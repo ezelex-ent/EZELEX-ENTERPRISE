@@ -1,1 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EZELEX | Building Opportunities</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{font-family:Arial,Helvetica,sans-serif;color:#172033;line-height:1.6;background:#fff}
+header{position:sticky;top:0;z-index:10;background:#fff;border-bottom:1px solid #e8ebf0;padding:18px 7%;display:flex;align-items:center;gap:28px}
+.logo{font-size:28px;font-weight:800;letter-spacing:3px;color:#14213d;margin-right:auto}
+nav{display:flex;gap:24px}
+nav a{color:#172033;text-decoration:none;font-weight:600}
+nav a:hover{color:#315efb}
+.button{display:inline-block;background:#315efb;color:#fff;text-decoration:none;border:0;border-radius:8px;padding:13px 20px;font-weight:700;cursor:pointer}
+.hero{padding:110px 7%;background:linear-gradient(135deg,#f5f8ff,#eef2ff);min-height:620px;display:flex;align-items:center}
+.hero-content{max-width:780px}
+.eyebrow{color:#315efb;font-weight:800;letter-spacing:2px;text-transform:uppercase;margin-bottom:16px}
+h1{font-size:clamp(44px,7vw,76px);line-height:1.05;margin-bottom:24px;color:#111827}
+.hero p{font-size:20px;max-width:680px;color:#526071;margin-bottom:30px}
+section{padding:85px 7%}
+.section-title{text-align:center;font-size:38px;margin-bottom:15px}
+.section-intro{text-align:center;max-width:700px;margin:0 auto 45px;color:#647083}
+.services{display:grid;grid-template-columns:repeat(3,1fr);gap:24px}
+.card{padding:32px;border:1px solid #e5e9f0;border-radius:14px;background:#fff;box-shadow:0 8px 30px rgba(20,33,61,.06)}
+.card h3{font-size:22px;margin-bottom:12px}
+.card p{color:#647083}
+.about{background:#f8fafc}
+.about-box{max-width:850px;margin:auto;text-align:center}
+.about-box p{font-size:20px;color:#566274}
+.jobs{background:#14213d;color:#fff;text-align:center}
+.jobs .section-title{color:#fff}
+.jobs p{color:#d7deeb;margin:15px auto 28px;max-width:620px}
+.contact-form{max-width:650px;margin:30px auto 0;display:grid;gap:14px}
+input,textarea{width:100%;padding:15px;border:1px solid #d9dee8;border-radius:8px;font:inherit}
+textarea{min-height:150px;resize:vertical}
+footer{background:#0d1526;color:#b9c2d2;text-align:center;padding:25px 7%}
+@media(max-width:800px){nav{display:none}.hero{min-height:540px;padding-top:80px}.services{grid-template-columns:1fr}section{padding:65px 6%}}
+</style>
+</head>
+<body>
+<header>
+<div class="logo">EZELEX</div>
+<nav>
+<a href="#home">Home</a>
+<a href="#about">About</a>
+<a href="#services">Services</a>
+<a href="#jobs">Jobs</a>
+<a href="#contact">Contact</a>
+</nav>
+<a class="button" href="#jobs">Apply for a Job</a>
+</header>
 
+<main>
+<section class="hero" id="home">
+<div class="hero-content">
+<div class="eyebrow">EZELEX ENTERPRISE</div>
+<h1>Building Opportunities.<br>Creating Businesses.</h1>
+<p>EZELEX is focused on creating businesses, employment opportunities and positive development within our communities.</p>
+<a class="button" href="#services">Explore EZELEX</a>
+</div>
+</section>
+
+<section id="services">
+<h2 class="section-title">What We Do</h2>
+<p class="section-intro">We build practical opportunities through enterprise, employment and community-focused initiatives.</p>
+<div class="services">
+<div class="card"><h3>Business Services</h3><p>We develop and operate businesses that create value and sustainable opportunities.</p></div>
+<div class="card"><h3>Employment Opportunities</h3><p>We create opportunities for people to work, grow and build their future.</p></div>
+<div class="card"><h3>Community Development</h3><p>We aim to support stronger and more sustainable communities through meaningful projects.</p></div>
+</div>
+</section>
+
+<section class="about" id="about">
+<div class="about-box">
+<h2 class="section-title">About EZELEX</h2>
+<p><strong>One enterprise. Multiple opportunities.</strong></p>
+<p>EZELEX is built around a simple vision: create businesses, create opportunities and create positive impact.</p>
+</div>
+</section>
+
+<section class="jobs" id="jobs">
+<h2 class="section-title">Looking for an Opportunity?</h2>
+<p>Join EZELEX and become part of what we're building.</p>
+<a class="button" href="#contact">Apply Now</a>
+</section>
+
+<section id="contact">
+<h2 class="section-title">Contact EZELEX</h2>
+<p class="section-intro">Have a question, business idea or interest in an opportunity? Send us a message.</p>
+<form class="contact-form" onsubmit="event.preventDefault(); alert('Thank you for contacting EZELEX. We will get back to you.');">
+<input type="text" placeholder="Your Name" required>
+<input type="email" placeholder="Your Email" required>
+<textarea placeholder="Your Message" required></textarea>
+<button class="button" type="submit">Send Message</button>
+</form>
+</section>
+</main>
+
+<footer><p>&copy; 2026 EZELEX. All rights reserved.</p></footer>
+</body>
+</html>
