@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EZELEX Admin Dashboard</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+*{box-sizing:border-box}body{margin:0;font-family:Arial,sans-serif;background:#f4f6f8;color:#17202a}
+header{background:#111827;color:white;padding:22px 5%;display:flex;justify-content:space-between;align-items:center;gap:15px}
+header h1{margin:0;font-size:24px}button{border:0;border-radius:8px;padding:11px 16px;cursor:pointer;font-weight:700}
+.login{max-width:420px;margin:70px auto;background:white;padding:30px;border-radius:14px;box-shadow:0 8px 30px #0001}
+input,select{width:100%;padding:12px;margin:7px 0 14px;border:1px solid #d5dbe1;border-radius:8px;font-size:15px}
+.primary{background:#111827;color:white}.danger{background:#b42318;color:white}
+.hidden{display:none}.wrap{max-width:1200px;margin:30px auto;padding:0 18px}
+.cards{display:grid;grid-template-columns:repeat(5,1fr);gap:15px}.card{background:white;padding:20px;border-radius:12px;box-shadow:0 3px 15px #0000000d}.label{color:#667085;font-size:13px}.value{font-size:27px;font-weight:800;margin-top:8px}
+.filters{background:white;padding:18px;border-radius:12px;margin:22px 0;display:grid;grid-template-columns:1.3fr 1fr 1fr auto;gap:12px;align-items:end}
+.tablebox{background:white;border-radius:12px;overflow:auto}.actions{display:flex;gap:10px;margin-bottom:15px}
+table{width:100%;border-collapse:collapse;min-width:800px}th,td{padding:12px;border-bottom:1px solid #eee;text-align:left;font-size:14px}th{background:#f8fafc}
+.msg{padding:10px;border-radius:8px;margin:10px 0;background:#fef3c7}.error{background:#fee4e2;color:#912018}
+@media(max-width:900px){.cards{grid-template-columns:repeat(2,1fr)}.filters{grid-template-columns:1fr}.wrap{padding:0 12px}}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>EZELEX Enterprise — Admin Dashboard</h1>
+  <button id="logoutBtn" class="danger hidden">Log out</button>
+</header>
+
+<section id="loginSection" class="login">
+  <h2>Admin Login</h2>
+  <p>Sign in with the EZELEX admin account.</p>
+  <div id="loginMsg"></div>
+  <label>Email</label>
+  <input id="email" type="email" placeholder="Admin email">
+  <label>Password</label>
+  <input id="password" type="password" placeholder="Password">
+  <button id="loginBtn" class="primary" style="width:100%">Sign in</button>
+</section>
+
+<main id="dashboard" class="wrap hidden">
+  <div id="dashMsg"></div>
+
+  <div class="cards">
+    <div class="card"><div class="label">Today</div><div class="value" id="today">GHS 0.00</div></div>
+    <div class="card"><div class="label">This Week</div><div class="value" id="week">GHS 0.00</div></div>
+    <div class="card"><div class="label">This Month</div><div class="value" id="month">GHS 0.00</div></div>
+    <div class="card"><div class="label">All Time</div><div class="value" id="alltime">GHS 0.00</div></div>
+    <div class="card"><div class="label">Active Workers</div><div class="value" id="workers">0</div></div>
+  </div>
+
+  <div class="filters">
+    <div><label>Worker</label><select id="workerFilter"><option value="">All workers</option></select></div>
+    <div><label>From</label><input id="fromDate" type="date"></div>
+    <div><label>To</label><input id="toDate" type="date"></div>
+    <button id="filterBtn" class="primary">Apply Filters</button>
+  </div>
+
+  <div class="actions">
+    <button id="refreshBtn" class="primary">Refresh</button>
+    <button id="csvBtn">Download CSV</button>
+  </div>
+
+  <div class="tablebox">
+    <table>
+      <thead><tr><th>Date</th><th>Worker</th><th>Worker ID</th><th>Customer</th><th>Product/Service</th><th>Qty</th><th>Amount (GHS)</th><th>Payment</th><th>Notes</th></tr></thead>
+      <tbody id="salesBody"><tr><td colspan="9">No records yet.</td></tr></tbody>
+    </table>
+  </div>
+</main>
+
+<script>
+const SUPABASE_URL = "https://hweczhwoggmsrwhkktrx.supabase.co";
+const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_D0o90HRJ1AfROf_DAj7ZAg_uaPDwqvV";
+const { createClient } = supabase;
+const db = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
+
+let allSales = [];
+let filteredSales = [];
+
+const $ = id => document.getElementById(id);
+const money = n => "GHS " + Number(n || 0).toLocaleString("en-GH",{minimumFractionDigits:2,maximumFractionDigits:2});
+
+function showMsg(id,text,error=false){
+  $(id).innerHTML = text ? `<div class="msg ${error?'error':''}">${text}</div>` : "";
+}
+
+async function checkAdmin(){
+  const {data:{session}} = await db.auth.getSession();
+  if(!session){ showLogin(); return; }
+  const {data,error} = await db.from("worker_profiles").select("id,role,active").eq("id",session.user.id).maybeSingle();
+  if(error || !data || data.role !== "admin" || !data.active){
+    await db.auth.signOut();
+    showLogin();
+    showMsg("loginMsg","This account does not have active EZELEX admin access.",true);
+    return;
+  }
+  $("loginSection").classList.add("hidden");
+  $("dashboard").classList.remove("hidden");
+  $("logoutBtn").classList.remove("hidden");
+  await loadData();
+}
+function showLogin(){
+  $("loginSection").classList.remove("hidden");
+  $("dashboard").classList.add("hidden");
+  $("logoutBtn").classList.add("hidden");
+}
+async function loadData(){
+  showMsg("dashMsg","Loading sales...");
+  const {data: sales,error} = await db.from("admin_sales_view").select("*").order("sale_date",{ascending:false});
+  if(error){showMsg("dashMsg","Could not load sales: "+error.message,true);return;}
+  allSales = sales || [];
+  populateWorkers();
+  updateSummary(allSales);
+  applyFilters(false);
+  showMsg("dashMsg","");
+}
+function populateWorkers(){
+  const seen = new Map();
+  allSales.forEach(s=>{ if(s.worker_id && !seen.has(s.worker_id)) seen.set(s.worker_id,s.worker_name||s.worker_id); });
+  const select=$("workerFilter");
+  select.innerHTML='<option value="">All workers</option>';
+  [...seen.entries()].sort((a,b)=>a[1].localeCompare(b[1])).forEach(([id,name])=>{
+    const o=document.createElement("option");o.value=id;o.textContent=name+" ("+id+")";select.appendChild(o);
+  });
+}
+function amount(s){return Number(s.amount ?? s.sale_amount ?? s.total_amount ?? 0)}
+function dateOnly(v){
+  if(!v) return "";
+  if(v instanceof Date){
+    return v.getFullYear()+"-"+String(v.getMonth()+1).padStart(2,"0")+"-"+String(v.getDate()).padStart(2,"0");
+  }
+  return String(v).slice(0,10);
+}
+function updateSummary(sales){
+  const now=new Date(), today=dateOnly(now);
+  const monday=new Date(now); monday.setHours(0,0,0,0); monday.setDate(monday.getDate()-((monday.getDay()+6)%7));
+  const mondayStr=dateOnly(monday);
+  const monthStr=now.getFullYear()+"-"+String(now.getMonth()+1).padStart(2,"0");
+  const todayTotal=sales.filter(s=>dateOnly(s.sale_date||s.created_at)===today).reduce((a,s)=>a+amount(s),0);
+  const weekTotal=sales.filter(s=>dateOnly(s.sale_date||s.created_at)>=mondayStr && dateOnly(s.sale_date||s.created_at)<=today).reduce((a,s)=>a+amount(s),0);
+  const monthTotal=sales.filter(s=>dateOnly(s.sale_date||s.created_at).startsWith(monthStr)).reduce((a,s)=>a+amount(s),0);
+  const allTotal=sales.reduce((a,s)=>a+amount(s),0);
+  $("today").textContent=money(todayTotal);$("week").textContent=money(weekTotal);$("month").textContent=money(monthTotal);$("alltime").textContent=money(allTotal);
+  const workerIds=new Set(sales.map(s=>s.worker_id).filter(Boolean));
+  $("workers").textContent=workerIds.size;
+}
+function applyFilters(show=true){
+  const worker=$("workerFilter").value, from=$("fromDate").value, to=$("toDate").value;
+  filteredSales=allSales.filter(s=>{
+    const d=dateOnly(s.sale_date||s.created_at);
+    return (!worker || s.worker_id===worker) && (!from || d>=from) && (!to || d<=to);
+  });
+  renderTable();
+}
+function renderTable(){
+  const body=$("salesBody");
+  if(!filteredSales.length){body.innerHTML='<tr><td colspan="9">No matching sales records.</td></tr>';return;}
+  body.innerHTML=filteredSales.map(s=>`<tr>
+    <td>${esc(dateOnly(s.sale_date||s.created_at))}</td>
+    <td>${esc(s.worker_name||"")}</td>
+    <td>${esc(s.worker_id||"")}</td>
+    <td>${esc(s.customer_reference||s.customer||"")}</td>
+    <td>${esc(s.product_service||s.product||"")}</td>
+    <td>${esc(s.quantity??"")}</td>
+    <td>${amount(s).toFixed(2)}</td>
+    <td>${esc(s.payment_method||"")}</td>
+    <td>${esc(s.notes||"")}</td>
+  </tr>`).join("");
+}
+function esc(v){return String(v??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[m]))}
+function csv(){
+  const headers=["Date","Worker","Worker ID","Customer","Product/Service","Quantity","Amount GHS","Payment","Notes"];
+  const rows=filteredSales.map(s=>[dateOnly(s.sale_date||s.created_at),s.worker_name||"",s.worker_id||"",s.customer_reference||s.customer||"",s.product_service||s.product||"",s.quantity??"",amount(s).toFixed(2),s.payment_method||"",s.notes||""]);
+  const out=[headers,...rows].map(r=>r.map(x=>`"${String(x??"").replace(/"/g,'""')}"`).join(",")).join("\n");
+  const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([out],{type:"text/csv"}));a.download="ezelex-sales.csv";a.click();URL.revokeObjectURL(a.href);
+}
+$("loginBtn").onclick=async()=>{
+  showMsg("loginMsg","Signing in...");
+  const {error}=await db.auth.signInWithPassword({email:$("email").value.trim(),password:$("password").value});
+  if(error){showMsg("loginMsg",error.message,true);return;}
+  await checkAdmin();
+};
+$("logoutBtn").onclick=async()=>{await db.auth.signOut();showLogin();};
+$("refreshBtn").onclick=loadData;
+$("filterBtn").onclick=()=>applyFilters(true);
+$("csvBtn").onclick=csv;
+checkAdmin();
+</script>
+</body>
+</html>
