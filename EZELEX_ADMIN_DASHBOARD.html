@@ -11,14 +11,13 @@
 <section id="sales" class="panel"><h2>Sales Management</h2><p class="small">Only approved sales count in totals.</p><div class="filters"><div><label>Worker</label><select id="wf"><option value="">All workers</option></select></div><div><label>From</label><input id="from" type="date"></div><div><label>To</label><input id="to" type="date"></div><button id="filter" class="p">Apply</button></div><div class="actions"><button id="refresh" class="p">Refresh</button><button id="csv" class="m">Download CSV</button></div><div class="table"><table><thead><tr><th>Date</th><th>Worker</th><th>Customer</th><th>Product</th><th>Qty</th><th>Amount</th><th>Status</th><th>Action</th></tr></thead><tbody id="sb"></tbody></table></div></section>
 <section id="workers" class="panel hidden">
 <h2>Worker Management</h2>
-<p class="small">Create worker accounts securely, manage contracts, and keep historical sales after a contract ends.</p>
+<p class="small">Create worker accounts securely. Workers set their own password from the welcome email, and historical sales stay preserved after a contract ends.</p>
 <h3>Add New Worker</h3>
 <form id="createWorkerForm" class="grid">
 <div><label>Full Name</label><input id="newFullName" required placeholder="Worker full name"></div>
 <div><label>Worker ID</label><input id="newWorkerId" required placeholder="EZE-001"></div>
 <div><label>Email</label><input id="newEmail" type="email" required placeholder="worker@example.com"></div>
 <div><label>Phone</label><input id="newPhone" placeholder="+233..."></div>
-<div><label>Temporary Password</label><input id="newPassword" type="password" minlength="8" required placeholder="At least 8 characters"></div>
 <div><label>Contract Start</label><input id="newContractStart" type="date"></div>
 <div><label>Contract End</label><input id="newContractEnd" type="date"></div>
 <div class="full"><button class="p" type="submit">Create Worker Account</button></div>
@@ -58,8 +57,7 @@ e.preventDefault();
 msg("createWorkerMsg","Creating worker account...");
 const {data:{session}}=await db.auth.getSession();
 if(!session)return msg("createWorkerMsg","Your admin session has expired. Please sign in again.","err");
-const payload={full_name:$("newFullName").value.trim(),worker_id:$("newWorkerId").value.trim(),email:$("newEmail").value.trim(),phone:$("newPhone").value.trim(),password:$("newPassword").value,contract_start:$("newContractStart").value||null,contract_end:$("newContractEnd").value||null};
-if(payload.password.length<8)return msg("createWorkerMsg","Temporary password must be at least 8 characters.","err");
+const payload={full_name:$("newFullName").value.trim(),worker_id:$("newWorkerId").value.trim(),email:$("newEmail").value.trim(),phone:$("newPhone").value.trim(),contract_start:$("newContractStart").value||null,contract_end:$("newContractEnd").value||null};
 if(payload.contract_start&&payload.contract_end&&payload.contract_end<payload.contract_start)return msg("createWorkerMsg","Contract end date cannot be before the start date.","err");
 try{
 const response=await fetch(U+"/functions/v1/create-worker",{method:"POST",headers:{"Authorization":"Bearer "+session.access_token,"apikey":K,"Content-Type":"application/json"},body:JSON.stringify(payload)});
