@@ -103,7 +103,7 @@ db.auth.onAuthStateChange((_event,session)=>{if(!session)showLogin()});
 
 async function loadDashboard(){await Promise.all([loadWorkers(),loadSales()])}
 async function loadWorkers(){
-const {data,error}=await db.from("worker_profiles").select("worker_id,full_name,phone,role,active,contract_end,contract_start").order("created_at",{ascending:false});
+const {data,error}=await db.from("worker_profiles").select("worker_id,full_name,phone,role,active,contract_end,contract_start");
 if(error){msg("workerMsg",error.message,"err");return}
 const body=$("workersBody");body.innerHTML="";
 (data||[]).forEach(w=>{const tr=document.createElement("tr");tr.innerHTML=
