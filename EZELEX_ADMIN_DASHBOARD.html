@@ -61,8 +61,29 @@ if(!session)return msg("createWorkerMsg","Your admin session has expired. Please
 const payload={full_name:$("newFullName").value.trim(),worker_id:$("newWorkerId").value.trim(),email:$("newEmail").value.trim(),phone:$("newPhone").value.trim(),contract_start:$("newContractStart").value||null,contract_end:$("newContractEnd").value||null};
 if(payload.contract_start&&payload.contract_end&&payload.contract_end<payload.contract_start)return msg("createWorkerMsg","Contract end date cannot be before the start date.","err");
 try{
-const response=await fetch(U+"/functions/v1/create-worker",{method:"POST",headers:{"Authorization":"Bearer "+session.access_token,"apikey":K,"Content-Type":"application/json"},body:JSON.stringify(payload)});
+const response=await fetch(U+"/functions/v1/create-worker",{
+  method:"POST",
+  headers:{
+    "Authorization":"Bearer "+session.access_token,
+    "apikey":K,
+    "Content-Type":"application/json"
+  },
+  body:JSON.stringify(payload)
+});
+
 const result=await response.json().catch(()=>({}));
+
+console.log("CREATE WORKER STATUS:", response.status);
+console.log("CREATE WORKER RESULT:", result);
+
+if (!response.ok || result.success === false) {
+  alert(
+    "Worker creation failed.\n\n" +
+    "Stage: " + (result.stage || "unknown") + "\n" +
+    "Error: " + (result.error || "Unknown error")
+  );
+  return;
+}
 if(!response.ok||!result.success)return msg("createWorkerMsg",result.error||"Could not create worker account.","err");
 msg("createWorkerMsg","Worker account created successfully: "+result.worker_id+" ("+result.email+")","ok");
 e.target.reset();
