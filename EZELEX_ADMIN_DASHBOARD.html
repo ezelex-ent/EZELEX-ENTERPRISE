@@ -58,6 +58,19 @@ table{width:100%;border-collapse:collapse;font-size:14px}th,td{padding:12px;bord
 <button id="createBtn" class="primary" type="submit">Create Worker & Send Welcome Email</button>
 </form></div>
 
+<div class="card">
+<div class="section-title"><h2>Communication Center</h2><span style="color:#64748b;font-size:14px">Send updates to your workers</span></div>
+<div id="commMsg" class="msg"></div>
+<form id="communicationForm">
+<label>Send To</label>
+<select id="commRecipient" style="width:100%;padding:12px;border:1px solid #d1d5db;border-radius:8px;margin:6px 0 14px;font-size:15px">
+<option value="ALL">All Active Workers</option>
+</select>
+<label>Subject</label><input id="commSubject" required placeholder="EZELEX Update">
+<label>Message</label><textarea id="commBody" required placeholder="Write your message to the worker(s)..." style="width:100%;min-height:150px;padding:12px;border:1px solid #d1d5db;border-radius:8px;margin:6px 0 14px;font-size:15px;font-family:Arial,sans-serif;resize:vertical"></textarea>
+<button id="sendCommBtn" class="primary" type="submit">Send Message</button>
+</form></div>
+
 <div class="card"><div class="section-title"><h2>Sales</h2><button id="refreshSales" class="secondary">Refresh</button></div>
 <div style="overflow-x:auto"><table><thead><tr><th>Date</th><th>Worker</th><th>Customer Ref</th><th>Product/Service</th><th>Qty</th><th>Amount</th><th>Payment</th></tr></thead>
 <tbody id="salesBody"></tbody></table></div></div>
@@ -69,6 +82,7 @@ const SUPABASE_ANON_KEY="sb_publishable_D0o90HRJ1AfROf_DAj7ZAg_uaPDwqvV";
 const db=supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY);
 const CREATE_WORKER_URL=SUPABASE_URL+"/functions/v1/create-worker";
 const DELETE_WORKER_URL=SUPABASE_URL+"/functions/v1/delete-worker";
+const SEND_MESSAGE_URL=SUPABASE_URL+"/functions/v1/send-worker-message";
 const $=id=>document.getElementById(id);
 
 function msg(id,text,type="ok"){const e=$(id);if(!e)return;e.textContent=text;e.className="msg "+type;e.style.display="block"}
@@ -101,7 +115,7 @@ catch(e){msg("loginMsg","Login error: "+(e.message||e),"err")}finally{b.disabled
 $("logoutBtn").onclick=async()=>{await db.auth.signOut();showLogin()};
 db.auth.onAuthStateChange((_event,session)=>{if(!session)showLogin()});
 
-async function loadDashboard(){await Promise.all([loadWorkers(),loadSales()])}
+async function loadDashboard(){await Promise.all([loadWorkers(),loadSales()]);await loadCommunicationRecipients()}
 async function loadWorkers(){
 const {data,error}=await db.from("worker_profiles").select("worker_id,full_name,phone,role,active,contract_end,contract_start");
 if(error){msg("workerMsg",error.message,"err");return}
@@ -111,6 +125,25 @@ const body=$("workersBody");body.innerHTML="";
 ${w.role!=="admin"?`<button class="secondary" onclick="toggleWorker('${js(w.worker_id)}',${w.active})">${w.active?"End Contract":"Reactivate"}</button><button class="danger" onclick="deleteWorker('${js(w.worker_id)}')">Delete</button>`:"<b>Administrator</b>"}</div></td>`;
 body.appendChild(tr)})
 }
+async function loadCommunicationRecipients(){
+const {data,error}=await db.from("worker_profiles").select("worker_id,full_name,active,role").eq("active",true);
+if(error){console.error(error);return}
+const select=$("commRecipient");select.innerHTML='<option value="ALL">All Active Workers</option>';
+(data||[]).filter(w=>w.role!=="admin").forEach(w=>{const o=document.createElement("option");o.value=w.worker_id;o.textContent=(w.full_name||w.worker_id)+" ("+w.worker_id+")";select.appendChild(o)})
+}
+
+$("communicationForm").onsubmit=async e=>{
+e.preventDefault();hideMsg("commMsg");const b=$("sendCommBtn");b.disabled=true;b.innerHTML='<span class="spinner"></span>Sending...';
+try{
+const {data:{session}}=await db.auth.getSession();if(!session)throw new Error("Admin session expired.");
+const payload={worker_id:$("commRecipient").value,subject:$("commSubject").value.trim(),message:$("commBody").value.trim()};
+if(!payload.subject||!payload.message)throw new Error("Enter a subject and message.");
+const r=await fetch(SEND_MESSAGE_URL,{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+session.access_token,"apikey":SUPABASE_ANON_KEY},body:JSON.stringify(payload)});
+const result=await r.json().catch(()=>({}));if(!r.ok||!result.success)throw new Error(result.error||result.message||("Message failed ("+r.status+")"));
+msg("commMsg",result.message||"Message sent successfully.","ok");$("commSubject").value="";$("commBody").value="";
+}catch(e){console.error(e);msg("commMsg",e.message||String(e),"err")}finally{b.disabled=false;b.textContent="Send Message"}
+};
+
 async function loadSales(){
 const {data,error}=await db.from("sales").select("sale_date,worker_id,customer_reference,product_service,quantity,sale_amount,payment_method").order("sale_date",{ascending:false});
 if(error){console.error(error);return}
