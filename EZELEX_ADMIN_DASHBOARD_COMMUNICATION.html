@@ -1040,14 +1040,11 @@ function hideMsg(id){
 
 
 function money(v){
-
-  return "£"+Number(v||0).toLocaleString(
-    "en-GB",
-    {
-      minimumFractionDigits:2,
-      maximumFractionDigits:2
-    }
-  );
+  return "GH₵" + Number(v || 0).toLocaleString("en-GH", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  });
+}
 
 }
 
