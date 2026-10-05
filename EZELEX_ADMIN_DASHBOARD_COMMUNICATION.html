@@ -1,15 +1,19 @@
 <!DOCTYPE html>
-
 <html lang="en">
+
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
 <title>EZELEX Enterprise — Administrator Dashboard</title>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
 <style>
-*{box-sizing:border-box}
+
+*{
+box-sizing:border-box;
+}
 
 body{
 margin:0;
@@ -40,40 +44,12 @@ border-radius:8px;
 padding:11px 16px;
 cursor:pointer;
 font-weight:700;
+font-size:14px;
 }
 
 button:disabled{
 opacity:.6;
 cursor:not-allowed;
-}
-
-.login{
-max-width:420px;
-margin:70px auto;
-background:white;
-padding:30px;
-border-radius:14px;
-box-shadow:0 8px 30px #0001;
-}
-
-.login h2{
-margin-top:0;
-}
-
-input,select{
-width:100%;
-padding:12px;
-margin:7px 0 14px;
-border:1px solid #d5dbe1;
-border-radius:8px;
-font-size:15px;
-background:white;
-}
-
-input:focus,select:focus{
-outline:none;
-border-color:#2563eb;
-box-shadow:0 0 0 3px #2563eb18;
 }
 
 .primary{
@@ -94,8 +70,62 @@ color:white;
 background:#912018;
 }
 
+.secondary{
+background:#e5e7eb;
+color:#111827;
+}
+
+.success{
+background:#15803d;
+color:white;
+}
+
 .hidden{
 display:none!important;
+}
+
+.login{
+max-width:430px;
+margin:70px auto;
+background:white;
+padding:30px;
+border-radius:14px;
+box-shadow:0 8px 30px #0001;
+}
+
+.login h2{
+margin-top:0;
+}
+
+input,
+select,
+textarea{
+width:100%;
+padding:12px;
+margin:7px 0 14px;
+border:1px solid #d5dbe1;
+border-radius:8px;
+font-size:15px;
+background:white;
+font-family:Arial,Helvetica,sans-serif;
+}
+
+textarea{
+min-height:140px;
+resize:vertical;
+}
+
+input:focus,
+select:focus,
+textarea:focus{
+outline:none;
+border-color:#2563eb;
+box-shadow:0 0 0 3px #2563eb18;
+}
+
+label{
+font-weight:700;
+font-size:14px;
 }
 
 .wrap{
@@ -128,22 +158,23 @@ font-weight:800;
 margin-top:8px;
 }
 
-.filters{
+.section{
 background:white;
-padding:18px;
-border-radius:12px;
-margin:22px 0;
+margin-top:25px;
+padding:22px;
+border-radius:14px;
+box-shadow:0 3px 15px #0000000d;
+}
+
+.section h2{
+margin-top:0;
+}
+
+.filters{
 display:grid;
 grid-template-columns:1.3fr 1fr 1fr auto;
 gap:12px;
 align-items:end;
-}
-
-.tablebox{
-background:white;
-border-radius:12px;
-overflow:auto;
-box-shadow:0 3px 15px #0000000d;
 }
 
 .actions{
@@ -153,13 +184,21 @@ margin-bottom:15px;
 flex-wrap:wrap;
 }
 
+.tablebox{
+background:white;
+border-radius:12px;
+overflow:auto;
+box-shadow:0 3px 15px #0000000d;
+}
+
 table{
 width:100%;
 border-collapse:collapse;
-min-width:950px;
+min-width:900px;
 }
 
-th,td{
+th,
+td{
 padding:12px;
 border-bottom:1px solid #eee;
 text-align:left;
@@ -176,27 +215,21 @@ background:#fafafa;
 }
 
 .msg{
-padding:10px;
+padding:11px;
 border-radius:8px;
 margin:10px 0;
 background:#fef3c7;
+color:#78350f;
 }
 
-.error{
+.msg.error{
 background:#fee4e2;
 color:#912018;
 }
 
-.worker-section{
-background:white;
-margin-top:25px;
-padding:22px;
-border-radius:14px;
-box-shadow:0 3px 15px #0000000d;
-}
-
-.worker-section h2{
-margin-top:0;
+.msg.success{
+background:#dcfce7;
+color:#166534;
 }
 
 .worker-grid{
@@ -209,7 +242,7 @@ gap:15px;
 border:1px solid #e5e7eb;
 border-radius:12px;
 padding:18px;
-background:#fff;
+background:white;
 }
 
 .worker-card h3{
@@ -253,16 +286,23 @@ padding:8px 12px;
 font-size:13px;
 }
 
-.protected{
-background:#f1f5f9;
-color:#475569;
-padding:8px 12px;
-border-radius:8px;
-font-size:13px;
-font-weight:700;
+.form-grid{
+display:grid;
+grid-template-columns:1fr 1fr;
+gap:0 15px;
 }
 
-@media(max-width:1000px){
+.full{
+grid-column:1/-1;
+}
+
+.empty{
+padding:20px;
+text-align:center;
+color:#667085;
+}
+
+@media(max-width:1050px){
 
 .cards{
 grid-template-columns:repeat(2,1fr);
@@ -281,7 +321,7 @@ padding:18px;
 }
 
 header h1{
-font-size:18px;
+font-size:19px;
 }
 
 .cards{
@@ -296,16 +336,30 @@ grid-template-columns:1fr;
 grid-template-columns:1fr;
 }
 
+.form-grid{
+grid-template-columns:1fr;
+}
+
+.full{
+grid-column:auto;
+}
+
 .wrap{
 padding:0 12px;
 }
 
+.section{
+padding:17px;
 }
-</style>
 
+}
+
+</style>
 </head>
 
+
 <body>
+
 
 <header>
 
@@ -316,9 +370,13 @@ EZELEX Enterprise — Administrator Dashboard
 <button
 id="logoutBtn"
 class="danger hidden">
-Log out </button>
+Log out
+</button>
 
 </header>
+
+
+<!-- LOGIN -->
 
 <section
 id="loginSection"
@@ -329,7 +387,7 @@ Administrator Login
 </h2>
 
 <p>
-Sign in with the secure EZELEX administrator account.
+Sign in with your secure EZELEX administrator account.
 </p>
 
 <div id="loginMsg"></div>
@@ -342,9 +400,7 @@ Email
 id="email"
 type="email"
 placeholder="Admin email"
-autocomplete="username"
-
->
+autocomplete="username">
 
 <label>
 Password
@@ -354,25 +410,31 @@ Password
 id="password"
 type="password"
 placeholder="Password"
-autocomplete="current-password"
-
->
+autocomplete="current-password">
 
 <button
 id="loginBtn"
 class="primary"
 style="width:100%">
-Sign in </button>
+Sign in
+</button>
 
 </section>
+
+
+
+<!-- DASHBOARD -->
 
 <main
 id="dashboard"
 class="wrap hidden">
 
+
 <div id="dashMsg"></div>
 
-<!-- SALES SUMMARY -->
+
+
+<!-- STATS -->
 
 <div class="cards">
 
@@ -390,6 +452,7 @@ GH₵0.00
 
 </div>
 
+
 <div class="card">
 
 <div class="label">
@@ -403,6 +466,7 @@ GH₵0.00
 </div>
 
 </div>
+
 
 <div class="card">
 
@@ -418,6 +482,7 @@ GH₵0.00
 
 </div>
 
+
 <div class="card">
 
 <div class="label">
@@ -431,6 +496,7 @@ GH₵0.00
 </div>
 
 </div>
+
 
 <div class="card">
 
@@ -448,7 +514,16 @@ id="workers">
 
 </div>
 
-<!-- SALES FILTERS -->
+
+
+<!-- SALES -->
+
+<section class="section">
+
+<h2>
+Sales Dashboard
+</h2>
+
 
 <div class="filters">
 
@@ -468,6 +543,7 @@ All workers
 
 </div>
 
+
 <div>
 
 <label>
@@ -476,11 +552,10 @@ From
 
 <input
 id="fromDate"
-type="date"
-
->
+type="date">
 
 </div>
+
 
 <div>
 
@@ -490,42 +565,36 @@ To
 
 <input
 id="toDate"
-type="date"
-
->
+type="date">
 
 </div>
+
 
 <button
 id="filterBtn"
 class="primary">
-
 Apply Filters
-
 </button>
 
 </div>
+
 
 <div class="actions">
 
 <button
-id="refreshBtn"
+id="refreshSalesBtn"
 class="primary">
-
-Refresh
-
+Refresh Sales
 </button>
 
 <button
-id="csvBtn">
-
+id="csvBtn"
+class="secondary">
 Download CSV
-
 </button>
 
 </div>
 
-<!-- CENTRAL SALES -->
 
 <div class="tablebox">
 
@@ -552,7 +621,7 @@ Customer
 </th>
 
 <th>
-Product/Service
+Product / Service
 </th>
 
 <th>
@@ -560,7 +629,7 @@ Qty
 </th>
 
 <th>
-Amount (GH₵)
+Amount
 </th>
 
 <th>
@@ -575,12 +644,17 @@ Notes
 
 </thead>
 
+
 <tbody id="salesBody">
 
 <tr>
 
-<td colspan="9">
-No records yet.
+<td
+colspan="9"
+class="empty">
+
+Loading sales...
+
 </td>
 
 </tr>
@@ -591,53 +665,279 @@ No records yet.
 
 </div>
 
+</section>
+
+
+
 <!-- WORKER MANAGEMENT -->
 
-<section
-class="worker-section">
+<section class="section">
 
 <h2>
 Worker Management
 </h2>
 
 <p>
-Manage EZELEX workers and their access securely.
+Create, manage and remove EZELEX workers.
 </p>
 
 <div id="workerMsg"></div>
+
 
 <div
 id="workerGrid"
 class="worker-grid">
 
-<p>
+<div class="empty">
 Loading workers...
-</p>
+</div>
 
 </div>
 
 </section>
 
+
+
+<!-- CREATE WORKER -->
+
+<section class="section">
+
+<h2>
+Create New Worker
+</h2>
+
+<p>
+Create a worker account and send the worker their password setup email.
+</p>
+
+
+<div id="addMsg"></div>
+
+
+<form id="addWorkerForm">
+
+
+<div class="form-grid">
+
+
+<div>
+
+<label>
+Worker ID
+</label>
+
+<input
+id="worker_id"
+required
+placeholder="EZE-001">
+
+</div>
+
+
+<div>
+
+<label>
+Full Name
+</label>
+
+<input
+id="full_name"
+required
+placeholder="Worker full name">
+
+</div>
+
+
+<div>
+
+<label>
+Phone
+</label>
+
+<input
+id="phone"
+required
+placeholder="Phone number">
+
+</div>
+
+
+<div>
+
+<label>
+Email
+</label>
+
+<input
+id="worker_email"
+type="email"
+required
+placeholder="worker@example.com">
+
+</div>
+
+
+<div>
+
+<label>
+Contract Start
+</label>
+
+<input
+id="contract_start"
+type="date">
+
+</div>
+
+
+<div>
+
+<label>
+Contract End
+</label>
+
+<input
+id="contract_end"
+type="date">
+
+</div>
+
+
+</div>
+
+
+<button
+id="createBtn"
+class="primary"
+type="submit">
+
+Create Worker & Send Welcome Email
+
+</button>
+
+
+</form>
+
+</section>
+
+
+
+<!-- COMMUNICATION -->
+
+<section class="section">
+
+<h2>
+Communication Center
+</h2>
+
+<p>
+Send important updates directly to your EZELEX workers.
+</p>
+
+
+<div id="commMsg"></div>
+
+
+<form id="communicationForm">
+
+
+<label>
+Send To
+</label>
+
+<select id="commRecipient">
+
+<option value="ALL">
+All Active Workers
+</option>
+
+</select>
+
+
+<label>
+Subject
+</label>
+
+<input
+id="commSubject"
+required
+placeholder="EZELEX Update">
+
+
+<label>
+Message
+</label>
+
+<textarea
+id="commBody"
+required
+placeholder="Write your message to the worker(s)..."></textarea>
+
+
+<button
+id="sendCommBtn"
+class="primary"
+type="submit">
+
+Send Message
+
+</button>
+
+
+</form>
+
+</section>
+
+
 </main>
 
+
+
 <script>
+
+
+/* =========================================================
+   SUPABASE
+========================================================= */
 
 const SUPABASE_URL =
 "https://hweczhwoggmsrwhkktrx.supabase.co";
 
-const SUPABASE_PUBLISHABLE_KEY =
+
+const SUPABASE_ANON_KEY =
 "sb_publishable_D0o90HRJ1AfROf_DAj7ZAg_uaPDwqvV";
 
-const {
-createClient
-} = supabase;
 
 const db =
-createClient(
+supabase.createClient(
 SUPABASE_URL,
-SUPABASE_PUBLISHABLE_KEY
+SUPABASE_ANON_KEY
 );
 
+
+/* =========================================================
+   EDGE FUNCTIONS
+========================================================= */
+
+const CREATE_WORKER_URL =
+SUPABASE_URL +
+"/functions/v1/create-worker";
+
+
+const DELETE_WORKER_URL =
+SUPABASE_URL +
+"/functions/v1/delete-worker";
+
+
+const SEND_MESSAGE_URL =
+SUPABASE_URL +
+"/functions/v1/send-worker-message";
+
+
+
+/* =========================================================
+   VARIABLES
+========================================================= */
 
 let allSales = [];
 
@@ -646,21 +946,21 @@ let filteredSales = [];
 let allWorkers = [];
 
 
+
 const $ =
 id =>
 document.getElementById(id);
 
 
-/* =========================
+
+/* =========================================================
    MONEY
-========================= */
+========================================================= */
 
 function money(value){
 
 return "GH₵" +
-Number(
-value || 0
-).toLocaleString(
+Number(value || 0).toLocaleString(
 "en-GH",
 {
 minimumFractionDigits:2,
@@ -671,9 +971,48 @@ maximumFractionDigits:2
 }
 
 
-/* =========================
-   MESSAGES
-========================= */
+
+/* =========================================================
+   DATE
+========================================================= */
+
+function dateOnly(value){
+
+if(!value){
+return "";
+}
+
+return String(value).slice(0,10);
+
+}
+
+
+
+/* =========================================================
+   ESCAPE HTML
+========================================================= */
+
+function esc(value){
+
+return String(value ?? "")
+.replace(
+/[&<>"']/g,
+character => ({
+"&":"&amp;",
+"<":"&lt;",
+">":"&gt;",
+'"':"&quot;",
+"'":"&#039;"
+}[character])
+);
+
+}
+
+
+
+/* =========================================================
+   MESSAGE
+========================================================= */
 
 function showMsg(
 id,
@@ -688,110 +1027,28 @@ if(!element){
 return;
 }
 
+if(!text){
+
+element.innerHTML="";
+
+return;
+
+}
+
 element.innerHTML =
-text
-?
-`<div class="${error ? "msg error" : "msg"}">${text}</div>`
-:
-"";
+`
+<div class="msg ${error ? "error" : "success"}">
+${esc(text)}
+</div>
+`;
 
 }
 
 
-/* =========================
-   ADMIN CHECK
-========================= */
 
-async function checkAdmin(){
-
-const {
-data:{
-session
-}
-} =
-await db.auth.getSession();
-
-
-if(!session){
-
-showLogin();
-
-return;
-
-}
-
-
-const {
-data,
-error
-} =
-await db
-.from("worker_profiles")
-.select(
-"user_id,worker_id,full_name,phone,role,active"
-)
-.eq(
-"user_id",
-session.user.id
-)
-.eq(
-"worker_id",
-"ADMIN001"
-)
-.eq(
-"role",
-"admin"
-)
-.maybeSingle();
-
-
-if(
-error ||
-!data ||
-data.role !== "admin" ||
-!data.active
-){
-
-await db.auth.signOut();
-
-showLogin();
-
-showMsg(
-"loginMsg",
-"This account does not have active EZELEX administrator access.",
-true
-);
-
-return;
-
-}
-
-
-$("loginSection")
-.classList
-.add("hidden");
-
-
-$("dashboard")
-.classList
-.remove("hidden");
-
-
-$("logoutBtn")
-.classList
-.remove("hidden");
-
-
-await loadData();
-
-await loadWorkers();
-
-}
-
-
-/* =========================
+/* =========================================================
    LOGIN SCREEN
-========================= */
+========================================================= */
 
 function showLogin(){
 
@@ -810,38 +1067,93 @@ $("logoutBtn")
 }
 
 
-/* =========================
-   LOAD SALES
-========================= */
 
-async function loadData(){
+/* =========================================================
+   DASHBOARD SCREEN
+========================================================= */
 
-showMsg(
-"dashMsg",
-"Loading sales..."
-);
+function showDashboard(){
 
+$("loginSection")
+.classList
+.add("hidden");
+
+$("dashboard")
+.classList
+.remove("hidden");
+
+$("logoutBtn")
+.classList
+.remove("hidden");
+
+}
+
+
+
+/* =========================================================
+   CHECK ADMIN
+========================================================= */
+
+async function checkAdmin(){
+
+try{
 
 const {
-data:sales,
+data:{
+session
+}
+} =
+await db.auth.getSession();
+
+
+if(!session){
+
+showLogin();
+
+return;
+
+}
+
+
+/*
+IMPORTANT:
+Your worker_profiles table uses user_id
+for the Supabase Auth account.
+*/
+
+const {
+data,
 error
 } =
 await db
-.from("admin_sales_view")
-.select("*")
-.order(
-"sale_date",
-{
-ascending:false
-}
-);
+.from("worker_profiles")
+.select(
+"user_id,worker_id,full_name,role,active"
+)
+.eq(
+"user_id",
+session.user.id
+)
+.eq(
+"worker_id",
+"ADMIN001"
+)
+.eq(
+"role",
+"admin"
+)
+.maybeSingle();
 
 
 if(error){
 
+await db.auth.signOut();
+
+showLogin();
+
 showMsg(
-"dashMsg",
-"Could not load sales: " +
+"loginMsg",
+"Administrator verification failed: " +
 error.message,
 true
 );
@@ -851,630 +1163,177 @@ return;
 }
 
 
-allSales =
-sales || [];
+if(
+!data ||
+data.role !== "admin" ||
+data.active !== true
+){
 
+await db.auth.signOut();
 
-populateWorkers();
-
-updateSummary(
-allSales
-);
-
-applyFilters();
+showLogin();
 
 showMsg(
-"dashMsg",
-""
+"loginMsg",
+"This account does not have active EZELEX administrator access.",
+true
 );
-
-}
-
-
-/* =========================
-   WORKER FILTER
-========================= */
-
-function populateWorkers(){
-
-const seen =
-new Map();
-
-
-allSales.forEach(
-sale => {
-
-if(
-sale.worker_id &&
-!seen.has(
-sale.worker_id
-)
-){
-
-seen.set(
-sale.worker_id,
-sale.worker_name ||
-sale.worker_id
-);
-
-}
-
-}
-);
-
-
-const select =
-$("workerFilter");
-
-
-select.innerHTML =
-'<option value="">All workers</option>';
-
-
-[
-...seen.entries()
-]
-.sort(
-(a,b) =>
-a[1].localeCompare(
-b[1]
-)
-)
-.forEach(
-([id,name]) => {
-
-const option =
-document.createElement(
-"option"
-);
-
-option.value =
-id;
-
-option.textContent =
-name +
-" (" +
-id +
-")";
-
-select.appendChild(
-option
-);
-
-}
-);
-
-}
-
-
-/* =========================
-   AMOUNT
-========================= */
-
-function amount(sale){
-
-return Number(
-sale.amount ??
-sale.sale_amount ??
-sale.total_amount ??
-0
-);
-
-}
-
-
-/* =========================
-   DATE
-========================= */
-
-function dateOnly(value){
-
-if(!value){
-return "";
-}
-
-
-if(value instanceof Date){
-
-return value.getFullYear() +
-"-" +
-String(
-value.getMonth()+1
-).padStart(
-2,
-"0"
-) +
-"-" +
-String(
-value.getDate()
-).padStart(
-2,
-"0"
-);
-
-}
-
-
-return String(
-value
-).slice(
-0,
-10
-);
-
-}
-
-
-/* =========================
-   SUMMARY
-========================= */
-
-function updateSummary(
-sales
-){
-
-const now =
-new Date();
-
-const today =
-dateOnly(
-now
-);
-
-
-const monday =
-new Date(
-now
-);
-
-monday.setHours(
-0,
-0,
-0,
-0
-);
-
-monday.setDate(
-monday.getDate() -
-((monday.getDay()+6)%7)
-);
-
-
-const mondayStr =
-dateOnly(
-monday
-);
-
-
-const monthStr =
-now.getFullYear() +
-"-" +
-String(
-now.getMonth()+1
-).padStart(
-2,
-"0"
-);
-
-
-const todayTotal =
-sales
-.filter(
-sale =>
-dateOnly(
-sale.sale_date ||
-sale.created_at
-) === today
-)
-.reduce(
-(total,sale) =>
-total +
-amount(sale),
-0
-);
-
-
-const weekTotal =
-sales
-.filter(
-sale => {
-
-const d =
-dateOnly(
-sale.sale_date ||
-sale.created_at
-);
-
-return (
-d >= mondayStr &&
-d <= today
-);
-
-}
-)
-.reduce(
-(total,sale) =>
-total +
-amount(sale),
-0
-);
-
-
-const monthTotal =
-sales
-.filter(
-sale =>
-dateOnly(
-sale.sale_date ||
-sale.created_at
-)
-.startsWith(
-monthStr
-)
-)
-.reduce(
-(total,sale) =>
-total +
-amount(sale),
-0
-);
-
-
-const allTotal =
-sales.reduce(
-(total,sale) =>
-total +
-amount(sale),
-0
-);
-
-
-$("today").textContent =
-money(
-todayTotal
-);
-
-
-$("week").textContent =
-money(
-weekTotal
-);
-
-
-$("month").textContent =
-money(
-monthTotal
-);
-
-
-$("alltime").textContent =
-money(
-allTotal
-);
-
-
-const workerIds =
-new Set(
-sales
-.map(
-sale =>
-sale.worker_id
-)
-.filter(
-Boolean
-)
-);
-
-
-$("workers").textContent =
-workerIds.size;
-
-}
-
-
-/* =========================
-   SALES FILTER
-========================= */
-
-function applyFilters(){
-
-const worker =
-$("workerFilter").value;
-
-const from =
-$("fromDate").value;
-
-const to =
-$("toDate").value;
-
-
-filteredSales =
-allSales.filter(
-sale => {
-
-const d =
-dateOnly(
-sale.sale_date ||
-sale.created_at
-);
-
-
-return (
-(!worker ||
-sale.worker_id === worker)
-
-&&
-
-(!from ||
-d >= from)
-
-&&
-
-(!to ||
-d <= to)
-);
-
-}
-);
-
-
-renderTable();
-
-}
-
-
-/* =========================
-   SALES TABLE
-========================= */
-
-function renderTable(){
-
-const body =
-$("salesBody");
-
-
-if(
-!filteredSales.length
-){
-
-body.innerHTML =
-'<tr><td colspan="9">No matching sales records.</td></tr>';
 
 return;
 
 }
 
 
-body.innerHTML =
-filteredSales
-.map(
-sale => `
+showDashboard();
 
-<tr>
 
-<td>
-${esc(
-dateOnly(
-sale.sale_date ||
-sale.created_at
-)
-)}
-</td>
+await loadDashboard();
 
-<td>
-${esc(
-sale.worker_name ||
-""
-)}
-</td>
-
-<td>
-${esc(
-sale.worker_id ||
-""
-)}
-</td>
-
-<td>
-${esc(
-sale.customer_reference ||
-sale.customer ||
-""
-)}
-</td>
-
-<td>
-${esc(
-sale.product_service ||
-sale.product ||
-""
-)}
-</td>
-
-<td>
-${esc(
-sale.quantity ??
-""
-)}
-</td>
-
-<td>
-${money(
-amount(sale)
-)}
-</td>
-
-<td>
-${esc(
-sale.payment_method ||
-""
-)}
-</td>
-
-<td>
-${esc(
-sale.notes ||
-""
-)}
-</td>
-
-</tr>
-
-`
-)
-.join("");
 
 }
+catch(error){
 
+console.error(error);
 
-/* =========================
-   ESCAPE HTML
-========================= */
+showLogin();
 
-function esc(value){
-
-return String(
-value ?? ""
-)
-.replace(
-/[&<>"']/g,
-character =>
-({
-
-"&":"&amp;",
-"<":"&lt;",
-">":"&gt;",
-'"':"&quot;",
-"'":"&#039;"
-
-}[character])
+showMsg(
+"loginMsg",
+"Administrator verification failed.",
+true
 );
 
 }
 
-
-/* =========================
-   CSV
-========================= */
-
-function csv(){
-
-const headers = [
-
-"Date",
-"Worker",
-"Worker ID",
-"Customer",
-"Product/Service",
-"Quantity",
-"Amount GH₵",
-"Payment",
-"Notes"
-
-];
-
-
-const rows =
-filteredSales.map(
-sale => [
-
-dateOnly(
-sale.sale_date ||
-sale.created_at
-),
-
-sale.worker_name ||
-"",
-
-sale.worker_id ||
-"",
-
-sale.customer_reference ||
-sale.customer ||
-"",
-
-sale.product_service ||
-sale.product ||
-"",
-
-sale.quantity ??
-"",
-
-amount(sale)
-.toFixed(2),
-
-sale.payment_method ||
-"",
-
-sale.notes ||
-""
-
-]
-);
-
-
-const output =
-[
-headers,
-...rows
-]
-.map(
-row =>
-row
-.map(
-value =>
-`"${String(
-value ?? ""
-).replace(
-/"/g,
-'""'
-)}"`
-)
-.join(",")
-)
-.join("\n");
-
-
-const blob =
-new Blob(
-[output],
-{
-type:
-"text/csv"
 }
+
+
+
+/* =========================================================
+   LOGIN
+========================================================= */
+
+$("loginBtn").onclick =
+async function(){
+
+const email =
+$("email")
+.value
+.trim();
+
+const password =
+$("password")
+.value;
+
+
+if(!email || !password){
+
+showMsg(
+"loginMsg",
+"Enter your email and password.",
+true
 );
 
-
-const url =
-URL.createObjectURL(
-blob
-);
-
-
-const link =
-document.createElement(
-"a"
-);
-
-link.href =
-url;
-
-link.download =
-"ezelex-sales.csv";
-
-link.click();
-
-
-URL.revokeObjectURL(
-url
-);
+return;
 
 }
 
 
-/* =========================
+const button =
+$("loginBtn");
+
+button.disabled=true;
+
+button.textContent="Signing in...";
+
+
+try{
+
+const {
+error
+} =
+await db.auth.signInWithPassword({
+
+email:email,
+
+password:password
+
+});
+
+
+if(error){
+
+showMsg(
+"loginMsg",
+error.message,
+true
+);
+
+return;
+
+}
+
+
+await checkAdmin();
+
+
+}
+catch(error){
+
+showMsg(
+"loginMsg",
+error.message ||
+"Login failed.",
+true
+);
+
+}
+finally{
+
+button.disabled=false;
+
+button.textContent="Sign in";
+
+}
+
+};
+
+
+
+/* =========================================================
+   LOGOUT
+========================================================= */
+
+$("logoutBtn").onclick =
+async function(){
+
+await db.auth.signOut();
+
+showLogin();
+
+};
+
+
+
+/* =========================================================
+   LOAD EVERYTHING
+========================================================= */
+
+async function loadDashboard(){
+
+await loadWorkers();
+
+await loadSales();
+
+await loadCommunicationRecipients();
+
+}
+
+
+
+/* =========================================================
    LOAD WORKERS
-========================= */
+========================================================= */
 
 async function loadWorkers(){
 
@@ -1483,7 +1342,11 @@ $("workerGrid");
 
 
 grid.innerHTML =
-"<p>Loading workers...</p>";
+`
+<div class="empty">
+Loading workers...
+</div>
+`;
 
 
 const {
@@ -1508,13 +1371,8 @@ if(error){
 grid.innerHTML =
 `
 <div class="msg error">
-
 Could not load workers:
-
-${esc(
-error.message
-)}
-
+${esc(error.message)}
 </div>
 `;
 
@@ -1534,10 +1392,22 @@ worker.role !== "admin"
 );
 
 
+$("workers")
+.textContent =
+workers.filter(
+worker =>
+worker.active === true
+).length;
+
+
 if(!workers.length){
 
 grid.innerHTML =
-"<p>No workers found.</p>";
+`
+<div class="empty">
+No workers found.
+</div>
+`;
 
 return;
 
@@ -1562,12 +1432,10 @@ return `
 <div class="worker-card">
 
 <h3>
-
 ${esc(
 worker.full_name ||
 "Unnamed Worker"
 )}
-
 </h3>
 
 
@@ -1629,41 +1497,61 @@ ${status}
 
 </span>
 
+
 </div>
 
 
 <div class="worker-actions">
 
+
 ${
 worker.active
 ?
 `
-
 <button
 class="danger small"
 onclick="deleteWorker(
 '${esc(worker.user_id)}',
-'${esc(worker.full_name || worker.worker_id)}'
+'${esc(
+worker.full_name ||
+worker.worker_id
+)}'
 )">
-
 Delete Worker
-
 </button>
-
 `
 :
 `
-
-<span class="protected">
-
-Inactive
-
-</span>
-
+<button
+class="success small"
+onclick="reactivateWorker(
+'${esc(worker.worker_id)}'
+)">
+Reactivate
+</button>
 `
 }
 
+
+${
+worker.active
+?
+`
+<button
+class="secondary small"
+onclick="endWorkerContract(
+'${esc(worker.worker_id)}'
+)">
+End Contract
+</button>
+`
+:
+""
+}
+
+
 </div>
+
 
 </div>
 
@@ -1676,9 +1564,138 @@ Inactive
 }
 
 
-/* =========================
+
+/* =========================================================
+   END CONTRACT
+========================================================= */
+
+async function endWorkerContract(
+workerId
+){
+
+const confirmed =
+confirm(
+"End the contract for Worker " +
+workerId +
+"?\n\nThe worker will become inactive."
+);
+
+
+if(!confirmed){
+
+return;
+
+}
+
+
+const {
+error
+} =
+await db
+.from("worker_profiles")
+.update({
+active:false
+})
+.eq(
+"worker_id",
+workerId
+);
+
+
+if(error){
+
+showMsg(
+"workerMsg",
+error.message,
+true
+);
+
+return;
+
+}
+
+
+showMsg(
+"workerMsg",
+"Worker contract ended successfully."
+);
+
+
+await loadWorkers();
+
+await loadCommunicationRecipients();
+
+}
+
+
+
+/* =========================================================
+   REACTIVATE WORKER
+========================================================= */
+
+async function reactivateWorker(
+workerId
+){
+
+const confirmed =
+confirm(
+"Reactivate Worker " +
+workerId +
+"? "
+);
+
+
+if(!confirmed){
+
+return;
+
+}
+
+
+const {
+error
+} =
+await db
+.from("worker_profiles")
+.update({
+active:true
+})
+.eq(
+"worker_id",
+workerId
+);
+
+
+if(error){
+
+showMsg(
+"workerMsg",
+error.message,
+true
+);
+
+return;
+
+}
+
+
+showMsg(
+"workerMsg",
+"Worker reactivated successfully."
+);
+
+
+await loadWorkers();
+
+await loadCommunicationRecipients();
+
+}
+
+
+
+/* =========================================================
    DELETE WORKER
-========================= */
+========================================================= */
 
 async function deleteWorker(
 userId,
@@ -1698,7 +1715,6 @@ return;
 
 const confirmed =
 confirm(
-
 "DELETE WORKER\n\n" +
 
 "Worker: " +
@@ -1709,18 +1725,21 @@ workerName +
 "This will permanently delete:\n" +
 
 "• Worker profile\n" +
+
 "• Worker sales\n" +
+
 "• Worker login account\n\n" +
 
 "This action cannot be undone.\n\n" +
 
 "Continue?"
-
 );
 
 
 if(!confirmed){
+
 return;
+
 }
 
 
@@ -1733,6 +1752,7 @@ workerName +
 
 
 try{
+
 
 const {
 data:{
@@ -1751,13 +1771,18 @@ throw new Error(
 }
 
 
+/*
+IMPORTANT:
+The new delete-worker Edge Function
+expects user_id.
+*/
+
 const response =
 await fetch(
 DELETE_WORKER_URL,
 {
 
-method:
-"POST",
+method:"POST",
 
 headers:{
 "Content-Type":
@@ -1765,13 +1790,16 @@ headers:{
 
 "Authorization":
 "Bearer " +
-session.access_token
+session.access_token,
+
+"apikey":
+SUPABASE_ANON_KEY
+
 },
 
 body:
 JSON.stringify({
-user_id:
-userId
+user_id:userId
 })
 
 }
@@ -1779,7 +1807,11 @@ userId
 
 
 const result =
-await response.json();
+await response
+.json()
+.catch(
+() => ({})
+);
 
 
 if(
@@ -1805,11 +1837,15 @@ result.message ||
 
 await loadWorkers();
 
-await loadData();
+await loadSales();
+
+await loadCommunicationRecipients();
 
 
 }
 catch(error){
+
+console.error(error);
 
 showMsg(
 "workerMsg",
@@ -1823,40 +1859,218 @@ true
 }
 
 
-/* =========================
-   LOGIN
-========================= */
 
-$("loginBtn").onclick =
-async () => {
+/* =========================================================
+   CREATE WORKER
+========================================================= */
+
+$("addWorkerForm").onsubmit =
+async function(event){
+
+event.preventDefault();
+
+
+const button =
+$("createBtn");
+
+
+button.disabled=true;
+
+button.textContent =
+"Creating Worker...";
+
 
 showMsg(
-"loginMsg",
-"Signing in..."
+"addMsg",
+"Creating worker and sending welcome email..."
+);
+
+
+try{
+
+
+const {
+data:{
+session
+}
+} =
+await db.auth.getSession();
+
+
+if(!session){
+
+throw new Error(
+"Admin session expired. Please log in again."
+);
+
+}
+
+
+const payload = {
+
+worker_id:
+$("worker_id")
+.value
+.trim(),
+
+full_name:
+$("full_name")
+.value
+.trim(),
+
+phone:
+$("phone")
+.value
+.trim(),
+
+email:
+$("worker_email")
+.value
+.trim(),
+
+contract_start:
+$("contract_start")
+.value ||
+null,
+
+contract_end:
+$("contract_end")
+.value ||
+null
+
+};
+
+
+const response =
+await fetch(
+CREATE_WORKER_URL,
+{
+
+method:"POST",
+
+headers:{
+"Content-Type":
+"application/json",
+
+"Authorization":
+"Bearer " +
+session.access_token,
+
+"apikey":
+SUPABASE_ANON_KEY
+
+},
+
+body:
+JSON.stringify(payload)
+
+}
+);
+
+
+const result =
+await response
+.json()
+.catch(
+() => ({})
+);
+
+
+if(
+!response.ok ||
+!result.success
+){
+
+throw new Error(
+result.error ||
+result.message ||
+"Worker creation failed."
+);
+
+}
+
+
+showMsg(
+"addMsg",
+"Worker created successfully. Welcome email sent."
+);
+
+
+$("addWorkerForm")
+.reset();
+
+
+await loadWorkers();
+
+await loadCommunicationRecipients();
+
+
+}
+catch(error){
+
+console.error(error);
+
+showMsg(
+"addMsg",
+error.message ||
+"Worker creation failed.",
+true
+);
+
+}
+finally{
+
+button.disabled=false;
+
+button.textContent =
+"Create Worker & Send Welcome Email";
+
+}
+
+};
+
+
+
+/* =========================================================
+   LOAD SALES
+========================================================= */
+
+async function loadSales(){
+
+showMsg(
+"dashMsg",
+"Loading sales..."
 );
 
 
 const {
+data:sales,
 error
 } =
-await db.auth.signInWithPassword({
-
-email:
-$("email")
-.value
-.trim(),
-
-password:
-$("password")
-.value
-
-});
+await db
+.from("sales")
+.select(
+"id,worker_id,sale_date,customer_reference,product_service,quantity,sale_amount,payment_method,notes,created_at"
+)
+.order(
+"sale_date",
+{
+ascending:false
+}
+)
+.order(
+"created_at",
+{
+ascending:false
+}
+);
 
 
 if(error){
 
 showMsg(
-"loginMsg",
+"dashMsg",
+"Could not load sales: " +
 error.message,
 true
 );
@@ -1866,60 +2080,931 @@ return;
 }
 
 
-await checkAdmin();
+const workerMap =
+new Map();
+
+
+allWorkers.forEach(
+worker => {
+
+workerMap.set(
+worker.user_id,
+worker
+);
+
+}
+);
+
+
+allSales =
+(sales || [])
+.map(
+sale => {
+
+const worker =
+workerMap.get(
+sale.worker_id
+);
+
+
+return {
+
+...sale,
+
+worker_name:
+worker?.full_name ||
+"Unknown Worker",
+
+worker_worker_id:
+worker?.worker_id ||
+sale.worker_id ||
+""
+
+};
+
+}
+);
+
+
+updateSummary(
+allSales
+);
+
+
+populateWorkerFilter();
+
+applyFilters();
+
+
+showMsg(
+"dashMsg",
+""
+);
+
+}
+
+
+
+/* =========================================================
+   AMOUNT
+========================================================= */
+
+function amount(sale){
+
+return Number(
+sale.sale_amount ||
+0
+);
+
+}
+
+
+
+/* =========================================================
+   SUMMARY
+========================================================= */
+
+function updateSummary(
+sales
+){
+
+const now =
+new Date();
+
+
+const today =
+dateOnly(
+now
+);
+
+
+const monthKey =
+now.getFullYear() +
+"-" +
+String(
+now.getMonth()+1
+)
+.padStart(2,"0");
+
+
+const monday =
+new Date(now);
+
+
+monday.setHours(
+0,
+0,
+0,
+0
+);
+
+
+monday.setDate(
+monday.getDate() -
+(
+(monday.getDay()+6)%7
+)
+);
+
+
+const mondayKey =
+dateOnly(
+monday
+);
+
+
+const todayTotal =
+sales
+.filter(
+sale =>
+dateOnly(
+sale.sale_date ||
+sale.created_at
+)
+===
+today
+)
+.reduce(
+(total,sale) =>
+total +
+amount(sale),
+0
+);
+
+
+const weekTotal =
+sales
+.filter(
+sale => {
+
+const d =
+dateOnly(
+sale.sale_date ||
+sale.created_at
+);
+
+return (
+d >= mondayKey &&
+d <= today
+);
+
+}
+)
+.reduce(
+(total,sale) =>
+total +
+amount(sale),
+0
+);
+
+
+const monthTotal =
+sales
+.filter(
+sale =>
+dateOnly(
+sale.sale_date ||
+sale.created_at
+)
+.startsWith(
+monthKey
+)
+)
+.reduce(
+(total,sale) =>
+total +
+amount(sale),
+0
+);
+
+
+const allTotal =
+sales
+.reduce(
+(total,sale) =>
+total +
+amount(sale),
+0
+);
+
+
+$("today")
+.textContent =
+money(
+todayTotal
+);
+
+
+$("week")
+.textContent =
+money(
+weekTotal
+);
+
+
+$("month")
+.textContent =
+money(
+monthTotal
+);
+
+
+$("alltime")
+.textContent =
+money(
+allTotal
+);
+
+}
+
+
+
+/* =========================================================
+   WORKER FILTER
+========================================================= */
+
+function populateWorkerFilter(){
+
+const select =
+$("workerFilter");
+
+
+const workers =
+new Map();
+
+
+allWorkers
+.filter(
+worker =>
+worker.role !== "admin"
+)
+.forEach(
+worker => {
+
+workers.set(
+worker.user_id,
+worker
+);
+
+}
+);
+
+
+select.innerHTML =
+`
+<option value="">
+All workers
+</option>
+`;
+
+
+[
+...workers.values()
+]
+.sort(
+(a,b) =>
+String(
+a.full_name || ""
+)
+.localeCompare(
+String(
+b.full_name || ""
+)
+)
+)
+.forEach(
+worker => {
+
+const option =
+document.createElement(
+"option"
+);
+
+
+option.value =
+worker.user_id;
+
+
+option.textContent =
+(
+worker.full_name ||
+worker.worker_id
+) +
+" (" +
+worker.worker_id +
+")";
+
+
+select.appendChild(
+option
+);
+
+}
+);
+
+}
+
+
+
+/* =========================================================
+   FILTER SALES
+========================================================= */
+
+function applyFilters(){
+
+const worker =
+$("workerFilter")
+.value;
+
+const from =
+$("fromDate")
+.value;
+
+const to =
+$("toDate")
+.value;
+
+
+filteredSales =
+allSales
+.filter(
+sale => {
+
+const saleDate =
+dateOnly(
+sale.sale_date ||
+sale.created_at
+);
+
+
+return (
+
+(!worker ||
+sale.worker_id === worker)
+
+&&
+
+(!from ||
+saleDate >= from)
+
+&&
+
+(!to ||
+saleDate <= to)
+
+);
+
+}
+);
+
+
+renderSales();
+
+}
+
+
+
+/* =========================================================
+   RENDER SALES
+========================================================= */
+
+function renderSales(){
+
+const body =
+$("salesBody");
+
+
+if(!filteredSales.length){
+
+body.innerHTML =
+`
+<tr>
+<td
+colspan="9"
+class="empty">
+
+No sales records found.
+
+</td>
+</tr>
+`;
+
+return;
+
+}
+
+
+body.innerHTML =
+filteredSales
+.map(
+sale => `
+
+<tr>
+
+<td>
+${esc(
+dateOnly(
+sale.sale_date ||
+sale.created_at
+)
+)}
+</td>
+
+
+<td>
+${esc(
+sale.worker_name ||
+"Unknown Worker"
+)}
+</td>
+
+
+<td>
+${esc(
+sale.worker_worker_id ||
+sale.worker_id ||
+""
+)}
+</td>
+
+
+<td>
+${esc(
+sale.customer_reference ||
+""
+)}
+</td>
+
+
+<td>
+${esc(
+sale.product_service ||
+""
+)}
+</td>
+
+
+<td>
+${esc(
+sale.quantity ??
+""
+)}
+</td>
+
+
+<td>
+${money(
+amount(sale)
+)}
+</td>
+
+
+<td>
+${esc(
+sale.payment_method ||
+""
+)}
+</td>
+
+
+<td>
+${esc(
+sale.notes ||
+""
+)}
+</td>
+
+</tr>
+
+`
+)
+.join("");
+
+}
+
+
+
+/* =========================================================
+   CSV
+========================================================= */
+
+$("csvBtn").onclick =
+function(){
+
+const headers = [
+
+"Date",
+
+"Worker",
+
+"Worker ID",
+
+"Customer",
+
+"Product/Service",
+
+"Quantity",
+
+"Amount GH₵",
+
+"Payment",
+
+"Notes"
+
+];
+
+
+const rows =
+filteredSales
+.map(
+sale => [
+
+dateOnly(
+sale.sale_date ||
+sale.created_at
+),
+
+sale.worker_name ||
+"",
+
+sale.worker_worker_id ||
+sale.worker_id ||
+"",
+
+sale.customer_reference ||
+"",
+
+sale.product_service ||
+"",
+
+sale.quantity ??
+"",
+
+amount(sale)
+.toFixed(2),
+
+sale.payment_method ||
+"",
+
+sale.notes ||
+""
+
+]
+);
+
+
+const output =
+[headers,...rows]
+.map(
+row =>
+row
+.map(
+value =>
+`"${String(
+value ?? ""
+)
+.replace(
+/"/g,
+'""'
+)}"`
+)
+.join(",")
+)
+.join("\n");
+
+
+const blob =
+new Blob(
+[output],
+{
+type:"text/csv"
+}
+);
+
+
+const url =
+URL.createObjectURL(
+blob
+);
+
+
+const link =
+document.createElement(
+"a"
+);
+
+
+link.href =
+url;
+
+link.download =
+"ezelex-sales.csv";
+
+link.click();
+
+
+URL.revokeObjectURL(
+url
+);
 
 };
 
 
-/* =========================
-   LOGOUT
-========================= */
 
-$("logoutBtn").onclick =
-async () => {
+/* =========================================================
+   COMMUNICATION RECIPIENTS
+========================================================= */
 
-await db.auth.signOut();
+async function loadCommunicationRecipients(){
 
-showLogin();
+const {
+data,
+error
+} =
+await db
+.from("worker_profiles")
+.select(
+"worker_id,full_name,active,role"
+)
+.eq(
+"active",
+true
+);
+
+
+if(error){
+
+console.error(
+error
+);
+
+return;
+
+}
+
+
+const select =
+$("commRecipient");
+
+
+select.innerHTML =
+`
+<option value="ALL">
+All Active Workers
+</option>
+`;
+
+
+(data || [])
+.filter(
+worker =>
+worker.role !== "admin"
+)
+.forEach(
+worker => {
+
+const option =
+document.createElement(
+"option"
+);
+
+
+option.value =
+worker.worker_id;
+
+
+option.textContent =
+(
+worker.full_name ||
+worker.worker_id
+) +
+" (" +
+worker.worker_id +
+")";
+
+
+select.appendChild(
+option
+);
+
+}
+);
+
+}
+
+
+
+/* =========================================================
+   SEND MESSAGE
+========================================================= */
+
+$("communicationForm").onsubmit =
+async function(event){
+
+event.preventDefault();
+
+
+const button =
+$("sendCommBtn");
+
+
+button.disabled=true;
+
+button.textContent =
+"Sending...";
+
+
+try{
+
+
+const {
+data:{
+session
+}
+} =
+await db.auth.getSession();
+
+
+if(!session){
+
+throw new Error(
+"Admin session expired."
+);
+
+}
+
+
+const payload = {
+
+worker_id:
+$("commRecipient")
+.value,
+
+subject:
+$("commSubject")
+.value
+.trim(),
+
+message:
+$("commBody")
+.value
+.trim()
 
 };
 
 
-/* =========================
-   BUTTONS
-========================= */
+if(
+!payload.subject ||
+!payload.message
+){
 
-$("refreshBtn").onclick =
-async () => {
+throw new Error(
+"Enter a subject and message."
+);
 
-await loadData();
+}
+
+
+const response =
+await fetch(
+SEND_MESSAGE_URL,
+{
+
+method:"POST",
+
+headers:{
+"Content-Type":
+"application/json",
+
+"Authorization":
+"Bearer " +
+session.access_token,
+
+"apikey":
+SUPABASE_ANON_KEY
+
+},
+
+body:
+JSON.stringify(
+payload
+)
+
+}
+);
+
+
+const result =
+await response
+.json()
+.catch(
+() => ({})
+);
+
+
+if(
+!response.ok ||
+!result.success
+){
+
+throw new Error(
+result.error ||
+result.message ||
+"Message sending failed."
+);
+
+}
+
+
+showMsg(
+"commMsg",
+result.message ||
+"Message sent successfully."
+);
+
+
+$("commSubject")
+.value="";
+
+$("commBody")
+.value="";
+
+
+}
+catch(error){
+
+console.error(error);
+
+showMsg(
+"commMsg",
+error.message ||
+"Message sending failed.",
+true
+);
+
+}
+finally{
+
+button.disabled=false;
+
+button.textContent =
+"Send Message";
+
+}
+
+};
+
+
+
+/* =========================================================
+   REFRESH
+========================================================= */
+
+$("refreshSalesBtn").onclick =
+async function(){
 
 await loadWorkers();
+
+await loadSales();
+
+await loadCommunicationRecipients();
 
 };
 
 
 $("filterBtn").onclick =
-() => {
+function(){
 
 applyFilters();
 
 };
 
 
-$("csvBtn").onclick =
-() => {
 
-csv();
+/* =========================================================
+   AUTH STATE
+========================================================= */
 
-};
+db.auth.onAuthStateChange(
+(event,session) => {
+
+if(!session){
+
+showLogin();
+
+}
+
+}
+);
 
 
-/* =========================
+
+/* =========================================================
    START
-========================= */
+========================================================= */
 
 checkAdmin();
+
 
 </script>
 
