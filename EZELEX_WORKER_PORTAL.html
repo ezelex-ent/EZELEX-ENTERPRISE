@@ -1,429 +1,1229 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>EZELEX Worker Portal</title>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<style>
-*{box-sizing:border-box}
-body{margin:0;font-family:Arial,sans-serif;background:#f4f6f8;color:#17202a}
-header{background:#111827;color:#fff;padding:22px 5%;display:flex;justify-content:space-between;align-items:center;gap:15px}
-header h1{margin:0;font-size:23px}
-button{border:0;border-radius:8px;padding:12px 16px;cursor:pointer;font-weight:700}
-.primary{background:#111827;color:#fff}.danger{background:#b42318;color:#fff}.secondary{background:#e5e7eb;color:#111827}
-.login{max-width:430px;margin:60px auto;background:#fff;padding:30px;border-radius:14px;box-shadow:0 8px 30px #0001}
-.wrap{max-width:1050px;margin:30px auto;padding:0 18px}
-.panel{background:#fff;padding:22px;border-radius:12px;margin-bottom:20px;box-shadow:0 3px 15px #0000000d}
-.grid{display:grid;grid-template-columns:1fr 1fr;gap:15px}
-label{font-weight:700;font-size:14px;display:block}
-input,select,textarea{width:100%;padding:12px;margin:7px 0 14px;border:1px solid #d5dbe1;border-radius:8px;font-size:15px}
-textarea{min-height:90px;resize:vertical}
-.full{grid-column:1/-1}
-.msg{padding:10px;border-radius:8px;margin:10px 0;background:#fef3c7}
-.error{background:#fee4e2;color:#912018}
-.success{background:#dcfae6;color:#067647}
-.workerInfo{font-size:14px;line-height:1.7}
-.notice{background:#eef2ff;border-left:4px solid #111827;padding:14px;border-radius:8px;margin:15px 0;line-height:1.5}
-.small{font-size:13px;color:#5b6470}
-table{width:100%;border-collapse:collapse;min-width:700px}
-th,td{padding:12px;border-bottom:1px solid #eee;text-align:left;font-size:14px}
-th{background:#f8fafc}
-.tablebox{overflow:auto}
-.hidden{display:none}
-.actions{display:flex;gap:10px;flex-wrap:wrap}
-@media(max-width:700px){.grid{grid-template-columns:1fr}.full{grid-column:auto}.login{margin:30px 15px}.wrap{padding:0 12px}}
-</style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <title>EZELEX Worker Portal</title>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: Arial, Helvetica, sans-serif;
+    }
+
+    body {
+      background: #f4f7fb;
+      color: #172033;
+      min-height: 100vh;
+    }
+
+    header {
+      background: #111827;
+      color: white;
+      padding: 18px 25px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    header h1 {
+      font-size: 22px;
+    }
+
+    header span {
+      font-size: 13px;
+      color: #cbd5e1;
+    }
+
+    .container {
+      width: 94%;
+      max-width: 1100px;
+      margin: 25px auto;
+    }
+
+    .login-box,
+    .dashboard {
+      background: white;
+      border-radius: 15px;
+      padding: 25px;
+      box-shadow: 0 5px 20px rgba(0,0,0,0.08);
+    }
+
+    .login-box {
+      max-width: 450px;
+      margin: 70px auto;
+    }
+
+    .login-box h2 {
+      margin-bottom: 8px;
+      font-size: 26px;
+    }
+
+    .subtitle {
+      color: #64748b;
+      margin-bottom: 25px;
+    }
+
+    label {
+      display: block;
+      margin-top: 15px;
+      margin-bottom: 7px;
+      font-weight: bold;
+      font-size: 14px;
+    }
+
+    input,
+    select,
+    textarea {
+      width: 100%;
+      padding: 13px;
+      border: 1px solid #d5dce7;
+      border-radius: 9px;
+      outline: none;
+      font-size: 15px;
+    }
+
+    input:focus,
+    select:focus,
+    textarea:focus {
+      border-color: #2563eb;
+    }
+
+    textarea {
+      min-height: 90px;
+      resize: vertical;
+    }
+
+    button {
+      border: none;
+      border-radius: 9px;
+      padding: 13px 18px;
+      cursor: pointer;
+      font-weight: bold;
+      font-size: 14px;
+    }
+
+    .primary {
+      background: #2563eb;
+      color: white;
+      width: 100%;
+      margin-top: 22px;
+    }
+
+    .primary:hover {
+      background: #1d4ed8;
+    }
+
+    .logout {
+      background: #dc2626;
+      color: white;
+      padding: 9px 15px;
+    }
+
+    .logout:hover {
+      background: #b91c1c;
+    }
+
+    .welcome {
+      background: #2563eb;
+      color: white;
+      border-radius: 15px;
+      padding: 25px;
+      margin-bottom: 20px;
+    }
+
+    .welcome h2 {
+      margin-bottom: 7px;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 18px;
+      margin-bottom: 20px;
+    }
+
+    .card {
+      background: white;
+      border-radius: 15px;
+      padding: 22px;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.06);
+    }
+
+    .card h3 {
+      font-size: 14px;
+      color: #64748b;
+      margin-bottom: 10px;
+    }
+
+    .amount {
+      font-size: 27px;
+      font-weight: bold;
+    }
+
+    .section {
+      background: white;
+      border-radius: 15px;
+      padding: 25px;
+      margin-bottom: 20px;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.06);
+    }
+
+    .section h2 {
+      margin-bottom: 18px;
+      font-size: 21px;
+    }
+
+    .profile-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 15px;
+    }
+
+    .profile-item {
+      background: #f8fafc;
+      padding: 15px;
+      border-radius: 10px;
+    }
+
+    .profile-item strong {
+      display: block;
+      font-size: 12px;
+      color: #64748b;
+      margin-bottom: 5px;
+    }
+
+    .profile-item span {
+      font-weight: bold;
+    }
+
+    .message {
+      margin-top: 15px;
+      padding: 12px;
+      border-radius: 8px;
+      display: none;
+      font-size: 14px;
+    }
+
+    .error {
+      background: #fee2e2;
+      color: #991b1b;
+    }
+
+    .success {
+      background: #dcfce7;
+      color: #166534;
+    }
+
+    .table-wrapper {
+      overflow-x: auto;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 650px;
+    }
+
+    th,
+    td {
+      padding: 13px;
+      text-align: left;
+      border-bottom: 1px solid #e5e7eb;
+      font-size: 14px;
+    }
+
+    th {
+      background: #f8fafc;
+      color: #475569;
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    .loading {
+      text-align: center;
+      padding: 30px;
+      color: #64748b;
+    }
+
+    @media (max-width: 750px) {
+
+      .grid {
+        grid-template-columns: 1fr;
+      }
+
+      .profile-grid {
+        grid-template-columns: 1fr;
+      }
+
+      header {
+        padding: 15px;
+      }
+
+      header h1 {
+        font-size: 18px;
+      }
+
+      .container {
+        width: 95%;
+      }
+
+      .welcome {
+        padding: 20px;
+      }
+    }
+  </style>
 </head>
+
 <body>
 
 <header>
-  <h1>EZELEX Worker Portal</h1>
-  <button id="logoutBtn" class="danger hidden">Log out</button>
+  <div>
+    <h1>EZELEX ENTERPRISE</h1>
+    <span>Worker Portal</span>
+  </div>
+
+  <button id="logoutBtn" class="logout hidden" onclick="logout()">
+    Logout
+  </button>
 </header>
 
-<section id="loginSection" class="login">
-  <h2>Worker Login</h2>
-  <p>Sign in with your EZELEX worker account.</p>
-  <div id="loginMsg"></div>
 
-  <label>Email / Username</label>
-  <input id="email" type="email" autocomplete="username" placeholder="Your email address">
+<!-- LOGIN -->
+<div id="loginSection" class="container">
 
-  <label>Password</label>
-  <input id="password" type="password" autocomplete="current-password" placeholder="Your password">
+  <div class="login-box">
 
-  <button id="loginBtn" class="primary" style="width:100%">Sign in</button>
+    <h2>Worker Login</h2>
 
-  <div style="margin-top:15px;text-align:center">
-    <button id="forgotBtn" class="secondary" style="width:100%">Forgot / Reset Password</button>
-  </div>
-</section>
+    <p class="subtitle">
+      Welcome to the EZELEX Worker Portal. Sign in to access your profile and record sales.
+    </p>
 
-<section id="resetSection" class="login hidden">
-  <h2>Create Your Password</h2>
-  <p>Your EZELEX welcome email brought you here. Create a secure password for your worker account.</p>
-  <div id="resetMsg"></div>
+    <form id="loginForm">
 
-  <label>New Password</label>
-  <input id="newPassword" type="password" autocomplete="new-password" placeholder="At least 8 characters">
+      <label for="email">Email Address</label>
 
-  <label>Confirm New Password</label>
-  <input id="confirmPassword" type="password" autocomplete="new-password" placeholder="Enter the password again">
+      <input
+        type="email"
+        id="email"
+        placeholder="Enter your email"
+        required
+      >
 
-  <button id="savePasswordBtn" class="primary" style="width:100%">Save Password & Continue</button>
+      <label for="password">Password</label>
 
-  <p class="small" style="margin-top:15px">
-    Your username is your worker email address.
-  </p>
-</section>
+      <input
+        type="password"
+        id="password"
+        placeholder="Enter your password"
+        required
+      >
 
-<main id="portal" class="wrap hidden">
-  <div class="panel">
-    <h2>Welcome, <span id="workerName">Worker</span></h2>
-    <div class="workerInfo">
-      <strong>Worker ID:</strong> <span id="workerId">—</span><br>
-      <strong>Username:</strong> <span id="workerEmail">—</span><br>
-      <strong>Role:</strong> <span id="workerRole">—</span>
-    </div>
-  </div>
+      <button type="submit" class="primary">
+        Login
+      </button>
 
-  <div class="panel">
-    <h2>Record a Sale</h2>
-    <div id="saleMsg"></div>
-    <form id="saleForm" class="grid">
-      <div>
-        <label>Sale Date</label>
-        <input id="saleDate" type="date" required>
-      </div>
-      <div>
-        <label>Customer / Reference</label>
-        <input id="customer" type="text" placeholder="Customer name or reference">
-      </div>
-      <div>
-        <label>Product / Service</label>
-        <input id="product" type="text" placeholder="What was sold?" required>
-      </div>
-      <div>
-        <label>Quantity</label>
-        <input id="quantity" type="number" min="1" step="1" value="1" required>
-      </div>
-      <div>
-        <label>Sale Amount (GHS)</label>
-        <input id="amount" type="number" min="0" step="0.01" placeholder="0.00" required>
-      </div>
-      <div>
-        <label>Payment Method</label>
-        <select id="payment" required>
-          <option value="">Select payment method</option>
-          <option>Cash</option>
-          <option>Mobile Money</option>
-          <option>Bank Transfer</option>
-          <option>Card</option>
-          <option>Other</option>
-        </select>
-      </div>
-      <div class="full">
-        <label>Notes</label>
-        <textarea id="notes" placeholder="Optional notes"></textarea>
-      </div>
-      <div class="full">
-        <button class="primary" type="submit">Record Sale</button>
-      </div>
     </form>
+
+    <div id="loginMessage" class="message"></div>
+
   </div>
 
-  <div class="panel">
-    <h2>My Sales History</h2>
-    <div class="tablebox">
-      <table>
-        <thead>
-          <tr><th>Date</th><th>Customer</th><th>Product/Service</th><th>Qty</th><th>Amount (GHS)</th><th>Payment</th><th>Notes</th></tr>
-        </thead>
-        <tbody id="salesBody"><tr><td colspan="7">No sales recorded yet.</td></tr></tbody>
-      </table>
-    </div>
+</div>
+
+
+<!-- WORKER DASHBOARD -->
+<div id="dashboardSection" class="container hidden">
+
+  <div class="welcome">
+
+    <h2>
+      Hello, <span id="workerName">Worker</span> 👋
+    </h2>
+
+    <p>
+      Welcome to your EZELEX Worker Portal.
+      Record your sales and keep track of your work.
+    </p>
+
   </div>
-</main>
+
+
+  <!-- SALES SUMMARY -->
+
+  <div class="grid">
+
+    <div class="card">
+      <h3>Today's Sales</h3>
+      <div class="amount" id="todaySales">£0.00</div>
+    </div>
+
+    <div class="card">
+      <h3>This Month</h3>
+      <div class="amount" id="monthSales">£0.00</div>
+    </div>
+
+    <div class="card">
+      <h3>All Time</h3>
+      <div class="amount" id="allTimeSales">£0.00</div>
+    </div>
+
+  </div>
+
+
+  <!-- PROFILE -->
+
+  <div class="section">
+
+    <h2>My Worker Profile</h2>
+
+    <div class="profile-grid">
+
+      <div class="profile-item">
+        <strong>Worker ID</strong>
+        <span id="profileWorkerId">Loading...</span>
+      </div>
+
+      <div class="profile-item">
+        <strong>Full Name</strong>
+        <span id="profileName">Loading...</span>
+      </div>
+
+      <div class="profile-item">
+        <strong>Email</strong>
+        <span id="profileEmail">Loading...</span>
+      </div>
+
+      <div class="profile-item">
+        <strong>Phone</strong>
+        <span id="profilePhone">Loading...</span>
+      </div>
+
+    </div>
+
+  </div>
+
+
+  <!-- RECORD SALE -->
+
+  <div class="section">
+
+    <h2>Record a Sale</h2>
+
+    <form id="saleForm">
+
+      <label for="customerReference">
+        Customer Reference
+      </label>
+
+      <input
+        type="text"
+        id="customerReference"
+        placeholder="Customer name or reference"
+      >
+
+
+      <label for="productService">
+        Product / Service
+      </label>
+
+      <input
+        type="text"
+        id="productService"
+        placeholder="What did you sell?"
+        required
+      >
+
+
+      <label for="quantity">
+        Quantity
+      </label>
+
+      <input
+        type="number"
+        id="quantity"
+        min="1"
+        value="1"
+        required
+      >
+
+
+      <label for="saleAmount">
+        Sale Amount
+      </label>
+
+      <input
+        type="number"
+        id="saleAmount"
+        min="0"
+        step="0.01"
+        placeholder="Enter amount"
+        required
+      >
+
+
+      <label for="paymentMethod">
+        Payment Method
+      </label>
+
+      <select id="paymentMethod">
+
+        <option value="Cash">
+          Cash
+        </option>
+
+        <option value="Mobile Money">
+          Mobile Money
+        </option>
+
+        <option value="Bank Transfer">
+          Bank Transfer
+        </option>
+
+        <option value="Other">
+          Other
+        </option>
+
+      </select>
+
+
+      <label for="notes">
+        Notes
+      </label>
+
+      <textarea
+        id="notes"
+        placeholder="Optional notes"
+      ></textarea>
+
+
+      <button type="submit" class="primary">
+        Record Sale
+      </button>
+
+    </form>
+
+    <div id="saleMessage" class="message"></div>
+
+  </div>
+
+
+  <!-- SALES HISTORY -->
+
+  <div class="section">
+
+    <h2>My Sales History</h2>
+
+    <div class="table-wrapper">
+
+      <table>
+
+        <thead>
+
+          <tr>
+            <th>Date</th>
+            <th>Customer</th>
+            <th>Product / Service</th>
+            <th>Quantity</th>
+            <th>Amount</th>
+            <th>Payment</th>
+          </tr>
+
+        </thead>
+
+        <tbody id="salesTableBody">
+
+          <tr>
+            <td colspan="6" class="loading">
+              Loading sales...
+            </td>
+          </tr>
+
+        </tbody>
+
+      </table>
+
+    </div>
+
+  </div>
+
+</div>
+
 
 <script>
-const SUPABASE_URL = "https://hweczhwoggmsrwhkktrx.supabase.co";
-const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_D0o90HRJ1AfROf_DAj7ZAg_uaPDwqvV";
-const db = supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
 
-let profile = null;
-let recoveryMode = false;
+  /*
+  ============================================================
+  EZELEX SUPABASE CONNECTION
+  ============================================================
 
-const $ = id => document.getElementById(id);
+  REPLACE THESE TWO VALUES WITH YOUR EXISTING SUPABASE VALUES.
 
-function msg(id,text,type=""){
-  $(id).innerHTML = text ? `<div class="msg ${type}">${text}</div>` : "";
-}
+  SUPABASE URL:
+  Supabase Dashboard → Settings → API
 
-function today(){
-  const d=new Date();
-  return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
-}
+  ANON KEY:
+  Supabase Dashboard → Settings → API → Publishable/Anon key
+  ============================================================
+  */
 
-function esc(v){
-  return String(v??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[m]));
-}
+  const SUPABASE_URL = "PASTE_YOUR_SUPABASE_URL_HERE";
 
-function showLogin(){
-  $("loginSection").classList.remove("hidden");
-  $("resetSection").classList.add("hidden");
-  $("portal").classList.add("hidden");
-  $("logoutBtn").classList.add("hidden");
-}
+  const SUPABASE_ANON_KEY = "PASTE_YOUR_SUPABASE_ANON_KEY_HERE";
 
-function showReset(){
-  recoveryMode = true;
-  $("loginSection").classList.add("hidden");
-  $("portal").classList.add("hidden");
-  $("resetSection").classList.remove("hidden");
-  $("logoutBtn").classList.add("hidden");
-  msg("resetMsg","Create a new password for your EZELEX worker account.");
-}
 
-async function showPortal(){
-  recoveryMode = false;
-  $("loginSection").classList.add("hidden");
-  $("resetSection").classList.add("hidden");
-  $("portal").classList.remove("hidden");
-  $("logoutBtn").classList.remove("hidden");
-}
+  const supabaseClient =
+    window.supabase.createClient(
+      SUPABASE_URL,
+      SUPABASE_ANON_KEY
+    );
 
-async function loadProfile(userId){
-  const {data,error}=await db.from("worker_profiles")
-    .select("user_id,worker_id,full_name,role,active")
-    .eq("user_id",userId)
-    .maybeSingle();
 
-  if(error || !data || !data.active || data.role==="admin"){
-    await db.auth.signOut();
-    showLogin();
-    msg("loginMsg","This account is not an active worker account.","error");
-    return false;
+  let currentUser = null;
+  let currentWorker = null;
+
+
+  /*
+  ============================================================
+  MESSAGE FUNCTION
+  ============================================================
+  */
+
+  function showMessage(elementId, message, type) {
+
+    const element = document.getElementById(elementId);
+
+    element.textContent = message;
+
+    element.className = "message " + type;
+
+    element.style.display = "block";
+
   }
 
-  const {data:{user}} = await db.auth.getUser();
 
-  profile=data;
-  await showPortal();
+  /*
+  ============================================================
+  LOGIN
+  ============================================================
+  */
 
-  $("workerName").textContent=data.full_name || "Worker";
-  $("workerId").textContent=data.worker_id || "—";
-  $("workerEmail").textContent=user?.email || "—";
-  $("workerRole").textContent=data.role || "worker";
-  $("saleDate").value=today();
+  document
+    .getElementById("loginForm")
+    .addEventListener("submit", async function(event) {
 
-  await loadSales();
-  return true;
-}
+      event.preventDefault();
 
-async function loadSales(){
-  if(!profile) return;
+      const email =
+        document.getElementById("email").value.trim();
 
-  const {data,error}=await db.from("sales")
-    .select("*")
-    .eq("worker_id",profile.user_id)
-    .order("sale_date",{ascending:false});
+      const password =
+        document.getElementById("password").value;
 
-  if(error){
-    msg("saleMsg","Could not load your sales: "+error.message,"error");
-    return;
-  }
 
-  const body=$("salesBody");
+      showMessage(
+        "loginMessage",
+        "Signing you in...",
+        "success"
+      );
 
-  if(!data || !data.length){
-    body.innerHTML='<tr><td colspan="7">No sales recorded yet.</td></tr>';
-    return;
-  }
 
-  body.innerHTML=data.map(s=>`<tr>
-    <td>${esc(String(s.sale_date||"").slice(0,10))}</td>
-    <td>${esc(s.customer_reference||"")}</td>
-    <td>${esc(s.product_service||"")}</td>
-    <td>${esc(s.quantity??"")}</td>
-    <td>${Number(s.sale_amount||0).toFixed(2)}</td>
-    <td>${esc(s.payment_method||"")}</td>
-    <td>${esc(s.notes||"")}</td>
-  </tr>`).join("");
-}
+      const { data, error } =
+        await supabaseClient.auth.signInWithPassword({
+          email: email,
+          password: password
+        });
 
-async function start(){
-  const url = new URL(window.location.href);
-  const hasRecoveryType = url.hash.includes("type=recovery");
-  const hasRecoveryQuery = url.searchParams.get("type") === "recovery";
 
-  const {data:{session}}=await db.auth.getSession();
+      if (error) {
 
-  if(hasRecoveryType || hasRecoveryQuery){
-    if(session){
-      showReset();
-    }else{
-      showReset();
-      msg("resetMsg","Opening your secure password setup session...");
+        showMessage(
+          "loginMessage",
+          error.message,
+          "error"
+        );
+
+        return;
+      }
+
+
+      currentUser = data.user;
+
+      await loadWorkerPortal();
+
+    });
+
+
+  /*
+  ============================================================
+  LOAD WORKER PORTAL
+  ============================================================
+  */
+
+  async function loadWorkerPortal() {
+
+    if (!currentUser) {
+      return;
     }
-    return;
+
+
+    /*
+    We look for the worker using the authentication user's ID.
+    */
+
+    const { data: worker, error } =
+      await supabaseClient
+        .from("workers")
+        .select("*")
+        .eq("id", currentUser.id)
+        .maybeSingle();
+
+
+    if (error) {
+
+      console.error(error);
+
+      showMessage(
+        "loginMessage",
+        "Worker profile could not be loaded. Please check the workers table.",
+        "error"
+      );
+
+      return;
+    }
+
+
+    /*
+    If your workers table uses a different ID structure,
+    we can adjust this after testing.
+    */
+
+    if (!worker) {
+
+      showMessage(
+        "loginMessage",
+        "Your login works, but no worker profile is connected to this account yet.",
+        "error"
+      );
+
+      await supabaseClient.auth.signOut();
+
+      return;
+    }
+
+
+    currentWorker = worker;
+
+
+    document
+      .getElementById("loginSection")
+      .classList.add("hidden");
+
+
+    document
+      .getElementById("dashboardSection")
+      .classList.remove("hidden");
+
+
+    document
+      .getElementById("logoutBtn")
+      .classList.remove("hidden");
+
+
+    displayWorkerProfile();
+
+    await loadSales();
+
   }
 
-  if(!session){
-    showLogin();
-    return;
+
+  /*
+  ============================================================
+  DISPLAY PROFILE
+  ============================================================
+  */
+
+  function displayWorkerProfile() {
+
+    const worker =
+      currentWorker;
+
+
+    const name =
+      worker.full_name ||
+      worker.name ||
+      worker.worker_name ||
+      "Worker";
+
+
+    document
+      .getElementById("workerName")
+      .textContent = name;
+
+
+    document
+      .getElementById("profileWorkerId")
+      .textContent =
+        worker.worker_id ||
+        worker.id ||
+        "Not assigned";
+
+
+    document
+      .getElementById("profileName")
+      .textContent =
+        name;
+
+
+    document
+      .getElementById("profileEmail")
+      .textContent =
+        worker.email ||
+        currentUser.email ||
+        "Not available";
+
+
+    document
+      .getElementById("profilePhone")
+      .textContent =
+        worker.phone ||
+        worker.phone_number ||
+        "Not available";
+
   }
 
-  await loadProfile(session.user.id);
-}
 
-db.auth.onAuthStateChange(async (event, session)=>{
-  if(event === "PASSWORD_RECOVERY"){
-    showReset();
-    return;
+  /*
+  ============================================================
+  RECORD SALE
+  ============================================================
+  */
+
+  document
+    .getElementById("saleForm")
+    .addEventListener("submit", async function(event) {
+
+      event.preventDefault();
+
+
+      if (!currentUser || !currentWorker) {
+
+        showMessage(
+          "saleMessage",
+          "Please log in again.",
+          "error"
+        );
+
+        return;
+      }
+
+
+      const customerReference =
+        document
+          .getElementById("customerReference")
+          .value
+          .trim();
+
+
+      const productService =
+        document
+          .getElementById("productService")
+          .value
+          .trim();
+
+
+      const quantity =
+        Number(
+          document
+            .getElementById("quantity")
+            .value
+        );
+
+
+      const saleAmount =
+        Number(
+          document
+            .getElementById("saleAmount")
+            .value
+        );
+
+
+      const paymentMethod =
+        document
+          .getElementById("paymentMethod")
+          .value;
+
+
+      const notes =
+        document
+          .getElementById("notes")
+          .value
+          .trim();
+
+
+      if (!productService || saleAmount <= 0) {
+
+        showMessage(
+          "saleMessage",
+          "Please enter the product/service and a valid sale amount.",
+          "error"
+        );
+
+        return;
+      }
+
+
+      const saleData = {
+
+        worker_id:
+          currentWorker.id,
+
+        sale_date:
+          new Date().toISOString(),
+
+        customer_reference:
+          customerReference,
+
+        product_service:
+          productService,
+
+        quantity:
+          quantity,
+
+        sale_amount:
+          saleAmount,
+
+        payment_method:
+          paymentMethod,
+
+        notes:
+          notes
+
+      };
+
+
+      const { error } =
+        await supabaseClient
+          .from("sales")
+          .insert([saleData]);
+
+
+      if (error) {
+
+        console.error(error);
+
+        showMessage(
+          "saleMessage",
+          "Sale could not be recorded: " + error.message,
+          "error"
+        );
+
+        return;
+      }
+
+
+      showMessage(
+        "saleMessage",
+        "Sale recorded successfully ✅",
+        "success"
+      );
+
+
+      document
+        .getElementById("saleForm")
+        .reset();
+
+
+      document
+        .getElementById("quantity")
+        .value = 1;
+
+
+      await loadSales();
+
+    });
+
+
+  /*
+  ============================================================
+  LOAD SALES
+  ============================================================
+  */
+
+  async function loadSales() {
+
+    if (!currentWorker) {
+      return;
+    }
+
+
+    const { data: sales, error } =
+      await supabaseClient
+        .from("sales")
+        .select("*")
+        .eq("worker_id", currentWorker.id)
+        .order("sale_date", {
+          ascending: false
+        });
+
+
+    if (error) {
+
+      console.error(error);
+
+      document
+        .getElementById("salesTableBody")
+        .innerHTML = `
+          <tr>
+            <td colspan="6">
+              Unable to load sales.
+            </td>
+          </tr>
+        `;
+
+      return;
+    }
+
+
+    let todayTotal = 0;
+    let monthTotal = 0;
+    let allTimeTotal = 0;
+
+
+    const now =
+      new Date();
+
+
+    const today =
+      now.toISOString().split("T")[0];
+
+
+    const currentMonth =
+      now.getFullYear() +
+      "-" +
+      String(now.getMonth() + 1).padStart(2, "0");
+
+
+    const tableBody =
+      document
+        .getElementById("salesTableBody");
+
+
+    tableBody.innerHTML = "";
+
+
+    if (!sales || sales.length === 0) {
+
+      tableBody.innerHTML = `
+        <tr>
+          <td colspan="6" style="text-align:center;">
+            No sales recorded yet.
+          </td>
+        </tr>
+      `;
+
+    }
+
+
+    (sales || []).forEach(function(sale) {
+
+      const amount =
+        Number(sale.sale_amount || 0);
+
+
+      allTimeTotal += amount;
+
+
+      const saleDate =
+        new Date(sale.sale_date);
+
+
+      const saleDateString =
+        saleDate.toISOString().split("T")[0];
+
+
+      const saleMonth =
+        saleDate.getFullYear() +
+        "-" +
+        String(
+          saleDate.getMonth() + 1
+        ).padStart(2, "0");
+
+
+      if (saleDateString === today) {
+
+        todayTotal += amount;
+
+      }
+
+
+      if (saleMonth === currentMonth) {
+
+        monthTotal += amount;
+
+      }
+
+
+      const row =
+        document.createElement("tr");
+
+
+      row.innerHTML = `
+
+        <td>
+          ${saleDate.toLocaleDateString()}
+        </td>
+
+        <td>
+          ${escapeHTML(
+            sale.customer_reference || "-"
+          )}
+        </td>
+
+        <td>
+          ${escapeHTML(
+            sale.product_service || "-"
+          )}
+        </td>
+
+        <td>
+          ${sale.quantity || 0}
+        </td>
+
+        <td>
+          £${amount.toFixed(2)}
+        </td>
+
+        <td>
+          ${escapeHTML(
+            sale.payment_method || "-"
+          )}
+        </td>
+
+      `;
+
+
+      tableBody.appendChild(row);
+
+    });
+
+
+    document
+      .getElementById("todaySales")
+      .textContent =
+        "£" + todayTotal.toFixed(2);
+
+
+    document
+      .getElementById("monthSales")
+      .textContent =
+        "£" + monthTotal.toFixed(2);
+
+
+    document
+      .getElementById("allTimeSales")
+      .textContent =
+        "£" + allTimeTotal.toFixed(2);
+
   }
 
-  if(event === "SIGNED_OUT"){
-    profile=null;
-    recoveryMode=false;
-    showLogin();
-    return;
+
+  /*
+  ============================================================
+  SECURITY HELPER
+  ============================================================
+  */
+
+  function escapeHTML(value) {
+
+    return String(value)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#039;");
+
   }
 
-  if(event === "SIGNED_IN" && session && !recoveryMode){
-    await loadProfile(session.user.id);
-  }
-});
 
-$("loginBtn").onclick=async()=>{
-  msg("loginMsg","Signing in...");
-  const email=$("email").value.trim().toLowerCase();
-  const password=$("password").value;
+  /*
+  ============================================================
+  LOGOUT
+  ============================================================
+  */
 
-  if(!email || !password){
-    msg("loginMsg","Enter your email address and password.","error");
-    return;
-  }
+  async function logout() {
 
-  const {data,error}=await db.auth.signInWithPassword({email,password});
+    await supabaseClient.auth.signOut();
 
-  if(error){
-    msg("loginMsg",error.message,"error");
-    return;
-  }
+    currentUser = null;
 
-  await loadProfile(data.user.id);
-};
+    currentWorker = null;
 
-$("forgotBtn").onclick=async()=>{
-  const email=$("email").value.trim().toLowerCase();
 
-  if(!email){
-    msg("loginMsg","Enter your worker email address first, then click Forgot / Reset Password.","error");
-    return;
-  }
+    document
+      .getElementById("dashboardSection")
+      .classList.add("hidden");
 
-  msg("loginMsg","Sending password reset email...");
 
-  const {error}=await db.auth.resetPasswordForEmail(email,{
-    redirectTo:window.location.origin + window.location.pathname
-  });
+    document
+      .getElementById("logoutBtn")
+      .classList.add("hidden");
 
-  if(error){
-    msg("loginMsg",error.message,"error");
-    return;
+
+    document
+      .getElementById("loginSection")
+      .classList.remove("hidden");
+
+
+    document
+      .getElementById("loginForm")
+      .reset();
+
   }
 
-  msg("loginMsg","Password reset email sent. Check your inbox.","success");
-};
 
-$("savePasswordBtn").onclick=async()=>{
-  const password=$("newPassword").value;
-  const confirm=$("confirmPassword").value;
+  /*
+  ============================================================
+  CHECK EXISTING LOGIN
+  ============================================================
+  */
 
-  if(password.length < 8){
-    msg("resetMsg","Your password must be at least 8 characters.","error");
-    return;
+  async function checkExistingSession() {
+
+    const {
+      data: {
+        session
+      }
+    } =
+      await supabaseClient
+        .auth
+        .getSession();
+
+
+    if (session) {
+
+      currentUser =
+        session.user;
+
+      await loadWorkerPortal();
+
+    }
+
   }
 
-  if(password !== confirm){
-    msg("resetMsg","The two passwords do not match.","error");
-    return;
-  }
 
-  msg("resetMsg","Saving your new password...");
+  checkExistingSession();
 
-  const {data:{session}}=await db.auth.getSession();
-
-  if(!session){
-    msg("resetMsg","This password setup link has expired. Please request a new password reset email.","error");
-    return;
-  }
-
-  const {error}=await db.auth.updateUser({password});
-
-  if(error){
-    msg("resetMsg","Could not save password: "+error.message,"error");
-    return;
-  }
-
-  msg("resetMsg","Password created successfully. Opening your worker account...","success");
-
-  $("newPassword").value="";
-  $("confirmPassword").value="";
-
-  await loadProfile(session.user.id);
-
-  history.replaceState({},document.title,window.location.pathname);
-};
-
-$("logoutBtn").onclick=async()=>{
-  await db.auth.signOut();
-  profile=null;
-  showLogin();
-};
-
-$("saleForm").onsubmit=async(e)=>{
-  e.preventDefault();
-
-  if(!profile){
-    msg("saleMsg","Your session has expired. Please sign in again.","error");
-    return;
-  }
-
-  msg("saleMsg","Saving sale...");
-
-  const sale={
-    worker_id:profile.user_id,
-    sale_date:$("saleDate").value,
-    customer_reference:$("customer").value.trim() || null,
-    product_service:$("product").value.trim(),
-    quantity:Number($("quantity").value),
-    sale_amount:Number($("amount").value),
-    payment_method:$("payment").value,
-    notes:$("notes").value.trim() || null
-  };
-
-  if(!sale.sale_date || !sale.product_service || sale.quantity<1 || sale.sale_amount<0 || !sale.payment_method){
-    msg("saleMsg","Please complete the required fields.","error");
-    return;
-  }
-
-  const {error}=await db.from("sales").insert(sale);
-
-  if(error){
-    msg("saleMsg","Sale could not be saved: "+error.message,"error");
-    return;
-  }
-
-  msg("saleMsg","Sale recorded successfully.","success");
-  $("saleForm").reset();
-  $("saleDate").value=today();
-  $("quantity").value=1;
-  await loadSales();
-};
-
-start();
 </script>
+
 </body>
 </html>
