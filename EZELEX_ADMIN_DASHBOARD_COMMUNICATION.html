@@ -3,185 +3,2308 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>EZELEX Administrator Dashboard</title>
+<title>EZELEX Enterprise | Administrator Command Center</title>
+
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
 <style>
-*{box-sizing:border-box}body{margin:0;font-family:Arial,sans-serif;background:#f4f7fb;color:#172033}
-header{background:#111827;color:#fff;padding:18px 24px;display:flex;justify-content:space-between;align-items:center}
-header h1{margin:0;font-size:22px}.container{max-width:1200px;margin:25px auto;padding:0 18px}
-.card{background:#fff;border-radius:14px;padding:20px;box-shadow:0 4px 18px rgba(0,0,0,.07);margin-bottom:20px}
-.login{max-width:430px;margin:70px auto}button{border:0;border-radius:8px;padding:11px 16px;font-weight:700;cursor:pointer}
-.primary{background:#111827;color:#fff}.danger{background:#b91c1c;color:#fff}.secondary{background:#e5e7eb;color:#111827}
-input{width:100%;padding:12px;border:1px solid #d1d5db;border-radius:8px;margin:6px 0 14px;font-size:15px}
-label{font-weight:700;font-size:14px}.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:15px}
-.stat{padding:18px;border-radius:12px;background:#f8fafc;border:1px solid #e5e7eb}.stat small{color:#64748b}.stat strong{display:block;font-size:25px;margin-top:7px}
-table{width:100%;border-collapse:collapse;font-size:14px}th,td{padding:12px;border-bottom:1px solid #e5e7eb;text-align:left}th{background:#f8fafc}
-.msg{padding:11px;border-radius:8px;margin:10px 0;display:none}.ok{background:#dcfce7;color:#166534}.err{background:#fee2e2;color:#991b1b}
-.hidden{display:none!important}.section-title{display:flex;justify-content:space-between;align-items:center;gap:10px}.actions{display:flex;gap:8px;flex-wrap:wrap}
-.spinner{display:inline-block;width:14px;height:14px;border:2px solid #fff;border-top-color:transparent;border-radius:50%;animation:spin .7s linear infinite;margin-right:7px;vertical-align:-2px}
-@keyframes spin{to{transform:rotate(360deg)}}@media(max-width:800px){.grid{grid-template-columns:repeat(2,1fr)}table{display:block;overflow-x:auto;white-space:nowrap}}
-@media(max-width:500px){.grid{grid-template-columns:1fr}header{padding:15px}.container{padding:0 12px}}
+*{box-sizing:border-box}
+
+:root{
+  --navy:#07111f;
+  --navy2:#0d1b2e;
+  --blue:#2563eb;
+  --blue2:#38bdf8;
+  --gold:#f5b942;
+  --green:#10b981;
+  --red:#ef4444;
+  --purple:#8b5cf6;
+  --bg:#eef3f9;
+  --card:#ffffff;
+  --text:#172033;
+  --muted:#64748b;
+  --border:#e2e8f0;
+}
+
+body{
+  margin:0;
+  font-family:Inter,Arial,sans-serif;
+  background:
+    radial-gradient(circle at top right,rgba(56,189,248,.10),transparent 30%),
+    linear-gradient(135deg,#eef3f9,#f8fafc);
+  color:var(--text);
+}
+
+.hidden{display:none!important}
+
+button,input,select,textarea{
+  font-family:inherit;
+}
+
+button{
+  border:0;
+  border-radius:11px;
+  padding:11px 16px;
+  font-weight:800;
+  cursor:pointer;
+  transition:.2s ease;
+}
+
+button:hover{
+  transform:translateY(-1px);
+}
+
+button:disabled{
+  opacity:.6;
+  cursor:not-allowed;
+  transform:none;
+}
+
+.primary{
+  background:linear-gradient(135deg,var(--blue),#1d4ed8);
+  color:#fff;
+  box-shadow:0 8px 20px rgba(37,99,235,.20);
+}
+
+.secondary{
+  background:#e8eef7;
+  color:#172033;
+}
+
+.danger{
+  background:linear-gradient(135deg,#ef4444,#b91c1c);
+  color:#fff;
+}
+
+.gold{
+  background:linear-gradient(135deg,#f5b942,#d99b20);
+  color:#101828;
+}
+
+.green{
+  background:linear-gradient(135deg,#10b981,#059669);
+  color:#fff;
+}
+
+input,select,textarea{
+  width:100%;
+  padding:13px 14px;
+  border:1px solid var(--border);
+  border-radius:11px;
+  margin:7px 0 15px;
+  font-size:15px;
+  outline:none;
+  background:#fff;
+}
+
+input:focus,select:focus,textarea:focus{
+  border-color:var(--blue);
+  box-shadow:0 0 0 4px rgba(37,99,235,.08);
+}
+
+label{
+  font-weight:800;
+  font-size:13px;
+  color:#334155;
+}
+
+.login-page{
+  min-height:100vh;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:25px;
+  background:
+    radial-gradient(circle at 20% 20%,rgba(56,189,248,.20),transparent 30%),
+    radial-gradient(circle at 80% 80%,rgba(245,185,66,.16),transparent 30%),
+    var(--navy);
+}
+
+.login-card{
+  width:100%;
+  max-width:450px;
+  background:rgba(255,255,255,.98);
+  border-radius:25px;
+  padding:35px;
+  box-shadow:0 30px 80px rgba(0,0,0,.35);
+}
+
+.brand{
+  display:flex;
+  align-items:center;
+  gap:13px;
+  margin-bottom:25px;
+}
+
+.brand-logo{
+  width:55px;
+  height:55px;
+  border-radius:17px;
+  background:linear-gradient(135deg,var(--gold),#fff0a8);
+  color:#111827;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-weight:1000;
+  font-size:20px;
+  box-shadow:0 10px 25px rgba(245,185,66,.25);
+}
+
+.brand h1{
+  margin:0;
+  font-size:23px;
+}
+
+.brand span{
+  color:var(--muted);
+  font-size:13px;
+}
+
+.login-card h2{
+  margin:0 0 7px;
+  font-size:28px;
+}
+
+.login-card p{
+  color:var(--muted);
+}
+
+.msg{
+  padding:12px 14px;
+  border-radius:11px;
+  margin:12px 0;
+  display:none;
+  font-weight:700;
+}
+
+.ok{
+  background:#dcfce7;
+  color:#166534;
+}
+
+.err{
+  background:#fee2e2;
+  color:#991b1b;
+}
+
+.app-shell{
+  min-height:100vh;
+}
+
+.topbar{
+  background:
+    linear-gradient(135deg,var(--navy),var(--navy2));
+  color:#fff;
+  padding:16px 25px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:15px;
+  position:sticky;
+  top:0;
+  z-index:20;
+  box-shadow:0 10px 30px rgba(7,17,31,.20);
+}
+
+.top-brand{
+  display:flex;
+  align-items:center;
+  gap:12px;
+}
+
+.top-logo{
+  width:46px;
+  height:46px;
+  border-radius:14px;
+  background:linear-gradient(135deg,var(--gold),#fff0a8);
+  color:#111827;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-weight:1000;
+}
+
+.top-brand h1{
+  margin:0;
+  font-size:18px;
+}
+
+.top-brand small{
+  color:#a9bbd1;
+}
+
+.top-actions{
+  display:flex;
+  align-items:center;
+  gap:10px;
+}
+
+.admin-mini{
+  text-align:right;
+}
+
+.admin-mini strong{
+  display:block;
+}
+
+.admin-mini span{
+  font-size:12px;
+  color:#a9bbd1;
+}
+
+.container{
+  max-width:1400px;
+  margin:auto;
+  padding:25px;
+}
+
+.hero{
+  border-radius:25px;
+  padding:30px;
+  color:#fff;
+  background:
+    radial-gradient(circle at 90% 10%,rgba(56,189,248,.25),transparent 30%),
+    radial-gradient(circle at 10% 90%,rgba(245,185,66,.15),transparent 30%),
+    linear-gradient(135deg,#0a1728,#132a46);
+  box-shadow:0 18px 45px rgba(7,17,31,.20);
+  margin-bottom:22px;
+}
+
+.hero-row{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:20px;
+}
+
+.hero h2{
+  margin:0 0 7px;
+  font-size:30px;
+}
+
+.hero p{
+  margin:0;
+  color:#b9c8da;
+}
+
+.status-pill{
+  display:inline-flex;
+  align-items:center;
+  gap:7px;
+  padding:8px 13px;
+  border-radius:30px;
+  background:rgba(16,185,129,.14);
+  color:#6ee7b7;
+  font-size:13px;
+  font-weight:800;
+}
+
+.status-dot{
+  width:8px;
+  height:8px;
+  background:#34d399;
+  border-radius:50%;
+  box-shadow:0 0 12px #34d399;
+}
+
+.profile-card{
+  margin-top:22px;
+  display:grid;
+  grid-template-columns:auto 1fr auto;
+  gap:20px;
+  align-items:center;
+  padding:20px;
+  border-radius:20px;
+  background:rgba(255,255,255,.07);
+  border:1px solid rgba(255,255,255,.10);
+}
+
+.profile-avatar{
+  width:82px;
+  height:82px;
+  border-radius:50%;
+  background:linear-gradient(135deg,var(--gold),#fff1a8);
+  color:#172033;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-size:29px;
+  font-weight:1000;
+  box-shadow:0 12px 30px rgba(245,185,66,.25);
+}
+
+.profile-info h3{
+  margin:0 0 5px;
+  font-size:22px;
+}
+
+.profile-info p{
+  margin:3px 0;
+  color:#b9c8da;
+}
+
+.profile-meta{
+  display:flex;
+  gap:8px;
+  flex-wrap:wrap;
+  margin-top:10px;
+}
+
+.meta-chip{
+  padding:6px 10px;
+  border-radius:9px;
+  background:rgba(255,255,255,.08);
+  color:#dbeafe;
+  font-size:12px;
+  font-weight:800;
+}
+
+.profile-badge{
+  text-align:center;
+}
+
+.profile-badge strong{
+  display:block;
+  color:var(--gold);
+  font-size:26px;
+}
+
+.profile-badge span{
+  color:#a9bbd1;
+  font-size:12px;
+}
+
+.grid{
+  display:grid;
+  grid-template-columns:repeat(4,1fr);
+  gap:16px;
+}
+
+.stat{
+  background:#fff;
+  border-radius:18px;
+  padding:20px;
+  box-shadow:0 8px 25px rgba(15,23,42,.07);
+  border:1px solid rgba(226,232,240,.8);
+  position:relative;
+  overflow:hidden;
+}
+
+.stat:after{
+  content:"";
+  position:absolute;
+  width:70px;
+  height:70px;
+  border-radius:50%;
+  right:-25px;
+  top:-25px;
+  background:rgba(37,99,235,.08);
+}
+
+.stat-icon{
+  font-size:22px;
+  margin-bottom:10px;
+}
+
+.stat small{
+  color:var(--muted);
+  font-weight:700;
+}
+
+.stat strong{
+  display:block;
+  font-size:26px;
+  margin-top:7px;
+}
+
+.stat span{
+  display:block;
+  color:#94a3b8;
+  font-size:12px;
+  margin-top:5px;
+}
+
+.card{
+  background:#fff;
+  border-radius:20px;
+  padding:22px;
+  box-shadow:0 8px 25px rgba(15,23,42,.07);
+  border:1px solid rgba(226,232,240,.8);
+  margin-top:20px;
+}
+
+.section-title{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:12px;
+  margin-bottom:15px;
+}
+
+.section-title h2{
+  margin:0;
+  font-size:20px;
+}
+
+.section-title p{
+  margin:4px 0 0;
+  color:var(--muted);
+  font-size:13px;
+}
+
+.section-icon{
+  width:42px;
+  height:42px;
+  border-radius:12px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  background:#eff6ff;
+  font-size:20px;
+}
+
+.title-left{
+  display:flex;
+  align-items:center;
+  gap:12px;
+}
+
+.actions{
+  display:flex;
+  gap:7px;
+  flex-wrap:wrap;
+}
+
+table{
+  width:100%;
+  border-collapse:collapse;
+  font-size:14px;
+}
+
+th,td{
+  padding:13px;
+  border-bottom:1px solid #edf2f7;
+  text-align:left;
+}
+
+th{
+  background:#f8fafc;
+  color:#475569;
+  font-size:12px;
+  text-transform:uppercase;
+  letter-spacing:.4px;
+}
+
+tr:hover td{
+  background:#fbfdff;
+}
+
+.badge{
+  display:inline-block;
+  padding:5px 9px;
+  border-radius:20px;
+  font-size:11px;
+  font-weight:800;
+}
+
+.badge-active{
+  background:#dcfce7;
+  color:#166534;
+}
+
+.badge-inactive{
+  background:#fee2e2;
+  color:#991b1b;
+}
+
+.badge-admin{
+  background:#fef3c7;
+  color:#92400e;
+}
+
+.form-grid{
+  display:grid;
+  grid-template-columns:repeat(2,1fr);
+  gap:0 18px;
+}
+
+.form-full{
+  grid-column:1/-1;
+}
+
+.empty{
+  text-align:center;
+  padding:35px;
+  color:#94a3b8;
+}
+
+.security-box{
+  background:linear-gradient(135deg,#f8fafc,#eef6ff);
+  border:1px solid #dbeafe;
+  border-radius:16px;
+  padding:18px;
+}
+
+.security-box h3{
+  margin-top:0;
+}
+
+.note{
+  font-size:12px;
+  color:var(--muted);
+  margin-top:-8px;
+  margin-bottom:14px;
+}
+
+.spinner{
+  display:inline-block;
+  width:14px;
+  height:14px;
+  border:2px solid currentColor;
+  border-top-color:transparent;
+  border-radius:50%;
+  animation:spin .7s linear infinite;
+  margin-right:7px;
+  vertical-align:-2px;
+}
+
+@keyframes spin{
+  to{transform:rotate(360deg)}
+}
+
+@media(max-width:1000px){
+  .grid{grid-template-columns:repeat(2,1fr)}
+  .profile-card{grid-template-columns:auto 1fr}
+  .profile-badge{grid-column:2;text-align:left}
+}
+
+@media(max-width:700px){
+  .topbar{padding:13px 15px}
+  .admin-mini{display:none}
+  .container{padding:14px}
+  .hero{padding:22px}
+  .hero-row{align-items:flex-start;flex-direction:column}
+  .profile-card{grid-template-columns:1fr}
+  .profile-badge{grid-column:auto}
+  .grid{grid-template-columns:1fr}
+  .form-grid{grid-template-columns:1fr}
+  .form-full{grid-column:auto}
+  .card{padding:16px}
+  table{display:block;overflow-x:auto;white-space:nowrap}
+}
 </style>
 </head>
-<body>
-<div id="loginView"><div class="card login">
-<h1>EZELEX Admin Login</h1><p>Administrator access</p><div id="loginMsg" class="msg"></div>
-<label>Email</label><input id="email" type="email" value="mrr.alex01@gmail.com">
-<label>Password</label><input id="password" type="password">
-<button id="loginBtn" class="primary" style="width:100%">Sign in</button>
-</div></div>
 
-<div id="appView" class="hidden">
-<header><h1>EZELEX Administrator Dashboard</h1><button id="logoutBtn" class="secondary">Log out</button></header>
-<div class="container">
-<div id="appMsg" class="msg"></div>
-<div class="grid">
-<div class="stat"><small>Today Sale</small><strong id="todaySale">£0.00</strong></div>
-<div class="stat"><small>This Week Sale</small><strong id="weekSale">£0.00</strong></div>
-<div class="stat"><small>This Month Sale</small><strong id="monthSale">£0.00</strong></div>
-<div class="stat"><small>All Time</small><strong id="allSale">£0.00</strong></div>
+<body>
+
+<!-- LOGIN -->
+<div id="loginView" class="login-page">
+  <div class="login-card">
+
+    <div class="brand">
+      <div class="brand-logo">EZ</div>
+      <div>
+        <h1>EZELEX ENTERPRISE</h1>
+        <span>Administrator Command Center</span>
+      </div>
+    </div>
+
+    <h2>Welcome back, Admin</h2>
+    <p>Secure administrator access to your EZELEX enterprise.</p>
+
+    <div id="loginMsg" class="msg"></div>
+
+    <label>Email</label>
+    <input id="email" type="email" value="mrr.alex01@gmail.com">
+
+    <label>Password</label>
+    <input id="password" type="password" placeholder="Enter your password">
+
+    <button id="loginBtn" class="primary" style="width:100%">
+      Sign in to EZELEX
+    </button>
+
+  </div>
 </div>
 
-<div class="card"><div class="section-title"><h2>Workers</h2><button id="refreshWorkers" class="secondary">Refresh</button></div>
-<div id="workerMsg" class="msg"></div><div style="overflow-x:auto"><table>
-<thead><tr><th>Worker ID</th><th>Name</th><th>Phone</th><th>Role</th><th>Active</th><th>Contract End</th><th>Actions</th></tr></thead>
-<tbody id="workersBody"></tbody></table></div></div>
 
-<div class="card"><h2>Add New Worker</h2><div id="addMsg" class="msg"></div>
-<form id="addWorkerForm">
-<label>Worker ID</label><input id="worker_id" required placeholder="EZE-11">
-<label>Full Name</label><input id="full_name" required>
-<label>Phone</label><input id="phone">
-<label>Email</label><input id="worker_email" type="email" required>
-<label>Contract Start</label><input id="contract_start" type="date">
-<label>Contract End</label><input id="contract_end" type="date">
-<button id="createBtn" class="primary" type="submit">Create Worker & Send Welcome Email</button>
-</form></div>
+<!-- APPLICATION -->
+<div id="appView" class="app-shell hidden">
+
+<header class="topbar">
+
+  <div class="top-brand">
+    <div class="top-logo">EZ</div>
+    <div>
+      <h1>EZELEX ENTERPRISE</h1>
+      <small>Administrator Command Center</small>
+    </div>
+  </div>
+
+  <div class="top-actions">
+    <div class="admin-mini">
+      <strong id="topAdminName">Administrator</strong>
+      <span>ADMIN001</span>
+    </div>
+    <button id="logoutBtn" class="secondary">Log out</button>
+  </div>
+
+</header>
+
+
+<div class="container">
+
+<div id="appMsg" class="msg"></div>
+
+
+<!-- ADMIN HERO / PROFILE -->
+
+<section class="hero">
+
+  <div class="hero-row">
+
+    <div>
+      <div class="status-pill">
+        <span class="status-dot"></span>
+        ADMINISTRATOR ACCOUNT ACTIVE
+      </div>
+
+      <h2 id="heroGreeting">Welcome to your EZELEX Command Center</h2>
+
+      <p>
+        Manage your workforce, monitor sales and communicate with your EZELEX team from one place.
+      </p>
+    </div>
+
+    <button id="refreshAll" class="gold">↻ Refresh Dashboard</button>
+
+  </div>
+
+
+  <div class="profile-card">
+
+    <div class="profile-avatar" id="adminAvatar">A</div>
+
+    <div class="profile-info">
+
+      <h3 id="adminName">EZELEX Administrator</h3>
+
+      <p id="adminEmail">Administrator account</p>
+
+      <div class="profile-meta">
+        <span class="meta-chip">👑 ADMIN001</span>
+        <span class="meta-chip">🛡️ Administrator</span>
+        <span class="meta-chip">✓ Active</span>
+        <span class="meta-chip">EZELEX ENTERPRISE</span>
+      </div>
+
+    </div>
+
+    <div class="profile-badge">
+      <strong id="activeWorkerHero">0</strong>
+      <span>Active Workers</span>
+    </div>
+
+  </div>
+
+</section>
+
+
+<!-- SALES STATS -->
+
+<div class="grid">
+
+  <div class="stat">
+    <div class="stat-icon">💷</div>
+    <small>Today Sale</small>
+    <strong id="todaySale">£0.00</strong>
+    <span>Today's recorded sales</span>
+  </div>
+
+  <div class="stat">
+    <div class="stat-icon">📅</div>
+    <small>This Week Sale</small>
+    <strong id="weekSale">£0.00</strong>
+    <span>Current week</span>
+  </div>
+
+  <div class="stat">
+    <div class="stat-icon">📈</div>
+    <small>This Month Sale</small>
+    <strong id="monthSale">£0.00</strong>
+    <span>Current month</span>
+  </div>
+
+  <div class="stat">
+    <div class="stat-icon">🏆</div>
+    <small>All Time</small>
+    <strong id="allSale">£0.00</strong>
+    <span>Total recorded sales</span>
+  </div>
+
+</div>
+
+
+<!-- WORKERS -->
 
 <div class="card">
-<div class="section-title"><h2>Communication Center</h2><span style="color:#64748b;font-size:14px">Send updates to your workers</span></div>
-<div id="commMsg" class="msg"></div>
-<form id="communicationForm">
-<label>Send To</label>
-<select id="commRecipient" style="width:100%;padding:12px;border:1px solid #d1d5db;border-radius:8px;margin:6px 0 14px;font-size:15px">
-<option value="ALL">All Active Workers</option>
-</select>
-<label>Subject</label><input id="commSubject" required placeholder="EZELEX Update">
-<label>Message</label><textarea id="commBody" required placeholder="Write your message to the worker(s)..." style="width:100%;min-height:150px;padding:12px;border:1px solid #d1d5db;border-radius:8px;margin:6px 0 14px;font-size:15px;font-family:Arial,sans-serif;resize:vertical"></textarea>
-<button id="sendCommBtn" class="primary" type="submit">Send Message</button>
-</form></div>
 
-<div class="card"><div class="section-title"><h2>Sales</h2><button id="refreshSales" class="secondary">Refresh</button></div>
-<div style="overflow-x:auto"><table><thead><tr><th>Date</th><th>Worker</th><th>Customer Ref</th><th>Product/Service</th><th>Qty</th><th>Amount</th><th>Payment</th></tr></thead>
-<tbody id="salesBody"></tbody></table></div></div>
-</div></div>
+  <div class="section-title">
+
+    <div class="title-left">
+      <div class="section-icon">👥</div>
+      <div>
+        <h2>Worker Management</h2>
+        <p>Create, manage and monitor your EZELEX workforce.</p>
+      </div>
+    </div>
+
+    <button id="refreshWorkers" class="secondary">↻ Refresh</button>
+
+  </div>
+
+  <div id="workerMsg" class="msg"></div>
+
+  <div style="overflow-x:auto">
+
+    <table>
+
+      <thead>
+        <tr>
+          <th>Worker ID</th>
+          <th>Name</th>
+          <th>Phone</th>
+          <th>Role</th>
+          <th>Status</th>
+          <th>Contract End</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+
+      <tbody id="workersBody"></tbody>
+
+    </table>
+
+  </div>
+
+</div>
+
+
+<!-- ADD WORKER -->
+
+<div class="card">
+
+  <div class="section-title">
+
+    <div class="title-left">
+      <div class="section-icon">➕</div>
+      <div>
+        <h2>Create New Worker</h2>
+        <p>The worker will receive a secure welcome email to create their password.</p>
+      </div>
+    </div>
+
+  </div>
+
+  <div id="addMsg" class="msg"></div>
+
+  <form id="addWorkerForm">
+
+    <div class="form-grid">
+
+      <div>
+        <label>Worker ID</label>
+        <input id="worker_id" required placeholder="EZE-11">
+      </div>
+
+      <div>
+        <label>Full Name</label>
+        <input id="full_name" required placeholder="Worker full name">
+      </div>
+
+      <div>
+        <label>Phone</label>
+        <input id="phone" placeholder="+44...">
+      </div>
+
+      <div>
+        <label>Email</label>
+        <input id="worker_email" type="email" required placeholder="worker@email.com">
+      </div>
+
+      <div>
+        <label>Contract Start</label>
+        <input id="contract_start" type="date">
+      </div>
+
+      <div>
+        <label>Contract End</label>
+        <input id="contract_end" type="date">
+      </div>
+
+      <div class="form-full">
+        <button id="createBtn" class="primary" type="submit">
+          Create Worker & Send Welcome Email
+        </button>
+      </div>
+
+    </div>
+
+  </form>
+
+</div>
+
+
+<!-- COMMUNICATION -->
+
+<div class="card">
+
+  <div class="section-title">
+
+    <div class="title-left">
+      <div class="section-icon">📨</div>
+      <div>
+        <h2>Communication Center</h2>
+        <p>Send important updates directly to your workers.</p>
+      </div>
+    </div>
+
+  </div>
+
+  <div id="commMsg" class="msg"></div>
+
+  <form id="communicationForm">
+
+    <label>Send To</label>
+
+    <select id="commRecipient">
+      <option value="ALL">All Active Workers</option>
+    </select>
+
+    <label>Subject</label>
+
+    <input id="commSubject" required placeholder="EZELEX Update">
+
+    <label>Message</label>
+
+    <textarea
+      id="commBody"
+      required
+      placeholder="Write your message to the worker(s)..."
+      style="min-height:150px;resize:vertical">
+    </textarea>
+
+    <button id="sendCommBtn" class="primary" type="submit">
+      Send Message
+    </button>
+
+  </form>
+
+</div>
+
+
+<!-- SALES -->
+
+<div class="card">
+
+  <div class="section-title">
+
+    <div class="title-left">
+      <div class="section-icon">💰</div>
+      <div>
+        <h2>Central Sales</h2>
+        <p>All worker sales are collected here in one central view.</p>
+      </div>
+    </div>
+
+    <button id="refreshSales" class="secondary">↻ Refresh</button>
+
+  </div>
+
+  <div style="overflow-x:auto">
+
+    <table>
+
+      <thead>
+        <tr>
+          <th>Date</th>
+          <th>Worker</th>
+          <th>Customer Ref</th>
+          <th>Product/Service</th>
+          <th>Qty</th>
+          <th>Amount</th>
+          <th>Payment</th>
+        </tr>
+      </thead>
+
+      <tbody id="salesBody"></tbody>
+
+    </table>
+
+  </div>
+
+</div>
+
+
+<!-- SECURITY -->
+
+<div class="card">
+
+  <div class="section-title">
+
+    <div class="title-left">
+      <div class="section-icon">🔐</div>
+      <div>
+        <h2>Administrator Security</h2>
+        <p>Keep your administrator account secure.</p>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="security-box">
+
+    <h3>Change Administrator Password</h3>
+
+    <div id="passwordMsg" class="msg"></div>
+
+    <form id="passwordForm">
+
+      <label>New Password</label>
+      <input id="newAdminPassword" type="password" minlength="6" required>
+
+      <label>Confirm New Password</label>
+      <input id="confirmAdminPassword" type="password" minlength="6" required>
+
+      <button id="passwordBtn" class="green" type="submit">
+        Update Password
+      </button>
+
+    </form>
+
+  </div>
+
+</div>
+
+
+</div>
+</div>
+
 
 <script>
+
 const SUPABASE_URL="https://hweczhwoggmsrwhkktrx.supabase.co";
+
 const SUPABASE_ANON_KEY="sb_publishable_D0o90HRJ1AfROf_DAj7ZAg_uaPDwqvV";
-const db=supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY);
-const CREATE_WORKER_URL=SUPABASE_URL+"/functions/v1/create-worker";
-const DELETE_WORKER_URL=SUPABASE_URL+"/functions/v1/delete-worker";
-const SEND_MESSAGE_URL=SUPABASE_URL+"/functions/v1/send-worker-message";
+
+const db=supabase.createClient(
+  SUPABASE_URL,
+  SUPABASE_ANON_KEY
+);
+
+const CREATE_WORKER_URL=
+  SUPABASE_URL+"/functions/v1/create-worker";
+
+const DELETE_WORKER_URL=
+  SUPABASE_URL+"/functions/v1/delete-worker";
+
+const SEND_MESSAGE_URL=
+  SUPABASE_URL+"/functions/v1/send-worker-message";
+
+
 const $=id=>document.getElementById(id);
 
-function msg(id,text,type="ok"){const e=$(id);if(!e)return;e.textContent=text;e.className="msg "+type;e.style.display="block"}
-function hideMsg(id){const e=$(id);if(e)e.style.display="none"}
-function money(v){return "£"+Number(v||0).toLocaleString("en-GB",{minimumFractionDigits:2,maximumFractionDigits:2})}
-function showLogin(){$("loginView").classList.remove("hidden");$("appView").classList.add("hidden")}
-function showApp(){$("loginView").classList.add("hidden");$("appView").classList.remove("hidden")}
-function esc(v){return String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
-function js(v){return String(v??"").replace(/\\/g,"\\\\").replace(/'/g,"\\'")}
+
+function msg(id,text,type="ok"){
+
+  const e=$(id);
+
+  if(!e)return;
+
+  e.textContent=text;
+
+  e.className="msg "+type;
+
+  e.style.display="block";
+
+}
+
+
+function hideMsg(id){
+
+  const e=$(id);
+
+  if(e)e.style.display="none";
+
+}
+
+
+function money(v){
+
+  return "£"+Number(v||0).toLocaleString(
+    "en-GB",
+    {
+      minimumFractionDigits:2,
+      maximumFractionDigits:2
+    }
+  );
+
+}
+
+
+function esc(v){
+
+  return String(v??"").replace(
+    /[&<>"']/g,
+    c=>({
+      "&":"&amp;",
+      "<":"&lt;",
+      ">":"&gt;",
+      '"':"&quot;",
+      "'":"&#39;"
+    }[c])
+  );
+
+}
+
+
+function js(v){
+
+  return String(v??"")
+    .replace(/\\/g,"\\\\")
+    .replace(/'/g,"\\'");
+
+}
+
+
+function showLogin(){
+
+  $("loginView").classList.remove("hidden");
+
+  $("appView").classList.add("hidden");
+
+}
+
+
+function showApp(){
+
+  $("loginView").classList.add("hidden");
+
+  $("appView").classList.remove("hidden");
+
+}
+
 
 async function checkAdmin(){
-try{
-const {data:{session},error:se}=await db.auth.getSession();if(se)throw se;
-if(!session){showLogin();return false}
-const {data,error}=await db.from("worker_profiles").select("worker_id,full_name,role,active")
-.eq("worker_id","ADMIN001").eq("role","admin").maybeSingle();
-if(error){await db.auth.signOut();showLogin();msg("loginMsg","Admin verification failed: "+error.message,"err");return false}
-if(!data||data.active!==true){await db.auth.signOut();showLogin();msg("loginMsg","Admin profile not found or inactive.","err");return false}
-showApp();await loadDashboard();return true
-}catch(e){console.error(e);showLogin();msg("loginMsg","Admin verification failed: "+(e.message||e),"err");return false}
+
+  try{
+
+    const {
+      data:{session},
+      error:sessionError
+    }=await db.auth.getSession();
+
+    if(sessionError)throw sessionError;
+
+    if(!session){
+
+      showLogin();
+
+      return false;
+
+    }
+
+
+    const {
+      data,
+      error
+    }=await db
+      .from("worker_profiles")
+      .select(
+        "user_id,worker_id,full_name,phone,role,active"
+      )
+      .eq("user_id",session.user.id)
+      .eq("worker_id","ADMIN001")
+      .eq("role","admin")
+      .maybeSingle();
+
+
+    if(error){
+
+      await db.auth.signOut();
+
+      showLogin();
+
+      msg(
+        "loginMsg",
+        "Admin verification failed: "+error.message,
+        "err"
+      );
+
+      return false;
+
+    }
+
+
+    if(!data||data.active!==true){
+
+      await db.auth.signOut();
+
+      showLogin();
+
+      msg(
+        "loginMsg",
+        "Admin profile not found or inactive.",
+        "err"
+      );
+
+      return false;
+
+    }
+
+
+    setupAdminProfile(
+      data,
+      session.user.email
+    );
+
+
+    showApp();
+
+    await loadDashboard();
+
+    return true;
+
+  }catch(e){
+
+    console.error(e);
+
+    showLogin();
+
+    msg(
+      "loginMsg",
+      "Admin verification failed: "+(e.message||e),
+      "err"
+    );
+
+    return false;
+
+  }
+
 }
+
+
+function setupAdminProfile(profile,email){
+
+  const name=
+    profile.full_name||
+    "EZELEX Administrator";
+
+  $("adminName").textContent=name;
+
+  $("topAdminName").textContent=name;
+
+  $("adminEmail").textContent=
+    email||
+    "Administrator account";
+
+  $("heroGreeting").textContent=
+    "Welcome back, "+name;
+
+  const initials=
+    name
+      .split(/\s+/)
+      .filter(Boolean)
+      .slice(0,2)
+      .map(x=>x[0])
+      .join("")
+      .toUpperCase();
+
+  $("adminAvatar").textContent=
+    initials||"A";
+
+}
+
 
 $("loginBtn").onclick=async()=>{
-hideMsg("loginMsg");const b=$("loginBtn"),email=$("email").value.trim(),password=$("password").value;
-if(!email||!password){msg("loginMsg","Enter your email and password.","err");return}
-b.disabled=true;b.innerHTML='<span class="spinner"></span>Signing in...';
-try{const {error}=await db.auth.signInWithPassword({email,password});if(error){msg("loginMsg",error.message,"err");return}await checkAdmin()}
-catch(e){msg("loginMsg","Login error: "+(e.message||e),"err")}finally{b.disabled=false;b.textContent="Sign in"}
-};
-$("logoutBtn").onclick=async()=>{await db.auth.signOut();showLogin()};
-db.auth.onAuthStateChange((_event,session)=>{if(!session)showLogin()});
 
-async function loadDashboard(){await Promise.all([loadWorkers(),loadSales()]);await loadCommunicationRecipients()}
+  hideMsg("loginMsg");
+
+  const b=$("loginBtn");
+
+  const email=$("email").value.trim();
+
+  const password=$("password").value;
+
+
+  if(!email||!password){
+
+    msg(
+      "loginMsg",
+      "Enter your email and password.",
+      "err"
+    );
+
+    return;
+
+  }
+
+
+  b.disabled=true;
+
+  b.innerHTML=
+    '<span class="spinner"></span>Signing in...';
+
+
+  try{
+
+    const {error}=
+      await db.auth.signInWithPassword({
+        email,
+        password
+      });
+
+
+    if(error){
+
+      msg(
+        "loginMsg",
+        error.message,
+        "err"
+      );
+
+      return;
+
+    }
+
+
+    await checkAdmin();
+
+
+  }catch(e){
+
+    msg(
+      "loginMsg",
+      "Login error: "+(e.message||e),
+      "err"
+    );
+
+  }finally{
+
+    b.disabled=false;
+
+    b.textContent=
+      "Sign in to EZELEX";
+
+  }
+
+};
+
+
+$("logoutBtn").onclick=async()=>{
+
+  await db.auth.signOut();
+
+  showLogin();
+
+};
+
+
+db.auth.onAuthStateChange(
+  (_event,session)=>{
+
+    if(!session){
+
+      showLogin();
+
+    }
+
+  }
+);
+
+
+async function loadDashboard(){
+
+  await Promise.all([
+    loadWorkers(),
+    loadSales()
+  ]);
+
+  await loadCommunicationRecipients();
+
+}
+
+
 async function loadWorkers(){
-const {data,error}=await db.from("worker_profiles").select("worker_id,full_name,phone,role,active,contract_end,contract_start");
-if(error){msg("workerMsg",error.message,"err");return}
-const body=$("workersBody");body.innerHTML="";
-(data||[]).forEach(w=>{const tr=document.createElement("tr");tr.innerHTML=
-`<td>${esc(w.worker_id)}</td><td>${esc(w.full_name)}</td><td>${esc(w.phone||"")}</td><td>${esc(w.role||"worker")}</td><td>${w.active?"Yes":"No"}</td><td>${esc(w.contract_end||"")}</td><td><div class="actions">
-${w.role!=="admin"?`<button class="secondary" onclick="toggleWorker('${js(w.worker_id)}',${w.active})">${w.active?"End Contract":"Reactivate"}</button><button class="danger" onclick="deleteWorker('${js(w.worker_id)}')">Delete</button>`:"<b>Administrator</b>"}</div></td>`;
-body.appendChild(tr)})
-}
-async function loadCommunicationRecipients(){
-const {data,error}=await db.from("worker_profiles").select("worker_id,full_name,active,role").eq("active",true);
-if(error){console.error(error);return}
-const select=$("commRecipient");select.innerHTML='<option value="ALL">All Active Workers</option>';
-(data||[]).filter(w=>w.role!=="admin").forEach(w=>{const o=document.createElement("option");o.value=w.worker_id;o.textContent=(w.full_name||w.worker_id)+" ("+w.worker_id+")";select.appendChild(o)})
+
+  const {
+    data,
+    error
+  }=await db
+    .from("worker_profiles")
+    .select(
+      "user_id,worker_id,full_name,phone,role,active,contract_end,contract_start"
+    )
+    .order("worker_id");
+
+
+  if(error){
+
+    msg(
+      "workerMsg",
+      error.message,
+      "err"
+    );
+
+    return;
+
+  }
+
+
+  const body=$("workersBody");
+
+  body.innerHTML="";
+
+
+  const workers=
+    (data||[]);
+
+
+  const activeWorkers=
+    workers.filter(
+      w=>w.role!=="admin"&&w.active===true
+    ).length;
+
+
+  $("activeWorkerHero").textContent=
+    activeWorkers;
+
+
+  if(!workers.length){
+
+    body.innerHTML=
+      '<tr><td colspan="7" class="empty">No workers found.</td></tr>';
+
+    return;
+
+  }
+
+
+  workers.forEach(w=>{
+
+    const tr=
+      document.createElement("tr");
+
+
+    const status=w.active
+      ?'<span class="badge badge-active">ACTIVE</span>'
+      :'<span class="badge badge-inactive">INACTIVE</span>';
+
+
+    const role=
+      w.role==="admin"
+        ?'<span class="badge badge-admin">ADMINISTRATOR</span>'
+        :'<span class="badge">WORKER</span>';
+
+
+    tr.innerHTML=`
+
+      <td><strong>${esc(w.worker_id)}</strong></td>
+
+      <td>${esc(w.full_name)}</td>
+
+      <td>${esc(w.phone||"")}</td>
+
+      <td>${role}</td>
+
+      <td>${status}</td>
+
+      <td>${esc(w.contract_end||"")}</td>
+
+      <td>
+
+        <div class="actions">
+
+          ${
+            w.role!=="admin"
+
+            ?
+
+            `
+
+            <button
+              class="secondary"
+              onclick="toggleWorker('${js(w.worker_id)}',${w.active})">
+
+              ${w.active?"End Contract":"Reactivate"}
+
+            </button>
+
+            <button
+              class="danger"
+              onclick="deleteWorker('${js(w.worker_id)}','${js(w.user_id)}')">
+
+              Delete
+
+            </button>
+
+            `
+
+            :
+
+            `<b style="color:#92400e">👑 Protected Admin</b>`
+
+          }
+
+        </div>
+
+      </td>
+
+    `;
+
+
+    body.appendChild(tr);
+
+  });
+
 }
 
-$("communicationForm").onsubmit=async e=>{
-e.preventDefault();hideMsg("commMsg");const b=$("sendCommBtn");b.disabled=true;b.innerHTML='<span class="spinner"></span>Sending...';
-try{
-const {data:{session}}=await db.auth.getSession();if(!session)throw new Error("Admin session expired.");
-const payload={worker_id:$("commRecipient").value,subject:$("commSubject").value.trim(),message:$("commBody").value.trim()};
-if(!payload.subject||!payload.message)throw new Error("Enter a subject and message.");
-const r=await fetch(SEND_MESSAGE_URL,{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+session.access_token,"apikey":SUPABASE_ANON_KEY},body:JSON.stringify(payload)});
-const result=await r.json().catch(()=>({}));if(!r.ok||!result.success)throw new Error(result.error||result.message||("Message failed ("+r.status+")"));
-msg("commMsg",result.message||"Message sent successfully.","ok");$("commSubject").value="";$("commBody").value="";
-}catch(e){console.error(e);msg("commMsg",e.message||String(e),"err")}finally{b.disabled=false;b.textContent="Send Message"}
+
+async function loadCommunicationRecipients(){
+
+  const {
+    data,
+    error
+  }=await db
+    .from("worker_profiles")
+    .select(
+      "worker_id,full_name,active,role"
+    )
+    .eq("active",true);
+
+
+  if(error){
+
+    console.error(error);
+
+    return;
+
+  }
+
+
+  const select=
+    $("commRecipient");
+
+
+  select.innerHTML=
+    '<option value="ALL">All Active Workers</option>';
+
+
+  (data||[])
+    .filter(w=>w.role!=="admin")
+    .forEach(w=>{
+
+      const option=
+        document.createElement("option");
+
+      option.value=
+        w.worker_id;
+
+      option.textContent=
+        (w.full_name||w.worker_id)+
+        " ("+
+        w.worker_id+
+        ")";
+
+      select.appendChild(option);
+
+    });
+
+}
+
+
+$("communicationForm").onsubmit=
+async e=>{
+
+  e.preventDefault();
+
+  hideMsg("commMsg");
+
+  const b=
+    $("sendCommBtn");
+
+
+  b.disabled=true;
+
+  b.innerHTML=
+    '<span class="spinner"></span>Sending...';
+
+
+  try{
+
+    const {
+      data:{session}
+    }=await db.auth.getSession();
+
+
+    if(!session){
+
+      throw new Error(
+        "Admin session expired."
+      );
+
+    }
+
+
+    const payload={
+
+      worker_id:
+        $("commRecipient").value,
+
+      subject:
+        $("commSubject").value.trim(),
+
+      message:
+        $("commBody").value.trim()
+
+    };
+
+
+    if(
+      !payload.subject||
+      !payload.message
+    ){
+
+      throw new Error(
+        "Enter a subject and message."
+      );
+
+    }
+
+
+    const r=
+      await fetch(
+        SEND_MESSAGE_URL,
+        {
+          method:"POST",
+
+          headers:{
+            "Content-Type":
+              "application/json",
+
+            "Authorization":
+              "Bearer "+
+              session.access_token,
+
+            "apikey":
+              SUPABASE_ANON_KEY
+          },
+
+          body:
+            JSON.stringify(payload)
+
+        }
+      );
+
+
+    const result=
+      await r.json().catch(
+        ()=>({})
+      );
+
+
+    if(
+      !r.ok||
+      !result.success
+    ){
+
+      throw new Error(
+        result.error||
+        result.message||
+        ("Message failed ("+
+        r.status+
+        ")")
+      );
+
+    }
+
+
+    msg(
+      "commMsg",
+      result.message||
+      "Message sent successfully.",
+      "ok"
+    );
+
+
+    $("commSubject").value="";
+
+    $("commBody").value="";
+
+
+  }catch(e){
+
+    console.error(e);
+
+    msg(
+      "commMsg",
+      e.message||String(e),
+      "err"
+    );
+
+  }finally{
+
+    b.disabled=false;
+
+    b.textContent=
+      "Send Message";
+
+  }
+
 };
+
 
 async function loadSales(){
-const {data,error}=await db.from("sales").select("sale_date,worker_id,customer_reference,product_service,quantity,sale_amount,payment_method").order("sale_date",{ascending:false});
-if(error){console.error(error);return}
-const rows=data||[],body=$("salesBody");body.innerHTML="";let today=0,week=0,month=0,all=0;
-const now=new Date(),todayKey=now.toISOString().slice(0,10),monthKey=now.toISOString().slice(0,7);
-const weekStart=new Date(now);weekStart.setHours(0,0,0,0);weekStart.setDate(weekStart.getDate()-((weekStart.getDay()+6)%7));
-rows.forEach(s=>{const a=Number(s.sale_amount||0);all+=a;const d=new Date(s.sale_date);
-if(String(s.sale_date||"").slice(0,10)===todayKey)today+=a;if(d>=weekStart)week+=a;if(String(s.sale_date||"").slice(0,7)===monthKey)month+=a;
-const tr=document.createElement("tr");tr.innerHTML=`<td>${esc(s.sale_date||"")}</td><td>${esc(s.worker_id||"")}</td><td>${esc(s.customer_reference||"")}</td><td>${esc(s.product_service||"")}</td><td>${esc(s.quantity||"")}</td><td>${money(a)}</td><td>${esc(s.payment_method||"")}</td>`;body.appendChild(tr)});
-$("todaySale").textContent=money(today);$("weekSale").textContent=money(week);$("monthSale").textContent=money(month);$("allSale").textContent=money(all)
-}
-$("refreshWorkers").onclick=loadWorkers;$("refreshSales").onclick=loadSales;
 
-$("addWorkerForm").onsubmit=async e=>{
-e.preventDefault();hideMsg("addMsg");const b=$("createBtn");b.disabled=true;b.innerHTML='<span class="spinner"></span>Creating...';
-try{
-const {data:{session}}=await db.auth.getSession();if(!session)throw new Error("Admin session expired.");
-const payload={worker_id:$("worker_id").value.trim(),full_name:$("full_name").value.trim(),phone:$("phone").value.trim(),email:$("worker_email").value.trim(),contract_start:$("contract_start").value||null,contract_end:$("contract_end").value||null};
-const r=await fetch(CREATE_WORKER_URL,{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+session.access_token,"apikey":SUPABASE_ANON_KEY},body:JSON.stringify(payload)});
-const result=await r.json().catch(()=>({}));if(!r.ok||!result.success)throw new Error(result.error||result.message||("Create worker failed ("+r.status+")"));
-msg("addMsg","Worker created successfully and welcome email sent.","ok");$("addWorkerForm").reset();await loadWorkers()
-}catch(e){console.error(e);msg("addMsg",e.message||String(e),"err")}finally{b.disabled=false;b.textContent="Create Worker & Send Welcome Email"}
+  const {
+    data,
+    error
+  }=await db
+    .from("sales")
+    .select(
+      "sale_date,worker_id,customer_reference,product_service,quantity,sale_amount,payment_method"
+    )
+    .order(
+      "sale_date",
+      {ascending:false}
+    );
+
+
+  if(error){
+
+    console.error(error);
+
+    return;
+
+  }
+
+
+  const rows=
+    data||[];
+
+  const body=
+    $("salesBody");
+
+  body.innerHTML="";
+
+
+  let today=0;
+
+  let week=0;
+
+  let month=0;
+
+  let all=0;
+
+
+  const now=
+    new Date();
+
+  const todayKey=
+    now.toISOString().slice(0,10);
+
+  const monthKey=
+    now.toISOString().slice(0,7);
+
+
+  const weekStart=
+    new Date(now);
+
+  weekStart.setHours(
+    0,0,0,0
+  );
+
+  weekStart.setDate(
+    weekStart.getDate()-
+    ((weekStart.getDay()+6)%7)
+  );
+
+
+  rows.forEach(s=>{
+
+    const amount=
+      Number(s.sale_amount||0);
+
+
+    all+=amount;
+
+
+    const d=
+      new Date(s.sale_date);
+
+
+    if(
+      String(s.sale_date||"")
+        .slice(0,10)
+      ===
+      todayKey
+    ){
+
+      today+=amount;
+
+    }
+
+
+    if(d>=weekStart){
+
+      week+=amount;
+
+    }
+
+
+    if(
+      String(s.sale_date||"")
+        .slice(0,7)
+      ===
+      monthKey
+    ){
+
+      month+=amount;
+
+    }
+
+
+    const tr=
+      document.createElement("tr");
+
+
+    tr.innerHTML=`
+
+      <td>${esc(s.sale_date||"")}</td>
+
+      <td><strong>${esc(s.worker_id||"")}</strong></td>
+
+      <td>${esc(s.customer_reference||"")}</td>
+
+      <td>${esc(s.product_service||"")}</td>
+
+      <td>${esc(s.quantity||"")}</td>
+
+      <td><strong>${money(amount)}</strong></td>
+
+      <td>${esc(s.payment_method||"")}</td>
+
+    `;
+
+
+    body.appendChild(tr);
+
+  });
+
+
+  if(!rows.length){
+
+    body.innerHTML=
+      '<tr><td colspan="7" class="empty">No sales recorded yet.</td></tr>';
+
+  }
+
+
+  $("todaySale").textContent=
+    money(today);
+
+  $("weekSale").textContent=
+    money(week);
+
+  $("monthSale").textContent=
+    money(month);
+
+  $("allSale").textContent=
+    money(all);
+
+}
+
+
+$("refreshWorkers").onclick=
+async()=>{
+
+  await loadWorkers();
+
+  await loadCommunicationRecipients();
+
 };
 
-async function toggleWorker(workerId,current){
-const {error}=await db.from("worker_profiles").update({active:!current}).eq("worker_id",workerId);
-if(error){msg("workerMsg",error.message,"err");return}msg("workerMsg",current?"Contract ended.":"Worker reactivated.","ok");await loadWorkers()
+
+$("refreshSales").onclick=
+loadSales;
+
+
+$("refreshAll").onclick=
+async()=>{
+
+  const b=$("refreshAll");
+
+  b.disabled=true;
+
+  b.innerHTML=
+    '<span class="spinner"></span>Refreshing...';
+
+
+  try{
+
+    await loadDashboard();
+
+    msg(
+      "appMsg",
+      "Dashboard refreshed successfully.",
+      "ok"
+    );
+
+  }finally{
+
+    b.disabled=false;
+
+    b.textContent=
+      "↻ Refresh Dashboard";
+
+  }
+
+};
+
+
+$("addWorkerForm").onsubmit=
+async e=>{
+
+  e.preventDefault();
+
+  hideMsg("addMsg");
+
+  const b=
+    $("createBtn");
+
+
+  b.disabled=true;
+
+  b.innerHTML=
+    '<span class="spinner"></span>Creating worker...';
+
+
+  try{
+
+    const {
+      data:{session}
+    }=await db.auth.getSession();
+
+
+    if(!session){
+
+      throw new Error(
+        "Admin session expired."
+      );
+
+    }
+
+
+    const payload={
+
+      worker_id:
+        $("worker_id").value.trim(),
+
+      full_name:
+        $("full_name").value.trim(),
+
+      phone:
+        $("phone").value.trim(),
+
+      email:
+        $("worker_email").value.trim(),
+
+      contract_start:
+        $("contract_start").value||
+        null,
+
+      contract_end:
+        $("contract_end").value||
+        null
+
+    };
+
+
+    const r=
+      await fetch(
+        CREATE_WORKER_URL,
+        {
+          method:"POST",
+
+          headers:{
+            "Content-Type":
+              "application/json",
+
+            "Authorization":
+              "Bearer "+
+              session.access_token,
+
+            "apikey":
+              SUPABASE_ANON_KEY
+          },
+
+          body:
+            JSON.stringify(payload)
+
+        }
+      );
+
+
+    const result=
+      await r.json().catch(
+        ()=>({})
+      );
+
+
+    if(
+      !r.ok||
+      !result.success
+    ){
+
+      throw new Error(
+        result.error||
+        result.message||
+        ("Create worker failed ("+
+        r.status+
+        ")")
+      );
+
+    }
+
+
+    msg(
+      "addMsg",
+      "Worker created successfully. Welcome email sent.",
+      "ok"
+    );
+
+
+    $("addWorkerForm").reset();
+
+
+    await loadWorkers();
+
+    await loadCommunicationRecipients();
+
+
+  }catch(e){
+
+    console.error(e);
+
+    msg(
+      "addMsg",
+      e.message||String(e),
+      "err"
+    );
+
+  }finally{
+
+    b.disabled=false;
+
+    b.textContent=
+      "Create Worker & Send Welcome Email";
+
+  }
+
+};
+
+
+async function toggleWorker(
+  workerId,
+  current
+){
+
+  try{
+
+    const {
+      error
+    }=await db
+      .from("worker_profiles")
+      .update({
+        active:!current
+      })
+      .eq(
+        "worker_id",
+        workerId
+      );
+
+
+    if(error){
+
+      msg(
+        "workerMsg",
+        error.message,
+        "err"
+      );
+
+      return;
+
+    }
+
+
+    msg(
+      "workerMsg",
+      current
+        ?"Contract ended."
+        :"Worker reactivated.",
+      "ok"
+    );
+
+
+    await loadWorkers();
+
+    await loadCommunicationRecipients();
+
+
+  }catch(e){
+
+    msg(
+      "workerMsg",
+      e.message||String(e),
+      "err"
+    );
+
+  }
+
 }
-async function deleteWorker(workerId){
-if(!confirm("Delete worker "+workerId+" and their sales? This cannot be undone."))return;
-try{
-const {data:{session}}=await db.auth.getSession();if(!session)throw new Error("Admin session expired.");
-const r=await fetch(DELETE_WORKER_URL,{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+session.access_token,"apikey":SUPABASE_ANON_KEY},body:JSON.stringify({worker_id:workerId})});
-const result=await r.json().catch(()=>({}));if(!r.ok||!result.success)throw new Error(result.error||result.message||("Delete failed ("+r.status+")"));
-msg("workerMsg","Worker deleted successfully.","ok");await Promise.all([loadWorkers(),loadSales()])
-}catch(e){console.error(e);msg("workerMsg",e.message||String(e),"err")}
+
+
+async function deleteWorker(
+  workerId,
+  userId
+){
+
+  if(workerId==="ADMIN001"){
+
+    msg(
+      "workerMsg",
+      "ADMIN001 is permanently protected and cannot be deleted.",
+      "err"
+    );
+
+    return;
+
+  }
+
+
+  const confirmed=
+    confirm(
+      "⚠️ DELETE WORKER\n\n"+
+      "Worker: "+
+      workerId+
+      "\n\n"+
+      "This will permanently delete:\n"+
+      "• Worker profile\n"+
+      "• Worker login account\n"+
+      "• Their recorded sales\n\n"+
+      "This cannot be undone.\n\n"+
+      "Continue?"
+    );
+
+
+  if(!confirmed)return;
+
+
+  try{
+
+    const {
+      data:{session}
+    }=await db.auth.getSession();
+
+
+    if(!session){
+
+      throw new Error(
+        "Admin session expired."
+      );
+
+    }
+
+
+    const r=
+      await fetch(
+        DELETE_WORKER_URL,
+        {
+          method:"POST",
+
+          headers:{
+            "Content-Type":
+              "application/json",
+
+            "Authorization":
+              "Bearer "+
+              session.access_token,
+
+            "apikey":
+              SUPABASE_ANON_KEY
+          },
+
+          body:
+            JSON.stringify({
+              user_id:userId
+            })
+
+        }
+      );
+
+
+    const result=
+      await r.json().catch(
+        ()=>({})
+      );
+
+
+    if(
+      !r.ok||
+      !result.success
+    ){
+
+      throw new Error(
+        result.error||
+        result.message||
+        ("Delete failed ("+
+        r.status+
+        ")")
+      );
+
+    }
+
+
+    msg(
+      "workerMsg",
+      "Worker "+workerId+
+      " was completely deleted.",
+      "ok"
+    );
+
+
+    await loadWorkers();
+
+    await loadSales();
+
+    await loadCommunicationRecipients();
+
+
+  }catch(e){
+
+    console.error(e);
+
+    msg(
+      "workerMsg",
+      e.message||String(e),
+      "err"
+    );
+
+  }
+
 }
-(async()=>{await checkAdmin()})();
+
+
+$("passwordForm").onsubmit=
+async e=>{
+
+  e.preventDefault();
+
+  hideMsg("passwordMsg");
+
+
+  const newPassword=
+    $("newAdminPassword").value;
+
+  const confirmPassword=
+    $("confirmAdminPassword").value;
+
+
+  if(newPassword.length<6){
+
+    msg(
+      "passwordMsg",
+      "Password must be at least 6 characters.",
+      "err"
+    );
+
+    return;
+
+  }
+
+
+  if(newPassword!==confirmPassword){
+
+    msg(
+      "passwordMsg",
+      "The passwords do not match.",
+      "err"
+    );
+
+    return;
+
+  }
+
+
+  const b=
+    $("passwordBtn");
+
+
+  b.disabled=true;
+
+  b.innerHTML=
+    '<span class="spinner"></span>Updating...';
+
+
+  try{
+
+    const {
+      error
+    }=await db.auth.updateUser({
+      password:newPassword
+    });
+
+
+    if(error)throw error;
+
+
+    msg(
+      "passwordMsg",
+      "Administrator password updated successfully.",
+      "ok"
+    );
+
+
+    $("passwordForm").reset();
+
+
+  }catch(e){
+
+    msg(
+      "passwordMsg",
+      e.message||String(e),
+      "err"
+    );
+
+  }finally{
+
+    b.disabled=false;
+
+    b.textContent=
+      "Update Password";
+
+  }
+
+};
+
+
+(async()=>{
+
+  await checkAdmin();
+
+})();
+
 </script>
+
 </body>
 </html>
