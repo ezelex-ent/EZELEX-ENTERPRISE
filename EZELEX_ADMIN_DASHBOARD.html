@@ -1,736 +1,154 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>EZELEX Enterprise — Admin Dashboard</title>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>EZELEX Administrator Dashboard</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
-*{box-sizing:border-box}
-body{margin:0;font-family:Arial,sans-serif;background:#f4f6f8;color:#17202a}
-header{background:#111827;color:#fff;padding:18px 5%;display:flex;justify-content:space-between;align-items:center;gap:15px}
-header h1{margin:0;font-size:21px}
-button{border:0;border-radius:8px;padding:10px 14px;font-weight:700;cursor:pointer}
-button:disabled{opacity:.6;cursor:not-allowed}
-.primary{background:#111827;color:#fff}.danger{background:#b42318;color:#fff}.muted{background:#eef2f6;color:#17202a}.success-btn{background:#067647;color:#fff}
-.login,.panel{background:#fff;border-radius:14px;padding:24px;box-shadow:0 3px 15px #0000000d}
-.login{max-width:430px;margin:60px auto}
-.wrap{max-width:1250px;margin:25px auto;padding:0 15px}
-.hidden{display:none!important}
-.cards{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:20px}
-.card{background:#fff;padding:18px;border-radius:12px;box-shadow:0 3px 15px #0000000d}
-.label{color:#667085;font-size:13px}.value{font-size:25px;font-weight:800;margin-top:7px}
-label{font-weight:700;font-size:13px;display:block}
-input,select{width:100%;padding:11px;margin:6px 0 12px;border:1px solid #d5dbe1;border-radius:8px;font-size:14px}
-.nav{display:flex;gap:8px;flex-wrap:wrap;margin:20px 0}
-.nav button.active{background:#111827;color:#fff}
-.filters{display:grid;grid-template-columns:1.2fr 1fr 1fr auto;gap:10px;align-items:end}
-.actions{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}
-.table{overflow:auto}
-table{width:100%;border-collapse:collapse;min-width:850px}
-th,td{padding:10px;border-bottom:1px solid #eee;text-align:left;font-size:14px}
-th{background:#f8fafc}
-.msg{padding:11px;border-radius:8px;margin:10px 0;background:#fef3c7}
-.err{background:#fee4e2;color:#912018}.ok{background:#dcfae6;color:#067647}
-.badge{padding:4px 8px;border-radius:20px;background:#eef2f6;font-size:12px;font-weight:700}
-.active{background:#dcfae6;color:#067647}.inactive{background:#fee4e2;color:#912018}
-.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-.full{grid-column:1/-1}.small{color:#667085;font-size:12px}
-.worker-box{border:1px solid #e5e7eb;border-radius:10px;padding:18px;margin-top:18px}
-hr{border:0;border-top:1px solid #eee;margin:25px 0}
-.spinner{display:inline-block;width:13px;height:13px;border:2px solid #fff;border-top-color:transparent;border-radius:50%;animation:spin .8s linear infinite;margin-right:6px;vertical-align:-2px}
-@keyframes spin{to{transform:rotate(360deg)}}
-@media(max-width:950px){.cards{grid-template-columns:repeat(2,1fr)}.filters{grid-template-columns:1fr 1fr}}
-@media(max-width:650px){.cards,.filters,.grid{grid-template-columns:1fr}.full{grid-column:auto}}
+*{box-sizing:border-box}body{margin:0;font-family:Arial,sans-serif;background:#f4f7fb;color:#172033}
+header{background:#111827;color:#fff;padding:18px 24px;display:flex;justify-content:space-between;align-items:center}
+header h1{margin:0;font-size:22px}.container{max-width:1200px;margin:25px auto;padding:0 18px}
+.card{background:#fff;border-radius:14px;padding:20px;box-shadow:0 4px 18px rgba(0,0,0,.07);margin-bottom:20px}
+.login{max-width:430px;margin:70px auto}button{border:0;border-radius:8px;padding:11px 16px;font-weight:700;cursor:pointer}
+.primary{background:#111827;color:#fff}.danger{background:#b91c1c;color:#fff}.secondary{background:#e5e7eb;color:#111827}
+input{width:100%;padding:12px;border:1px solid #d1d5db;border-radius:8px;margin:6px 0 14px;font-size:15px}
+label{font-weight:700;font-size:14px}.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:15px}
+.stat{padding:18px;border-radius:12px;background:#f8fafc;border:1px solid #e5e7eb}.stat small{color:#64748b}.stat strong{display:block;font-size:25px;margin-top:7px}
+table{width:100%;border-collapse:collapse;font-size:14px}th,td{padding:12px;border-bottom:1px solid #e5e7eb;text-align:left}th{background:#f8fafc}
+.msg{padding:11px;border-radius:8px;margin:10px 0;display:none}.ok{background:#dcfce7;color:#166534}.err{background:#fee2e2;color:#991b1b}
+.hidden{display:none!important}.section-title{display:flex;justify-content:space-between;align-items:center;gap:10px}.actions{display:flex;gap:8px;flex-wrap:wrap}
+.spinner{display:inline-block;width:14px;height:14px;border:2px solid #fff;border-top-color:transparent;border-radius:50%;animation:spin .7s linear infinite;margin-right:7px;vertical-align:-2px}
+@keyframes spin{to{transform:rotate(360deg)}}@media(max-width:800px){.grid{grid-template-columns:repeat(2,1fr)}table{display:block;overflow-x:auto;white-space:nowrap}}
+@media(max-width:500px){.grid{grid-template-columns:1fr}header{padding:15px}.container{padding:0 12px}}
 </style>
 </head>
 <body>
+<div id="loginView"><div class="card login">
+<h1>EZELEX Admin Login</h1><p>Administrator access</p><div id="loginMsg" class="msg"></div>
+<label>Email</label><input id="email" type="email" value="mrr.alex01@gmail.com">
+<label>Password</label><input id="password" type="password">
+<button id="loginBtn" class="primary" style="width:100%">Sign in</button>
+</div></div>
 
-<header>
-  <h1>EZELEX Enterprise — Administrator</h1>
-  <button id="logoutBtn" class="danger hidden">Log out</button>
-</header>
+<div id="appView" class="hidden">
+<header><h1>EZELEX Administrator Dashboard</h1><button id="logoutBtn" class="secondary">Log out</button></header>
+<div class="container">
+<div id="appMsg" class="msg"></div>
+<div class="grid">
+<div class="stat"><small>Today Sale</small><strong id="todaySale">£0.00</strong></div>
+<div class="stat"><small>This Week Sale</small><strong id="weekSale">£0.00</strong></div>
+<div class="stat"><small>This Month Sale</small><strong id="monthSale">£0.00</strong></div>
+<div class="stat"><small>All Time</small><strong id="allSale">£0.00</strong></div>
+</div>
 
-<section id="loginSection" class="login">
-  <h2>Admin Login</h2>
-  <p class="small">Secure EZELEX administrator access.</p>
-  <div id="loginMsg"></div>
-  <label for="email">Email</label>
-  <input id="email" type="email" autocomplete="username" placeholder="Admin email">
-  <label for="password">Password</label>
-  <input id="password" type="password" autocomplete="current-password" placeholder="Admin password">
-  <button id="loginBtn" class="primary" style="width:100%">Sign in</button>
-</section>
+<div class="card"><div class="section-title"><h2>Workers</h2><button id="refreshWorkers" class="secondary">Refresh</button></div>
+<div id="workerMsg" class="msg"></div><div style="overflow-x:auto"><table>
+<thead><tr><th>Worker ID</th><th>Name</th><th>Phone</th><th>Role</th><th>Active</th><th>Contract End</th><th>Actions</th></tr></thead>
+<tbody id="workersBody"></tbody></table></div></div>
 
-<main id="app" class="wrap hidden">
-  <div id="dashboardMsg"></div>
+<div class="card"><h2>Add New Worker</h2><div id="addMsg" class="msg"></div>
+<form id="addWorkerForm">
+<label>Worker ID</label><input id="worker_id" required placeholder="EZE-11">
+<label>Full Name</label><input id="full_name" required>
+<label>Phone</label><input id="phone">
+<label>Email</label><input id="worker_email" type="email" required>
+<label>Contract Start</label><input id="contract_start" type="date">
+<label>Contract End</label><input id="contract_end" type="date">
+<button id="createBtn" class="primary" type="submit">Create Worker & Send Welcome Email</button>
+</form></div>
 
-  <div class="cards">
-    <div class="card"><div class="label">Today Sale</div><div id="today" class="value">GHS 0.00</div></div>
-    <div class="card"><div class="label">This Week Sale</div><div id="week" class="value">GHS 0.00</div></div>
-    <div class="card"><div class="label">This Month Sale</div><div id="month" class="value">GHS 0.00</div></div>
-    <div class="card"><div class="label">All Time</div><div id="all" class="value">GHS 0.00</div></div>
-    <div class="card"><div class="label">Active Workers</div><div id="workerCount" class="value">0</div></div>
-  </div>
-
-  <div class="nav">
-    <button class="muted active" data-tab="salesTab">Sales</button>
-    <button class="muted" data-tab="workersTab">Workers</button>
-  </div>
-
-  <section id="salesTab" class="panel">
-    <h2>Sales Management</h2>
-    <p class="small">All workers' sales appear here. Only approved sales are included in the totals.</p>
-
-    <div class="filters">
-      <div>
-        <label for="workerFilter">Worker</label>
-        <select id="workerFilter"><option value="">All workers</option></select>
-      </div>
-      <div>
-        <label for="fromDate">From</label>
-        <input id="fromDate" type="date">
-      </div>
-      <div>
-        <label for="toDate">To</label>
-        <input id="toDate" type="date">
-      </div>
-      <button id="applyFilter" class="primary">Apply</button>
-    </div>
-
-    <div class="actions">
-      <button id="refreshSales" class="primary">Refresh</button>
-      <button id="downloadCsv" class="muted">Download CSV</button>
-    </div>
-
-    <div class="table">
-      <table>
-        <thead>
-          <tr>
-            <th>Date</th><th>Worker</th><th>Customer</th><th>Product/Service</th>
-            <th>Qty</th><th>Amount</th><th>Status</th><th>Action</th>
-          </tr>
-        </thead>
-        <tbody id="salesBody"></tbody>
-      </table>
-    </div>
-  </section>
-
-  <section id="workersTab" class="panel hidden">
-    <h2>Worker Management</h2>
-    <p class="small">Create workers without a temporary password. The worker receives the welcome email and sets their own password.</p>
-
-    <div class="worker-box">
-      <h3>Add New Worker</h3>
-      <form id="createWorkerForm" class="grid">
-        <div>
-          <label for="newFullName">Full Name</label>
-          <input id="newFullName" required placeholder="Worker full name">
-        </div>
-        <div>
-          <label for="newWorkerId">Worker ID</label>
-          <input id="newWorkerId" required placeholder="EZE-001">
-        </div>
-        <div>
-          <label for="newEmail">Email</label>
-          <input id="newEmail" type="email" required placeholder="worker@example.com">
-        </div>
-        <div>
-          <label for="newPhone">Phone</label>
-          <input id="newPhone" placeholder="+233...">
-        </div>
-        <div>
-          <label for="newContractStart">Contract Start</label>
-          <input id="newContractStart" type="date">
-        </div>
-        <div>
-          <label for="newContractEnd">Contract End</label>
-          <input id="newContractEnd" type="date">
-        </div>
-        <div class="full">
-          <button id="createWorkerBtn" class="primary" type="submit">Create Worker Account</button>
-        </div>
-      </form>
-      <div id="createWorkerMsg"></div>
-    </div>
-
-    <hr>
-
-    <h3>Existing Workers</h3>
-    <div class="actions">
-      <button id="refreshWorkers" class="primary">Refresh Workers</button>
-    </div>
-
-    <div class="table">
-      <table>
-        <thead>
-          <tr><th>Worker ID</th><th>Name</th><th>Role</th><th>Status</th><th>Contract End</th><th>Action</th></tr>
-        </thead>
-        <tbody id="workersBody"></tbody>
-      </table>
-    </div>
-  </section>
-</main>
+<div class="card"><div class="section-title"><h2>Sales</h2><button id="refreshSales" class="secondary">Refresh</button></div>
+<div style="overflow-x:auto"><table><thead><tr><th>Date</th><th>Worker</th><th>Customer Ref</th><th>Product/Service</th><th>Qty</th><th>Amount</th><th>Payment</th></tr></thead>
+<tbody id="salesBody"></tbody></table></div></div>
+</div></div>
 
 <script>
-const SUPABASE_URL = "https://hweczhwoggmsrwhkktrx.supabase.co";
-const SUPABASE_ANON_KEY = "sb_publishable_D0o90HRJ1AfROf_DAj7ZAg_uaPDwqvV";
-const db = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+const SUPABASE_URL="https://hweczhwoggmsrwhkktrx.supabase.co";
+const SUPABASE_ANON_KEY="sb_publishable_D0o90HRJ1AfROf_DAj7ZAg_uaPDwqvV";
+const db=supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY);
+const CREATE_WORKER_URL=SUPABASE_URL+"/functions/v1/create-worker";
+const DELETE_WORKER_URL=SUPABASE_URL+"/functions/v1/delete-worker";
+const $=id=>document.getElementById(id);
 
-let sales = [];
-let workers = [];
-let filteredSales = [];
-
-const $ = id => document.getElementById(id);
-
-function escapeHtml(value){
-  return String(value ?? "").replace(/[&<>"']/g, c => ({
-    "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"
-  }[c]));
-}
-
-function showMessage(id, text, type=""){
-  $(id).innerHTML = text
-    ? `<div class="msg ${type}">${escapeHtml(text)}</div>`
-    : "";
-}
-
-function money(value){
-  return "GHS " + Number(value || 0).toLocaleString("en-GH", {
-    minimumFractionDigits:2,
-    maximumFractionDigits:2
-  });
-}
-
-function saleAmount(row){
-  return Number(row.sale_amount ?? row.amount ?? 0);
-}
-
-function shortDate(value){
-  return String(value || "").slice(0,10);
-}
-
-function isApproved(row){
-  return String(row.status || "approved").toLowerCase() === "approved";
-}
-
-function showLogin(){
-  $("loginSection").classList.remove("hidden");
-  $("app").classList.add("hidden");
-  $("logoutBtn").classList.add("hidden");
-}
-
-function showApp(){
-  $("loginSection").classList.add("hidden");
-  $("app").classList.remove("hidden");
-  $("logoutBtn").classList.remove("hidden");
-}
+function msg(id,text,type="ok"){const e=$(id);if(!e)return;e.textContent=text;e.className="msg "+type;e.style.display="block"}
+function hideMsg(id){const e=$(id);if(e)e.style.display="none"}
+function money(v){return "£"+Number(v||0).toLocaleString("en-GB",{minimumFractionDigits:2,maximumFractionDigits:2})}
+function showLogin(){$("loginView").classList.remove("hidden");$("appView").classList.add("hidden")}
+function showApp(){$("loginView").classList.add("hidden");$("appView").classList.remove("hidden")}
+function esc(v){return String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
+function js(v){return String(v??"").replace(/\\/g,"\\\\").replace(/'/g,"\\'")}
 
 async function checkAdmin(){
-  try{
-    const {data:{session}, error:sessionError} = await db.auth.getSession();
-
-    if(sessionError){
-      showLogin();
-      showMessage("loginMsg", "Session error: " + sessionError.message, "err");
-      return false;
-    }
-
-    if(!session){
-      showLogin();
-      return false;
-    }
-
-    const {data, error} = await db
-      .from("worker_profiles")
-      .select("id,role,active")
-      .eq("id", session.user.id)
-      .maybeSingle();
-
-    if(error){
-      console.error("Admin check error:", error);
-      showLogin();
-      showMessage("loginMsg", "Admin verification failed: " + error.message, "err");
-      return false;
-    }
-
-    if(!data){
-      await db.auth.signOut();
-      showLogin();
-      showMessage("loginMsg", "Admin profile not found.", "err");
-      return false;
-    }
-
-    if(data.role !== "admin" || data.active !== true){
-      await db.auth.signOut();
-      showLogin();
-      showMessage("loginMsg", "This account does not have active administrator access.", "err");
-      return false;
-    }
-
-    showApp();
-    await loadDashboard();
-    return true;
-
-  }catch(error){
-    console.error(error);
-    showLogin();
-    showMessage("loginMsg", "Admin verification failed: " + (error.message || error), "err");
-    return false;
-  }
+try{
+const {data:{session},error:se}=await db.auth.getSession();if(se)throw se;
+if(!session){showLogin();return false}
+const {data,error}=await db.from("worker_profiles").select("worker_id,full_name,role,active")
+.eq("worker_id","ADMIN001").eq("role","admin").maybeSingle();
+if(error){await db.auth.signOut();showLogin();msg("loginMsg","Admin verification failed: "+error.message,"err");return false}
+if(!data||data.active!==true){await db.auth.signOut();showLogin();msg("loginMsg","Admin profile not found or inactive.","err");return false}
+showApp();await loadDashboard();return true
+}catch(e){console.error(e);showLogin();msg("loginMsg","Admin verification failed: "+(e.message||e),"err");return false}
 }
 
-async function loadDashboard(){
-  await loadWorkers();
-  await loadSales();
-}
+$("loginBtn").onclick=async()=>{
+hideMsg("loginMsg");const b=$("loginBtn"),email=$("email").value.trim(),password=$("password").value;
+if(!email||!password){msg("loginMsg","Enter your email and password.","err");return}
+b.disabled=true;b.innerHTML='<span class="spinner"></span>Signing in...';
+try{const {error}=await db.auth.signInWithPassword({email,password});if(error){msg("loginMsg",error.message,"err");return}await checkAdmin()}
+catch(e){msg("loginMsg","Login error: "+(e.message||e),"err")}finally{b.disabled=false;b.textContent="Sign in"}
+};
+$("logoutBtn").onclick=async()=>{await db.auth.signOut();showLogin()};
+db.auth.onAuthStateChange((_event,session)=>{if(!session)showLogin()});
 
-async function loadSales(){
-  const {data, error} = await db
-    .from("sales")
-    .select("*")
-    .order("sale_date", {ascending:false});
-
-  if(error){
-    showMessage("dashboardMsg", "Sales error: " + error.message, "err");
-    $("salesBody").innerHTML = `<tr><td colspan="8">${escapeHtml(error.message)}</td></tr>`;
-    return;
-  }
-
-  sales = data || [];
-  updateWorkerFilter();
-  applyFilters();
-  updateSummary();
-}
-
+async function loadDashboard(){await Promise.all([loadWorkers(),loadSales()])}
 async function loadWorkers(){
-  const {data, error} = await db
-    .from("worker_profiles")
-    .select("id,worker_id,full_name,phone,role,active,contract_start,contract_end")
-    .order("full_name");
-
-  if(error){
-    $("workersBody").innerHTML = `<tr><td colspan="6">${escapeHtml(error.message)}</td></tr>`;
-    showMessage("dashboardMsg", "Workers error: " + error.message, "err");
-    return;
-  }
-
-  workers = data || [];
-  renderWorkers();
-  updateWorkerFilter();
-  updateSummary();
+const {data,error}=await db.from("worker_profiles").select("worker_id,full_name,phone,role,active,contract_end,contract_start").order("created_at",{ascending:false});
+if(error){msg("workerMsg",error.message,"err");return}
+const body=$("workersBody");body.innerHTML="";
+(data||[]).forEach(w=>{const tr=document.createElement("tr");tr.innerHTML=
+`<td>${esc(w.worker_id)}</td><td>${esc(w.full_name)}</td><td>${esc(w.phone||"")}</td><td>${esc(w.role||"worker")}</td><td>${w.active?"Yes":"No"}</td><td>${esc(w.contract_end||"")}</td><td><div class="actions">
+${w.role!=="admin"?`<button class="secondary" onclick="toggleWorker('${js(w.worker_id)}',${w.active})">${w.active?"End Contract":"Reactivate"}</button><button class="danger" onclick="deleteWorker('${js(w.worker_id)}')">Delete</button>`:"<b>Administrator</b>"}</div></td>`;
+body.appendChild(tr)})
 }
-
-function updateWorkerFilter(){
-  const current = $("workerFilter").value;
-  $("workerFilter").innerHTML =
-    '<option value="">All workers</option>' +
-    workers.map(w =>
-      `<option value="${escapeHtml(w.id)}">${escapeHtml(w.full_name || w.worker_id || w.id)}</option>`
-    ).join("");
-
-  if(workers.some(w => w.id === current)) $("workerFilter").value = current;
+async function loadSales(){
+const {data,error}=await db.from("sales").select("sale_date,worker_id,customer_reference,product_service,quantity,sale_amount,payment_method").order("sale_date",{ascending:false});
+if(error){console.error(error);return}
+const rows=data||[],body=$("salesBody");body.innerHTML="";let today=0,week=0,month=0,all=0;
+const now=new Date(),todayKey=now.toISOString().slice(0,10),monthKey=now.toISOString().slice(0,7);
+const weekStart=new Date(now);weekStart.setHours(0,0,0,0);weekStart.setDate(weekStart.getDate()-((weekStart.getDay()+6)%7));
+rows.forEach(s=>{const a=Number(s.sale_amount||0);all+=a;const d=new Date(s.sale_date);
+if(String(s.sale_date||"").slice(0,10)===todayKey)today+=a;if(d>=weekStart)week+=a;if(String(s.sale_date||"").slice(0,7)===monthKey)month+=a;
+const tr=document.createElement("tr");tr.innerHTML=`<td>${esc(s.sale_date||"")}</td><td>${esc(s.worker_id||"")}</td><td>${esc(s.customer_reference||"")}</td><td>${esc(s.product_service||"")}</td><td>${esc(s.quantity||"")}</td><td>${money(a)}</td><td>${esc(s.payment_method||"")}</td>`;body.appendChild(tr)});
+$("todaySale").textContent=money(today);$("weekSale").textContent=money(week);$("monthSale").textContent=money(month);$("allSale").textContent=money(all)
 }
+$("refreshWorkers").onclick=loadWorkers;$("refreshSales").onclick=loadSales;
 
-function updateSummary(){
-  const approved = sales.filter(isApproved);
-  const now = new Date();
-
-  const today = now.toISOString().slice(0,10);
-  const month = now.toISOString().slice(0,7);
-
-  const weekStart = new Date(now);
-  const day = weekStart.getDay();
-  const diff = day === 0 ? 6 : day - 1;
-  weekStart.setDate(weekStart.getDate() - diff);
-  const week = weekStart.toISOString().slice(0,10);
-
-  const total = filter => approved
-    .filter(filter)
-    .reduce((sum,row) => sum + saleAmount(row), 0);
-
-  $("today").textContent = money(total(row =>
-    shortDate(row.sale_date || row.created_at) === today
-  ));
-
-  $("week").textContent = money(total(row =>
-    shortDate(row.sale_date || row.created_at) >= week
-  ));
-
-  $("month").textContent = money(total(row =>
-    shortDate(row.sale_date || row.created_at).startsWith(month)
-  ));
-
-  $("all").textContent = money(total(() => true));
-  $("workerCount").textContent = workers.filter(w => w.active === true && w.role !== "admin").length;
-}
-
-function applyFilters(){
-  const worker = $("workerFilter").value;
-  const from = $("fromDate").value;
-  const to = $("toDate").value;
-
-  filteredSales = sales.filter(row => {
-    const date = shortDate(row.sale_date || row.created_at);
-
-    return (!worker || row.worker_id === worker) &&
-           (!from || date >= from) &&
-           (!to || date <= to);
-  });
-
-  renderSales();
-}
-
-function workerName(workerId){
-  const worker = workers.find(w => w.id === workerId);
-  return worker ? (worker.full_name || worker.worker_id || worker.id) : (workerId || "");
-}
-
-function renderSales(){
-  $("salesBody").innerHTML = filteredSales.length
-    ? filteredSales.map(row => {
-        const status = String(row.status || "approved").toLowerCase();
-        let action = "";
-
-        if(status === "pending"){
-          action =
-            `<button class="success-btn" onclick="approveSale('${escapeHtml(row.id)}')">Approve</button>
-             <button class="danger" onclick="rejectSale('${escapeHtml(row.id)}')">Reject</button>`;
-        }else{
-          action =
-            `<button class="muted" onclick="deleteSale('${escapeHtml(row.id)}')">Delete</button>`;
-        }
-
-        return `
-          <tr>
-            <td>${escapeHtml(shortDate(row.sale_date || row.created_at))}</td>
-            <td>${escapeHtml(workerName(row.worker_id))}</td>
-            <td>${escapeHtml(row.customer_reference || "")}</td>
-            <td>${escapeHtml(row.product_service || "")}</td>
-            <td>${escapeHtml(row.quantity ?? "")}</td>
-            <td>${money(saleAmount(row))}</td>
-            <td>
-              <span class="badge ${status === "approved" ? "active" : status === "rejected" ? "inactive" : ""}">
-                ${escapeHtml(status)}
-              </span>
-              ${row.rejection_reason ? `<div class="small">${escapeHtml(row.rejection_reason)}</div>` : ""}
-            </td>
-            <td>${action}</td>
-          </tr>`;
-      }).join("")
-    : '<tr><td colspan="8">No sales found.</td></tr>';
-}
-
-function renderWorkers(){
-  const nonAdminWorkers = workers.filter(w => w.role !== "admin");
-
-  $("workersBody").innerHTML = nonAdminWorkers.length
-    ? nonAdminWorkers.map(w => `
-      <tr>
-        <td>${escapeHtml(w.worker_id || "")}</td>
-        <td>${escapeHtml(w.full_name || "")}</td>
-        <td>${escapeHtml(w.role || "worker")}</td>
-        <td>
-          <span class="badge ${w.active ? "active" : "inactive"}">
-            ${w.active ? "Active" : "Inactive"}
-          </span>
-        </td>
-        <td>${escapeHtml(w.contract_end || "—")}</td>
-        <td>
-          ${w.active
-            ? `<button class="danger" onclick="endContract('${escapeHtml(w.id)}')">End Contract</button>`
-            : `<button class="muted" onclick="reactivateWorker('${escapeHtml(w.id)}')">Reactivate</button>`
-          }
-          <button class="danger" onclick="deleteWorker('${escapeHtml(w.id)}','${escapeHtml(w.full_name || w.worker_id || "Worker")}')">Delete</button>
-        </td>
-      </tr>
-    `).join("")
-    : '<tr><td colspan="6">No workers found.</td></tr>';
-}
-
-window.approveSale = async function(id){
-  const {error} = await db.from("sales")
-    .update({
-      status:"approved",
-      rejection_reason:null,
-      approved_at:new Date().toISOString()
-    })
-    .eq("id", id);
-
-  if(error) alert(error.message);
-  else await loadSales();
+$("addWorkerForm").onsubmit=async e=>{
+e.preventDefault();hideMsg("addMsg");const b=$("createBtn");b.disabled=true;b.innerHTML='<span class="spinner"></span>Creating...';
+try{
+const {data:{session}}=await db.auth.getSession();if(!session)throw new Error("Admin session expired.");
+const payload={worker_id:$("worker_id").value.trim(),full_name:$("full_name").value.trim(),phone:$("phone").value.trim(),email:$("worker_email").value.trim(),contract_start:$("contract_start").value||null,contract_end:$("contract_end").value||null};
+const r=await fetch(CREATE_WORKER_URL,{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+session.access_token,"apikey":SUPABASE_ANON_KEY},body:JSON.stringify(payload)});
+const result=await r.json().catch(()=>({}));if(!r.ok||!result.success)throw new Error(result.error||result.message||("Create worker failed ("+r.status+")"));
+msg("addMsg","Worker created successfully and welcome email sent.","ok");$("addWorkerForm").reset();await loadWorkers()
+}catch(e){console.error(e);msg("addMsg",e.message||String(e),"err")}finally{b.disabled=false;b.textContent="Create Worker & Send Welcome Email"}
 };
 
-window.rejectSale = async function(id){
-  const reason = prompt("Reason for rejecting this sale:");
-  if(reason === null) return;
-
-  const {error} = await db.from("sales")
-    .update({
-      status:"rejected",
-      rejection_reason:reason,
-      approved_at:null
-    })
-    .eq("id", id);
-
-  if(error) alert(error.message);
-  else await loadSales();
-};
-
-window.deleteSale = async function(id){
-  if(!confirm("Delete this sale? This cannot be undone.")) return;
-
-  const {error} = await db.from("sales").delete().eq("id", id);
-
-  if(error) alert(error.message);
-  else await loadSales();
-};
-
-window.endContract = async function(id){
-  if(!confirm("End this worker's contract? Historical sales will remain in the sales table.")) return;
-
-  const {error} = await db
-    .from("worker_profiles")
-    .update({active:false})
-    .eq("id", id);
-
-  if(error) alert(error.message);
-  else await loadWorkers();
-};
-
-window.reactivateWorker = async function(id){
-  if(!confirm("Reactivate this worker?")) return;
-
-  const {error} = await db
-    .from("worker_profiles")
-    .update({active:true})
-    .eq("id", id);
-
-  if(error) alert(error.message);
-  else await loadWorkers();
-};
-
-window.deleteWorker = async function(id, name){
-  if(!confirm("Delete " + name + " permanently? This removes the worker account and profile.")) return;
-
-  try{
-    const {data:{session}} = await db.auth.getSession();
-
-    if(!session){
-      alert("Your admin session has expired. Please sign in again.");
-      return;
-    }
-
-    const response = await fetch(
-      SUPABASE_URL + "/functions/v1/delete-worker",
-      {
-        method:"POST",
-        headers:{
-          "Authorization":"Bearer " + session.access_token,
-          "apikey":SUPABASE_ANON_KEY,
-          "Content-Type":"application/json"
-        },
-        body:JSON.stringify({user_id:id})
-      }
-    );
-
-    const result = await response.json().catch(() => ({}));
-
-    if(!response.ok || !result.success){
-      alert(result.error || "Could not delete worker.");
-      return;
-    }
-
-    alert("Worker deleted successfully.");
-    await loadWorkers();
-
-  }catch(error){
-    alert("Connection error: " + (error.message || "Could not reach delete-worker."));
-  }
-};
-
-$("createWorkerForm").addEventListener("submit", async function(event){
-  event.preventDefault();
-
-  const button = $("createWorkerBtn");
-  button.disabled = true;
-  button.innerHTML = '<span class="spinner"></span>Creating...';
-  showMessage("createWorkerMsg", "Creating worker account...");
-
-  try{
-    const {data:{session}} = await db.auth.getSession();
-
-    if(!session){
-      showMessage("createWorkerMsg", "Your admin session has expired. Please sign in again.", "err");
-      return;
-    }
-
-    const payload = {
-      full_name:$("newFullName").value.trim(),
-      worker_id:$("newWorkerId").value.trim(),
-      email:$("newEmail").value.trim(),
-      phone:$("newPhone").value.trim(),
-      contract_start:$("newContractStart").value || null,
-      contract_end:$("newContractEnd").value || null
-    };
-
-    if(!payload.full_name || !payload.worker_id || !payload.email){
-      showMessage("createWorkerMsg", "Full name, worker ID and email are required.", "err");
-      return;
-    }
-
-    if(payload.contract_start && payload.contract_end &&
-       payload.contract_end < payload.contract_start){
-      showMessage("createWorkerMsg", "Contract end date cannot be before the start date.", "err");
-      return;
-    }
-
-    const response = await fetch(
-      SUPABASE_URL + "/functions/v1/create-worker",
-      {
-        method:"POST",
-        headers:{
-          "Authorization":"Bearer " + session.access_token,
-          "apikey":SUPABASE_ANON_KEY,
-          "Content-Type":"application/json"
-        },
-        body:JSON.stringify(payload)
-      }
-    );
-
-    const result = await response.json().catch(() => ({}));
-
-    console.log("CREATE WORKER STATUS:", response.status);
-    console.log("CREATE WORKER RESULT:", result);
-
-    if(!response.ok || result.success === false){
-      const detail = [
-        result.error || "Could not create worker account.",
-        result.stage ? "Stage: " + result.stage : "",
-        result.resend_status ? "Resend status: " + result.resend_status : ""
-      ].filter(Boolean).join(" | ");
-
-      showMessage("createWorkerMsg", detail, "err");
-      return;
-    }
-
-    showMessage(
-      "createWorkerMsg",
-      "Worker created successfully. Welcome email sent to " + payload.email + ".",
-      "ok"
-    );
-
-    this.reset();
-    await loadWorkers();
-
-  }catch(error){
-    console.error(error);
-    showMessage(
-      "createWorkerMsg",
-      "Connection error: " + (error.message || "Could not reach create-worker."),
-      "err"
-    );
-  }finally{
-    button.disabled = false;
-    button.textContent = "Create Worker Account";
-  }
-});
-
-$("loginBtn").addEventListener("click", async function(){
-  const button = $("loginBtn");
-  button.disabled = true;
-  button.innerHTML = '<span class="spinner"></span>Signing in...';
-  showMessage("loginMsg", "Signing in...");
-
-  try{
-    const email = $("email").value.trim();
-    const password = $("password").value;
-
-    if(!email || !password){
-      showMessage("loginMsg", "Enter your admin email and password.", "err");
-      return;
-    }
-
-    const {error} = await db.auth.signInWithPassword({
-      email,
-      password
-    });
-
-    if(error){
-      showMessage("loginMsg", error.message, "err");
-      return;
-    }
-
-    await checkAdmin();
-
-  }catch(error){
-    console.error(error);
-    showMessage("loginMsg", "Login error: " + (error.message || error), "err");
-  }finally{
-    button.disabled = false;
-    button.textContent = "Sign in";
-  }
-});
-
-$("password").addEventListener("keydown", e => {
-  if(e.key === "Enter") $("loginBtn").click();
-});
-
-$("logoutBtn").addEventListener("click", async function(){
-  await db.auth.signOut();
-  showLogin();
-  showMessage("loginMsg", "You have been logged out.", "ok");
-});
-
-$("refreshSales").addEventListener("click", loadSales);
-$("refreshWorkers").addEventListener("click", loadWorkers);
-$("applyFilter").addEventListener("click", applyFilters);
-$("workerFilter").addEventListener("change", applyFilters);
-
-$("downloadCsv").addEventListener("click", function(){
-  const rows = [
-    ["Date","Worker","Customer","Product/Service","Quantity","Amount","Status","Rejection Reason"],
-    ...filteredSales.map(row => [
-      shortDate(row.sale_date || row.created_at),
-      workerName(row.worker_id),
-      row.customer_reference || "",
-      row.product_service || "",
-      row.quantity ?? "",
-      saleAmount(row),
-      row.status || "approved",
-      row.rejection_reason || ""
-    ])
-  ];
-
-  const csv = rows.map(row =>
-    row.map(value => `"${String(value).replaceAll('"','""')}"`).join(",")
-  ).join("\n");
-
-  const link = document.createElement("a");
-  link.href = URL.createObjectURL(new Blob([csv], {type:"text/csv"}));
-  link.download = "ezelex-sales.csv";
-  link.click();
-  URL.revokeObjectURL(link.href);
-});
-
-document.querySelectorAll(".nav button").forEach(button => {
-  button.addEventListener("click", function(){
-    document.querySelectorAll(".nav button").forEach(b => b.classList.remove("active"));
-    this.classList.add("active");
-
-    document.querySelectorAll("#app > section").forEach(section =>
-      section.classList.add("hidden")
-    );
-
-    $(this.dataset.tab).classList.remove("hidden");
-  });
-});
-
-db.auth.onAuthStateChange((event, session) => {
-  if(event === "SIGNED_OUT") showLogin();
-});
-
-checkAdmin();
+async function toggleWorker(workerId,current){
+const {error}=await db.from("worker_profiles").update({active:!current}).eq("worker_id",workerId);
+if(error){msg("workerMsg",error.message,"err");return}msg("workerMsg",current?"Contract ended.":"Worker reactivated.","ok");await loadWorkers()
+}
+async function deleteWorker(workerId){
+if(!confirm("Delete worker "+workerId+" and their sales? This cannot be undone."))return;
+try{
+const {data:{session}}=await db.auth.getSession();if(!session)throw new Error("Admin session expired.");
+const r=await fetch(DELETE_WORKER_URL,{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+session.access_token,"apikey":SUPABASE_ANON_KEY},body:JSON.stringify({worker_id:workerId})});
+const result=await r.json().catch(()=>({}));if(!r.ok||!result.success)throw new Error(result.error||result.message||("Delete failed ("+r.status+")"));
+msg("workerMsg","Worker deleted successfully.","ok");await Promise.all([loadWorkers(),loadSales()])
+}catch(e){console.error(e);msg("workerMsg",e.message||String(e),"err")}
+}
+(async()=>{await checkAdmin()})();
 </script>
 </body>
 </html>
