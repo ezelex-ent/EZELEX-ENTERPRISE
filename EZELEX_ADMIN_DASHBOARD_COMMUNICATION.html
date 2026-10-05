@@ -9,305 +9,297 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
 <style>
-*{
-  box-sizing:border-box;
-}
+*{box-sizing:border-box}
 
 body{
-  margin:0;
-  font-family:Arial,Helvetica,sans-serif;
-  background:#f4f6f8;
-  color:#17202a;
+margin:0;
+font-family:Arial,Helvetica,sans-serif;
+background:#f4f6f8;
+color:#17202a;
 }
 
 header{
-  background:linear-gradient(135deg,#111827,#1e293b);
-  color:white;
-  padding:22px 5%;
-  display:flex;
-  justify-content:space-between;
-  align-items:center;
-  gap:15px;
-  box-shadow:0 4px 20px #0002;
+background:linear-gradient(135deg,#111827,#1e293b);
+color:white;
+padding:22px 5%;
+display:flex;
+justify-content:space-between;
+align-items:center;
+gap:15px;
+box-shadow:0 4px 20px #0002;
 }
 
 header h1{
-  margin:0;
-  font-size:24px;
+margin:0;
+font-size:24px;
 }
 
 button{
-  border:0;
-  border-radius:8px;
-  padding:11px 16px;
-  cursor:pointer;
-  font-weight:700;
+border:0;
+border-radius:8px;
+padding:11px 16px;
+cursor:pointer;
+font-weight:700;
 }
 
 button:disabled{
-  opacity:.6;
-  cursor:not-allowed;
+opacity:.6;
+cursor:not-allowed;
 }
 
 .login{
-  max-width:420px;
-  margin:70px auto;
-  background:white;
-  padding:30px;
-  border-radius:14px;
-  box-shadow:0 8px 30px #0001;
+max-width:420px;
+margin:70px auto;
+background:white;
+padding:30px;
+border-radius:14px;
+box-shadow:0 8px 30px #0001;
 }
 
 .login h2{
-  margin-top:0;
+margin-top:0;
 }
 
 input,select{
-  width:100%;
-  padding:12px;
-  margin:7px 0 14px;
-  border:1px solid #d5dbe1;
-  border-radius:8px;
-  font-size:15px;
-  background:white;
+width:100%;
+padding:12px;
+margin:7px 0 14px;
+border:1px solid #d5dbe1;
+border-radius:8px;
+font-size:15px;
+background:white;
 }
 
 input:focus,select:focus{
-  outline:none;
-  border-color:#2563eb;
-  box-shadow:0 0 0 3px #2563eb18;
+outline:none;
+border-color:#2563eb;
+box-shadow:0 0 0 3px #2563eb18;
 }
 
 .primary{
-  background:#111827;
-  color:white;
+background:#111827;
+color:white;
 }
 
 .primary:hover{
-  background:#1f2937;
+background:#1f2937;
 }
 
 .danger{
-  background:#b42318;
-  color:white;
+background:#b42318;
+color:white;
 }
 
 .danger:hover{
-  background:#912018;
-}
-
-.success{
-  background:#087443;
-  color:white;
+background:#912018;
 }
 
 .hidden{
-  display:none!important;
+display:none!important;
 }
 
 .wrap{
-  max-width:1250px;
-  margin:30px auto;
-  padding:0 18px;
+max-width:1250px;
+margin:30px auto;
+padding:0 18px;
 }
 
 .cards{
-  display:grid;
-  grid-template-columns:repeat(5,1fr);
-  gap:15px;
+display:grid;
+grid-template-columns:repeat(5,1fr);
+gap:15px;
 }
 
 .card{
-  background:white;
-  padding:20px;
-  border-radius:12px;
-  box-shadow:0 3px 15px #0000000d;
+background:white;
+padding:20px;
+border-radius:12px;
+box-shadow:0 3px 15px #0000000d;
 }
 
 .label{
-  color:#667085;
-  font-size:13px;
+color:#667085;
+font-size:13px;
 }
 
 .value{
-  font-size:27px;
-  font-weight:800;
-  margin-top:8px;
+font-size:27px;
+font-weight:800;
+margin-top:8px;
 }
 
 .filters{
-  background:white;
-  padding:18px;
-  border-radius:12px;
-  margin:22px 0;
-  display:grid;
-  grid-template-columns:1.3fr 1fr 1fr auto;
-  gap:12px;
-  align-items:end;
+background:white;
+padding:18px;
+border-radius:12px;
+margin:22px 0;
+display:grid;
+grid-template-columns:1.3fr 1fr 1fr auto;
+gap:12px;
+align-items:end;
 }
 
 .tablebox{
-  background:white;
-  border-radius:12px;
-  overflow:auto;
-  box-shadow:0 3px 15px #0000000d;
+background:white;
+border-radius:12px;
+overflow:auto;
+box-shadow:0 3px 15px #0000000d;
 }
 
 .actions{
-  display:flex;
-  gap:10px;
-  margin-bottom:15px;
-  flex-wrap:wrap;
+display:flex;
+gap:10px;
+margin-bottom:15px;
+flex-wrap:wrap;
 }
 
 table{
-  width:100%;
-  border-collapse:collapse;
-  min-width:950px;
+width:100%;
+border-collapse:collapse;
+min-width:950px;
 }
 
 th,td{
-  padding:12px;
-  border-bottom:1px solid #eee;
-  text-align:left;
-  font-size:14px;
+padding:12px;
+border-bottom:1px solid #eee;
+text-align:left;
+font-size:14px;
 }
 
 th{
-  background:#f8fafc;
-  font-weight:700;
+background:#f8fafc;
+font-weight:700;
 }
 
 tr:hover td{
-  background:#fafafa;
+background:#fafafa;
 }
 
 .msg{
-  padding:10px;
-  border-radius:8px;
-  margin:10px 0;
-  background:#fef3c7;
+padding:10px;
+border-radius:8px;
+margin:10px 0;
+background:#fef3c7;
 }
 
 .error{
-  background:#fee4e2;
-  color:#912018;
-}
-
-.successMsg{
-  background:#dcfce7;
-  color:#166534;
+background:#fee4e2;
+color:#912018;
 }
 
 .worker-section{
-  background:white;
-  margin-top:25px;
-  padding:22px;
-  border-radius:14px;
-  box-shadow:0 3px 15px #0000000d;
+background:white;
+margin-top:25px;
+padding:22px;
+border-radius:14px;
+box-shadow:0 3px 15px #0000000d;
 }
 
 .worker-section h2{
-  margin-top:0;
+margin-top:0;
 }
 
 .worker-grid{
-  display:grid;
-  grid-template-columns:repeat(3,1fr);
-  gap:15px;
+display:grid;
+grid-template-columns:repeat(3,1fr);
+gap:15px;
 }
 
 .worker-card{
-  border:1px solid #e5e7eb;
-  border-radius:12px;
-  padding:18px;
-  background:#fff;
+border:1px solid #e5e7eb;
+border-radius:12px;
+padding:18px;
+background:#fff;
 }
 
 .worker-card h3{
-  margin-top:0;
-  margin-bottom:8px;
+margin-top:0;
+margin-bottom:8px;
 }
 
 .worker-meta{
-  color:#667085;
-  font-size:14px;
-  line-height:1.7;
+color:#667085;
+font-size:14px;
+line-height:1.7;
 }
 
 .badge{
-  display:inline-block;
-  padding:5px 9px;
-  border-radius:999px;
-  font-size:12px;
-  font-weight:700;
+display:inline-block;
+padding:5px 9px;
+border-radius:999px;
+font-size:12px;
+font-weight:700;
 }
 
 .badge.active{
-  background:#dcfce7;
-  color:#166534;
+background:#dcfce7;
+color:#166534;
 }
 
 .badge.inactive{
-  background:#fee2e2;
-  color:#991b1b;
+background:#fee2e2;
+color:#991b1b;
 }
 
 .worker-actions{
-  display:flex;
-  gap:8px;
-  margin-top:15px;
-  flex-wrap:wrap;
+display:flex;
+gap:8px;
+margin-top:15px;
+flex-wrap:wrap;
 }
 
 .small{
-  padding:8px 12px;
-  font-size:13px;
+padding:8px 12px;
+font-size:13px;
 }
 
 .protected{
-  background:#f1f5f9;
-  color:#475569;
-  padding:8px 12px;
-  border-radius:8px;
-  font-size:13px;
-  font-weight:700;
+background:#f1f5f9;
+color:#475569;
+padding:8px 12px;
+border-radius:8px;
+font-size:13px;
+font-weight:700;
 }
 
 @media(max-width:1000px){
-  .cards{
-    grid-template-columns:repeat(2,1fr);
-  }
 
-  .worker-grid{
-    grid-template-columns:repeat(2,1fr);
-  }
+.cards{
+grid-template-columns:repeat(2,1fr);
+}
+
+.worker-grid{
+grid-template-columns:repeat(2,1fr);
+}
+
 }
 
 @media(max-width:700px){
-  header{
-    padding:18px;
-  }
 
-  header h1{
-    font-size:18px;
-  }
+header{
+padding:18px;
+}
 
-  .cards{
-    grid-template-columns:1fr;
-  }
+header h1{
+font-size:18px;
+}
 
-  .filters{
-    grid-template-columns:1fr;
-  }
+.cards{
+grid-template-columns:1fr;
+}
 
-  .worker-grid{
-    grid-template-columns:1fr;
-  }
+.filters{
+grid-template-columns:1fr;
+}
 
-  .wrap{
-    padding:0 12px;
-  }
+.worker-grid{
+grid-template-columns:1fr;
+}
+
+.wrap{
+padding:0 12px;
+}
+
 }
 </style>
 
@@ -316,21 +308,36 @@ tr:hover td{
 <body>
 
 <header>
-  <h1>EZELEX Enterprise — Administrator Dashboard</h1>
-  <button id="logoutBtn" class="danger hidden">Log out</button>
+
+<h1>
+EZELEX Enterprise — Administrator Dashboard
+</h1>
+
+<button
+id="logoutBtn"
+class="danger hidden">
+Log out </button>
+
 </header>
 
-<section id="loginSection" class="login">
+<section
+id="loginSection"
+class="login">
 
-  <h2>Administrator Login</h2>
+<h2>
+Administrator Login
+</h2>
 
-  <p>
-    Sign in with the secure EZELEX administrator account.
-  </p>
+<p>
+Sign in with the secure EZELEX administrator account.
+</p>
 
-  <div id="loginMsg"></div>
+<div id="loginMsg"></div>
 
-<label>Email</label>
+<label>
+Email
+</label>
+
 <input
 id="email"
 type="email"
@@ -339,7 +346,10 @@ autocomplete="username"
 
 >
 
-<label>Password</label>
+<label>
+Password
+</label>
+
 <input
 id="password"
 type="password"
@@ -351,181 +361,294 @@ autocomplete="current-password"
 <button
 id="loginBtn"
 class="primary"
-style="width:100%"
-
->
-
-```
-Sign in
-```
-
-  </button>
+style="width:100%">
+Sign in </button>
 
 </section>
 
-<main id="dashboard" class="wrap hidden">
+<main
+id="dashboard"
+class="wrap hidden">
 
-  <div id="dashMsg"></div>
+<div id="dashMsg"></div>
 
-  <!-- SALES SUMMARY -->
+<!-- SALES SUMMARY -->
 
-  <div class="cards">
+<div class="cards">
 
-```
 <div class="card">
-  <div class="label">Today Sale</div>
-  <div class="value" id="today">GH₵0.00</div>
+
+<div class="label">
+Today Sale
+</div>
+
+<div
+class="value"
+id="today">
+GH₵0.00
+</div>
+
 </div>
 
 <div class="card">
-  <div class="label">This Week Sale</div>
-  <div class="value" id="week">GH₵0.00</div>
+
+<div class="label">
+This Week Sale
+</div>
+
+<div
+class="value"
+id="week">
+GH₵0.00
+</div>
+
 </div>
 
 <div class="card">
-  <div class="label">This Month Sale</div>
-  <div class="value" id="month">GH₵0.00</div>
+
+<div class="label">
+This Month Sale
+</div>
+
+<div
+class="value"
+id="month">
+GH₵0.00
+</div>
+
 </div>
 
 <div class="card">
-  <div class="label">All Time Sale</div>
-  <div class="value" id="alltime">GH₵0.00</div>
+
+<div class="label">
+All Time Sale
+</div>
+
+<div
+class="value"
+id="alltime">
+GH₵0.00
+</div>
+
 </div>
 
 <div class="card">
-  <div class="label">Active Workers</div>
-  <div class="value" id="workers">0</div>
+
+<div class="label">
+Active Workers
 </div>
-```
 
-  </div>
+<div
+class="value"
+id="workers">
+0
+</div>
 
-  <!-- SALES FILTERS -->
+</div>
 
-  <div class="filters">
+</div>
 
-```
+<!-- SALES FILTERS -->
+
+<div class="filters">
+
 <div>
-  <label>Worker</label>
-  <select id="workerFilter">
-    <option value="">All workers</option>
-  </select>
+
+<label>
+Worker
+</label>
+
+<select id="workerFilter">
+
+<option value="">
+All workers
+</option>
+
+</select>
+
 </div>
 
 <div>
-  <label>From</label>
-  <input id="fromDate" type="date">
+
+<label>
+From
+</label>
+
+<input
+id="fromDate"
+type="date"
+
+>
+
 </div>
 
 <div>
-  <label>To</label>
-  <input id="toDate" type="date">
+
+<label>
+To
+</label>
+
+<input
+id="toDate"
+type="date"
+
+>
+
 </div>
 
-<button id="filterBtn" class="primary">
-  Apply Filters
-</button>
-```
+<button
+id="filterBtn"
+class="primary">
 
-  </div>
+Apply Filters
 
-  <div class="actions">
-
-```
-<button id="refreshBtn" class="primary">
-  Refresh
 </button>
 
-<button id="csvBtn">
-  Download CSV
+</div>
+
+<div class="actions">
+
+<button
+id="refreshBtn"
+class="primary">
+
+Refresh
+
 </button>
-```
 
-  </div>
+<button
+id="csvBtn">
 
-  <!-- CENTRAL SALES -->
+Download CSV
 
-  <div class="tablebox">
+</button>
 
-```
+</div>
+
+<!-- CENTRAL SALES -->
+
+<div class="tablebox">
+
 <table>
 
-  <thead>
-    <tr>
-      <th>Date</th>
-      <th>Worker</th>
-      <th>Worker ID</th>
-      <th>Customer</th>
-      <th>Product/Service</th>
-      <th>Qty</th>
-      <th>Amount (GH₵)</th>
-      <th>Payment</th>
-      <th>Notes</th>
-    </tr>
-  </thead>
+<thead>
 
-  <tbody id="salesBody">
-    <tr>
-      <td colspan="9">
-        No records yet.
-      </td>
-    </tr>
-  </tbody>
+<tr>
+
+<th>
+Date
+</th>
+
+<th>
+Worker
+</th>
+
+<th>
+Worker ID
+</th>
+
+<th>
+Customer
+</th>
+
+<th>
+Product/Service
+</th>
+
+<th>
+Qty
+</th>
+
+<th>
+Amount (GH₵)
+</th>
+
+<th>
+Payment
+</th>
+
+<th>
+Notes
+</th>
+
+</tr>
+
+</thead>
+
+<tbody id="salesBody">
+
+<tr>
+
+<td colspan="9">
+No records yet.
+</td>
+
+</tr>
+
+</tbody>
 
 </table>
-```
 
-  </div>
+</div>
 
-  <!-- WORKER MANAGEMENT -->
+<!-- WORKER MANAGEMENT -->
 
-  <section class="worker-section">
+<section
+class="worker-section">
 
-```
-<h2>Worker Management</h2>
+<h2>
+Worker Management
+</h2>
 
 <p>
-  Manage EZELEX workers and their access securely.
+Manage EZELEX workers and their access securely.
 </p>
 
 <div id="workerMsg"></div>
 
-<div id="workerGrid" class="worker-grid">
-  <p>Loading workers...</p>
-</div>
-```
+<div
+id="workerGrid"
+class="worker-grid">
 
-  </section>
+<p>
+Loading workers...
+</p>
+
+</div>
+
+</section>
 
 </main>
 
 <script>
 
 const SUPABASE_URL =
-  "https://hweczhwoggmsrwhkktrx.supabase.co";
+"https://hweczhwoggmsrwhkktrx.supabase.co";
 
 const SUPABASE_PUBLISHABLE_KEY =
-  "sb_publishable_D0o90HRJ1AfROf_DAj7ZAg_uaPDwqvV";
+"sb_publishable_D0o90HRJ1AfROf_DAj7ZAg_uaPDwqvV";
 
-const { createClient } = supabase;
+const {
+createClient
+} = supabase;
 
-const db = createClient(
-  SUPABASE_URL,
-  SUPABASE_PUBLISHABLE_KEY
+const db =
+createClient(
+SUPABASE_URL,
+SUPABASE_PUBLISHABLE_KEY
 );
 
 
-const DELETE_WORKER_URL =
-  SUPABASE_URL + "/functions/v1/delete-worker";
-
-
 let allSales = [];
+
 let filteredSales = [];
+
 let allWorkers = [];
 
 
-const $ = id =>
-  document.getElementById(id);
+const $ =
+id =>
+document.getElementById(id);
 
 
 /* =========================
@@ -534,11 +657,16 @@ const $ = id =>
 
 function money(value){
 
-  return "GH₵" +
-    Number(value || 0).toLocaleString("en-GH",{
-      minimumFractionDigits:2,
-      maximumFractionDigits:2
-    });
+return "GH₵" +
+Number(
+value || 0
+).toLocaleString(
+"en-GH",
+{
+minimumFractionDigits:2,
+maximumFractionDigits:2
+}
+);
 
 }
 
@@ -548,21 +676,24 @@ function money(value){
 ========================= */
 
 function showMsg(
-  id,
-  text,
-  error=false
+id,
+text,
+error=false
 ){
 
-  const element = $(id);
+const element =
+$(id);
 
-  if(!element){
-    return;
-  }
+if(!element){
+return;
+}
 
-  element.innerHTML =
-    text
-      ? `<div class="${error ? "msg error" : "msg"}">${text}</div>`
-      : "";
+element.innerHTML =
+text
+?
+`<div class="${error ? "msg error" : "msg"}">${text}</div>`
+:
+"";
 
 }
 
@@ -573,78 +704,87 @@ function showMsg(
 
 async function checkAdmin(){
 
-  const {
-    data:{session}
-  } = await db.auth.getSession();
-
-  if(!session){
-
-    showLogin();
-
-    return;
-  }
+const {
+data:{
+session
+}
+} =
+await db.auth.getSession();
 
 
-  const {
-    data,
-    error
-  } = await db
-    .from("worker_profiles")
-    .select(
-      "user_id,worker_id,full_name,phone,role,active"
-    )
-    .eq(
-      "user_id",
-      session.user.id
-    )
-    .eq(
-      "worker_id",
-      "ADMIN001"
-    )
-    .eq(
-      "role",
-      "admin"
-    )
-    .maybeSingle();
+if(!session){
+
+showLogin();
+
+return;
+
+}
 
 
-  if(
-    error ||
-    !data ||
-    data.role !== "admin" ||
-    !data.active
-  ){
-
-    await db.auth.signOut();
-
-    showLogin();
-
-    showMsg(
-      "loginMsg",
-      "This account does not have active EZELEX administrator access.",
-      true
-    );
-
-    return;
-  }
-
-
-  $("loginSection")
-    .classList
-    .add("hidden");
-
-  $("dashboard")
-    .classList
-    .remove("hidden");
-
-  $("logoutBtn")
-    .classList
-    .remove("hidden");
+const {
+data,
+error
+} =
+await db
+.from("worker_profiles")
+.select(
+"user_id,worker_id,full_name,phone,role,active"
+)
+.eq(
+"user_id",
+session.user.id
+)
+.eq(
+"worker_id",
+"ADMIN001"
+)
+.eq(
+"role",
+"admin"
+)
+.maybeSingle();
 
 
-  await loadData();
+if(
+error ||
+!data ||
+data.role !== "admin" ||
+!data.active
+){
 
-  await loadWorkers();
+await db.auth.signOut();
+
+showLogin();
+
+showMsg(
+"loginMsg",
+"This account does not have active EZELEX administrator access.",
+true
+);
+
+return;
+
+}
+
+
+$("loginSection")
+.classList
+.add("hidden");
+
+
+$("dashboard")
+.classList
+.remove("hidden");
+
+
+$("logoutBtn")
+.classList
+.remove("hidden");
+
+
+await loadData();
+
+await loadWorkers();
 
 }
 
@@ -655,17 +795,17 @@ async function checkAdmin(){
 
 function showLogin(){
 
-  $("loginSection")
-    .classList
-    .remove("hidden");
+$("loginSection")
+.classList
+.remove("hidden");
 
-  $("dashboard")
-    .classList
-    .add("hidden");
+$("dashboard")
+.classList
+.add("hidden");
 
-  $("logoutBtn")
-    .classList
-    .add("hidden");
+$("logoutBtn")
+.classList
+.add("hidden");
 
 }
 
@@ -676,53 +816,57 @@ function showLogin(){
 
 async function loadData(){
 
-  showMsg(
-    "dashMsg",
-    "Loading sales..."
-  );
+showMsg(
+"dashMsg",
+"Loading sales..."
+);
 
 
-  const {
-    data:sales,
-    error
-  } = await db
-    .from("admin_sales_view")
-    .select("*")
-    .order(
-      "sale_date",
-      {ascending:false}
-    );
+const {
+data:sales,
+error
+} =
+await db
+.from("admin_sales_view")
+.select("*")
+.order(
+"sale_date",
+{
+ascending:false
+}
+);
 
 
-  if(error){
+if(error){
 
-    showMsg(
-      "dashMsg",
-      "Could not load sales: " +
-      error.message,
-      true
-    );
+showMsg(
+"dashMsg",
+"Could not load sales: " +
+error.message,
+true
+);
 
-    return;
-  }
+return;
 
-
-  allSales =
-    sales || [];
+}
 
 
-  populateWorkers();
+allSales =
+sales || [];
 
-  updateSummary(
-    allSales
-  );
 
-  applyFilters();
+populateWorkers();
 
-  showMsg(
-    "dashMsg",
-    ""
-  );
+updateSummary(
+allSales
+);
+
+applyFilters();
+
+showMsg(
+"dashMsg",
+""
+);
 
 }
 
@@ -733,72 +877,72 @@ async function loadData(){
 
 function populateWorkers(){
 
-  const seen =
-    new Map();
+const seen =
+new Map();
 
 
-  allSales.forEach(
-    sale => {
+allSales.forEach(
+sale => {
 
-      if(
-        sale.worker_id &&
-        !seen.has(
-          sale.worker_id
-        )
-      ){
+if(
+sale.worker_id &&
+!seen.has(
+sale.worker_id
+)
+){
 
-        seen.set(
-          sale.worker_id,
-          sale.worker_name ||
-          sale.worker_id
-        );
+seen.set(
+sale.worker_id,
+sale.worker_name ||
+sale.worker_id
+);
 
-      }
+}
 
-    }
-  );
-
-
-  const select =
-    $("workerFilter");
+}
+);
 
 
-  select.innerHTML =
-    '<option value="">All workers</option>';
+const select =
+$("workerFilter");
 
 
-  [
-    ...seen.entries()
-  ]
-  .sort(
-    (a,b) =>
-      a[1].localeCompare(
-        b[1]
-      )
-  )
-  .forEach(
-    ([id,name]) => {
+select.innerHTML =
+'<option value="">All workers</option>';
 
-      const option =
-        document.createElement(
-          "option"
-        );
 
-      option.value =
-        id;
+[
+...seen.entries()
+]
+.sort(
+(a,b) =>
+a[1].localeCompare(
+b[1]
+)
+)
+.forEach(
+([id,name]) => {
 
-      option.textContent =
-        name +
-        " (" +
-        id +
-        ")";
+const option =
+document.createElement(
+"option"
+);
 
-      select.appendChild(
-        option
-      );
+option.value =
+id;
 
-    }
-  );
+option.textContent =
+name +
+" (" +
+id +
+")";
+
+select.appendChild(
+option
+);
+
+}
+);
 
 }
 
@@ -809,12 +953,12 @@ function populateWorkers(){
 
 function amount(sale){
 
-  return Number(
-    sale.amount ??
-    sale.sale_amount ??
-    sale.total_amount ??
-    0
-  );
+return Number(
+sale.amount ??
+sale.sale_amount ??
+sale.total_amount ??
+0
+);
 
 }
 
@@ -825,28 +969,38 @@ function amount(sale){
 
 function dateOnly(value){
 
-  if(!value){
-    return "";
-  }
+if(!value){
+return "";
+}
 
 
-  if(value instanceof Date){
+if(value instanceof Date){
 
-    return value.getFullYear() +
-      "-" +
-      String(
-        value.getMonth()+1
-      ).padStart(2,"0") +
-      "-" +
-      String(
-        value.getDate()
-      ).padStart(2,"0");
+return value.getFullYear() +
+"-" +
+String(
+value.getMonth()+1
+).padStart(
+2,
+"0"
+) +
+"-" +
+String(
+value.getDate()
+).padStart(
+2,
+"0"
+);
 
-  }
+}
 
 
-  return String(value)
-    .slice(0,10);
+return String(
+value
+).slice(
+0,
+10
+);
 
 }
 
@@ -856,134 +1010,164 @@ function dateOnly(value){
 ========================= */
 
 function updateSummary(
-  sales
+sales
 ){
 
-  const now =
-    new Date();
+const now =
+new Date();
 
-  const today =
-    dateOnly(now);
-
-
-  const monday =
-    new Date(now);
-
-  monday.setHours(
-    0,0,0,0
-  );
-
-  monday.setDate(
-    monday.getDate() -
-    ((monday.getDay()+6)%7)
-  );
+const today =
+dateOnly(
+now
+);
 
 
-  const mondayStr =
-    dateOnly(monday);
+const monday =
+new Date(
+now
+);
+
+monday.setHours(
+0,
+0,
+0,
+0
+);
+
+monday.setDate(
+monday.getDate() -
+((monday.getDay()+6)%7)
+);
 
 
-  const monthStr =
-    now.getFullYear() +
-    "-" +
-    String(
-      now.getMonth()+1
-    ).padStart(2,"0");
+const mondayStr =
+dateOnly(
+monday
+);
 
 
-  const todayTotal =
-    sales
-      .filter(
-        sale =>
-          dateOnly(
-            sale.sale_date ||
-            sale.created_at
-          ) === today
-      )
-      .reduce(
-        (total,sale) =>
-          total + amount(sale),
-        0
-      );
+const monthStr =
+now.getFullYear() +
+"-" +
+String(
+now.getMonth()+1
+).padStart(
+2,
+"0"
+);
 
 
-  const weekTotal =
-    sales
-      .filter(
-        sale => {
-
-          const d =
-            dateOnly(
-              sale.sale_date ||
-              sale.created_at
-            );
-
-          return (
-            d >= mondayStr &&
-            d <= today
-          );
-
-        }
-      )
-      .reduce(
-        (total,sale) =>
-          total + amount(sale),
-        0
-      );
+const todayTotal =
+sales
+.filter(
+sale =>
+dateOnly(
+sale.sale_date ||
+sale.created_at
+) === today
+)
+.reduce(
+(total,sale) =>
+total +
+amount(sale),
+0
+);
 
 
-  const monthTotal =
-    sales
-      .filter(
-        sale =>
-          dateOnly(
-            sale.sale_date ||
-            sale.created_at
-          ).startsWith(
-            monthStr
-          )
-      )
-      .reduce(
-        (total,sale) =>
-          total + amount(sale),
-        0
-      );
+const weekTotal =
+sales
+.filter(
+sale => {
+
+const d =
+dateOnly(
+sale.sale_date ||
+sale.created_at
+);
+
+return (
+d >= mondayStr &&
+d <= today
+);
+
+}
+)
+.reduce(
+(total,sale) =>
+total +
+amount(sale),
+0
+);
 
 
-  const allTotal =
-    sales.reduce(
-      (total,sale) =>
-        total + amount(sale),
-      0
-    );
+const monthTotal =
+sales
+.filter(
+sale =>
+dateOnly(
+sale.sale_date ||
+sale.created_at
+)
+.startsWith(
+monthStr
+)
+)
+.reduce(
+(total,sale) =>
+total +
+amount(sale),
+0
+);
 
 
-  $("today").textContent =
-    money(todayTotal);
-
-  $("week").textContent =
-    money(weekTotal);
-
-  $("month").textContent =
-    money(monthTotal);
-
-  $("alltime").textContent =
-    money(allTotal);
+const allTotal =
+sales.reduce(
+(total,sale) =>
+total +
+amount(sale),
+0
+);
 
 
-  const workerIds =
-    new Set(
-      sales
-        .map(
-          sale =>
-            sale.worker_id
-        )
-        .filter(Boolean)
-    );
+$("today").textContent =
+money(
+todayTotal
+);
 
 
-  $("workers").textContent =
-    workerIds.size;
+$("week").textContent =
+money(
+weekTotal
+);
+
+
+$("month").textContent =
+money(
+monthTotal
+);
+
+
+$("alltime").textContent =
+money(
+allTotal
+);
+
+
+const workerIds =
+new Set(
+sales
+.map(
+sale =>
+sale.worker_id
+)
+.filter(
+Boolean
+)
+);
+
+
+$("workers").textContent =
+workerIds.size;
 
 }
 
@@ -994,43 +1178,47 @@ function updateSummary(
 
 function applyFilters(){
 
-  const worker =
-    $("workerFilter").value;
+const worker =
+$("workerFilter").value;
 
-  const from =
-    $("fromDate").value;
+const from =
+$("fromDate").value;
 
-  const to =
-    $("toDate").value;
-
-
-  filteredSales =
-    allSales.filter(
-      sale => {
-
-        const d =
-          dateOnly(
-            sale.sale_date ||
-            sale.created_at
-          );
+const to =
+$("toDate").value;
 
 
-        return (
-          (!worker ||
-            sale.worker_id === worker) &&
+filteredSales =
+allSales.filter(
+sale => {
 
-          (!from ||
-            d >= from) &&
-
-          (!to ||
-            d <= to)
-        );
-
-      }
-    );
+const d =
+dateOnly(
+sale.sale_date ||
+sale.created_at
+);
 
 
-  renderTable();
+return (
+(!worker ||
+sale.worker_id === worker)
+
+&&
+
+(!from ||
+d >= from)
+
+&&
+
+(!to ||
+d <= to)
+);
+
+}
+);
+
+
+renderTable();
 
 }
 
@@ -1041,99 +1229,100 @@ function applyFilters(){
 
 function renderTable(){
 
-  const body =
-    $("salesBody");
+const body =
+$("salesBody");
 
 
-  if(
-    !filteredSales.length
-  ){
+if(
+!filteredSales.length
+){
 
-    body.innerHTML =
-      '<tr><td colspan="9">No matching sales records.</td></tr>';
+body.innerHTML =
+'<tr><td colspan="9">No matching sales records.</td></tr>';
 
-    return;
-  }
+return;
+
+}
 
 
-  body.innerHTML =
-    filteredSales
-      .map(
-        sale => `
+body.innerHTML =
+filteredSales
+.map(
+sale => `
 
-        <tr>
+<tr>
 
-          <td>
-            ${esc(
-              dateOnly(
-                sale.sale_date ||
-                sale.created_at
-              )
-            )}
-          </td>
+<td>
+${esc(
+dateOnly(
+sale.sale_date ||
+sale.created_at
+)
+)}
+</td>
 
-          <td>
-            ${esc(
-              sale.worker_name ||
-              ""
-            )}
-          </td>
+<td>
+${esc(
+sale.worker_name ||
+""
+)}
+</td>
 
-          <td>
-            ${esc(
-              sale.worker_id ||
-              ""
-            )}
-          </td>
+<td>
+${esc(
+sale.worker_id ||
+""
+)}
+</td>
 
-          <td>
-            ${esc(
-              sale.customer_reference ||
-              sale.customer ||
-              ""
-            )}
-          </td>
+<td>
+${esc(
+sale.customer_reference ||
+sale.customer ||
+""
+)}
+</td>
 
-          <td>
-            ${esc(
-              sale.product_service ||
-              sale.product ||
-              ""
-            )}
-          </td>
+<td>
+${esc(
+sale.product_service ||
+sale.product ||
+""
+)}
+</td>
 
-          <td>
-            ${esc(
-              sale.quantity ??
-              ""
-            )}
-          </td>
+<td>
+${esc(
+sale.quantity ??
+""
+)}
+</td>
 
-          <td>
-            ${money(
-              amount(sale)
-            )}
-          </td>
+<td>
+${money(
+amount(sale)
+)}
+</td>
 
-          <td>
-            ${esc(
-              sale.payment_method ||
-              ""
-            )}
-          </td>
+<td>
+${esc(
+sale.payment_method ||
+""
+)}
+</td>
 
-          <td>
-            ${esc(
-              sale.notes ||
-              ""
-            )}
-          </td>
+<td>
+${esc(
+sale.notes ||
+""
+)}
+</td>
 
-        </tr>
+</tr>
 
-      `
-      )
-      .join("");
+`
+)
+.join("");
 
 }
 
@@ -1144,18 +1333,22 @@ function renderTable(){
 
 function esc(value){
 
-  return String(
-    value ?? ""
-  ).replace(
-    /[&<>"']/g,
-    character => ({
-      "&":"&amp;",
-      "<":"&lt;",
-      ">":"&gt;",
-      '"':"&quot;",
-      "'":"&#039;"
-    }[character])
-  );
+return String(
+value ?? ""
+)
+.replace(
+/[&<>"']/g,
+character =>
+({
+
+"&":"&amp;",
+"<":"&lt;",
+">":"&gt;",
+'"':"&quot;",
+"'":"&#039;"
+
+}[character])
+);
 
 }
 
@@ -1166,113 +1359,115 @@ function esc(value){
 
 function csv(){
 
-  const headers = [
-    "Date",
-    "Worker",
-    "Worker ID",
-    "Customer",
-    "Product/Service",
-    "Quantity",
-    "Amount GH₵",
-    "Payment",
-    "Notes"
-  ];
+const headers = [
+
+"Date",
+"Worker",
+"Worker ID",
+"Customer",
+"Product/Service",
+"Quantity",
+"Amount GH₵",
+"Payment",
+"Notes"
+
+];
 
 
-  const rows =
-    filteredSales.map(
-      sale => [
+const rows =
+filteredSales.map(
+sale => [
 
-        dateOnly(
-          sale.sale_date ||
-          sale.created_at
-        ),
+dateOnly(
+sale.sale_date ||
+sale.created_at
+),
 
-        sale.worker_name ||
-        "",
+sale.worker_name ||
+"",
 
-        sale.worker_id ||
-        "",
+sale.worker_id ||
+"",
 
-        sale.customer_reference ||
-        sale.customer ||
-        "",
+sale.customer_reference ||
+sale.customer ||
+"",
 
-        sale.product_service ||
-        sale.product ||
-        "",
+sale.product_service ||
+sale.product ||
+"",
 
-        sale.quantity ??
-        "",
+sale.quantity ??
+"",
 
-        amount(sale)
-          .toFixed(2),
+amount(sale)
+.toFixed(2),
 
-        sale.payment_method ||
-        "",
+sale.payment_method ||
+"",
 
-        sale.notes ||
-        ""
+sale.notes ||
+""
 
-      ]
-    );
-
-
-  const output =
-    [
-      headers,
-      ...rows
-    ]
-    .map(
-      row =>
-        row
-          .map(
-            value =>
-              `"${String(
-                value ?? ""
-              ).replace(
-                /"/g,
-                '""'
-              )}"`
-          )
-          .join(",")
-    )
-    .join("\n");
+]
+);
 
 
-  const blob =
-    new Blob(
-      [output],
-      {
-        type:
-          "text/csv"
-      }
-    );
+const output =
+[
+headers,
+...rows
+]
+.map(
+row =>
+row
+.map(
+value =>
+`"${String(
+value ?? ""
+).replace(
+/"/g,
+'""'
+)}"`
+)
+.join(",")
+)
+.join("\n");
 
 
-  const url =
-    URL.createObjectURL(
-      blob
-    );
+const blob =
+new Blob(
+[output],
+{
+type:
+"text/csv"
+}
+);
 
 
-  const link =
-    document.createElement(
-      "a"
-    );
-
-  link.href =
-    url;
-
-  link.download =
-    "ezelex-sales.csv";
-
-  link.click();
+const url =
+URL.createObjectURL(
+blob
+);
 
 
-  URL.revokeObjectURL(
-    url
-  );
+const link =
+document.createElement(
+"a"
+);
+
+link.href =
+url;
+
+link.download =
+"ezelex-sales.csv";
+
+link.click();
+
+
+URL.revokeObjectURL(
+url
+);
 
 }
 
@@ -1283,155 +1478,200 @@ function csv(){
 
 async function loadWorkers(){
 
-  const grid =
-    $("workerGrid");
+const grid =
+$("workerGrid");
 
 
-  grid.innerHTML =
-    "<p>Loading workers...</p>";
+grid.innerHTML =
+"<p>Loading workers...</p>";
 
 
-  const {
-    data,
-    error
-  } = await db
-    .from("worker_profiles")
-    .select(
-      "user_id,worker_id,full_name,phone,role,active,contract_start,contract_end"
-    )
-    .order(
-      "full_name",
-      {ascending:true}
-    );
+const {
+data,
+error
+} =
+await db
+.from("worker_profiles")
+.select(
+"user_id,worker_id,full_name,phone,role,active,contract_start,contract_end"
+)
+.order(
+"full_name",
+{
+ascending:true
+}
+);
 
 
-  if(error){
+if(error){
 
-    grid.innerHTML =
-      `<div class="msg error">
-        Could not load workers:
-        ${esc(error.message)}
-      </div>`;
+grid.innerHTML =
+`
+<div class="msg error">
 
-    return;
-  }
+Could not load workers:
 
+${esc(
+error.message
+)}
 
-  allWorkers =
-    data || [];
+</div>
+`;
 
+return;
 
-  const workers =
-    allWorkers.filter(
-      worker =>
-        worker.role !== "admin"
-    );
+}
 
 
-  if(!workers.length){
-
-    grid.innerHTML =
-      "<p>No workers found.</p>";
-
-    return;
-  }
+allWorkers =
+data || [];
 
 
-  grid.innerHTML =
-    workers
-      .map(
-        worker => {
-
-          const status =
-            worker.active
-              ? "Active"
-              : "Inactive";
+const workers =
+allWorkers.filter(
+worker =>
+worker.role !== "admin"
+);
 
 
-          return `
+if(!workers.length){
 
-          <div class="worker-card">
+grid.innerHTML =
+"<p>No workers found.</p>";
 
-            <h3>
-              ${esc(
-                worker.full_name ||
-                "Unnamed Worker"
-              )}
-            </h3>
+return;
 
-            <div class="worker-meta">
-
-              <strong>
-                Worker ID:
-              </strong>
-              ${esc(
-                worker.worker_id ||
-                ""
-              )}
-              <br>
-
-              <strong>
-                Phone:
-              </strong>
-              ${esc(
-                worker.phone ||
-                "Not provided"
-              )}
-              <br>
-
-              <strong>
-                Contract:
-              </strong>
-              ${esc(
-                worker.contract_start ||
-                "-"
-              )}
-              to
-              ${esc(
-                worker.contract_end ||
-                "-"
-              )}
-              <br><br>
-
-              <span class="badge ${
-                worker.active
-                  ? "active"
-                  : "inactive"
-              }">
-                ${status}
-              </span>
-
-            </div>
+}
 
 
-            <div class="worker-actions">
+grid.innerHTML =
+workers
+.map(
+worker => {
 
-              ${
-                worker.active
-                  ? `
-                    <button
-                      class="danger small"
-                      onclick="deleteWorker('${esc(worker.user_id)}','${esc(worker.full_name || worker.worker_id)}')"
-                    >
-                      Delete Worker
-                    </button>
-                  `
-                  : `
-                    <span class="protected">
-                      Inactive
-                    </span>
-                  `
-              }
+const status =
+worker.active
+?
+"Active"
+:
+"Inactive";
 
-            </div>
 
-          </div>
+return `
 
-          `;
+<div class="worker-card">
 
-        }
-      )
-      .join("");
+<h3>
+
+${esc(
+worker.full_name ||
+"Unnamed Worker"
+)}
+
+</h3>
+
+
+<div class="worker-meta">
+
+<strong>
+Worker ID:
+</strong>
+
+${esc(
+worker.worker_id ||
+""
+)}
+
+<br>
+
+
+<strong>
+Phone:
+</strong>
+
+${esc(
+worker.phone ||
+"Not provided"
+)}
+
+<br>
+
+
+<strong>
+Contract:
+</strong>
+
+${esc(
+worker.contract_start ||
+"-"
+)}
+
+to
+
+${esc(
+worker.contract_end ||
+"-"
+)}
+
+<br><br>
+
+
+<span
+class="badge ${
+worker.active
+?
+"active"
+:
+"inactive"
+}">
+
+${status}
+
+</span>
+
+</div>
+
+
+<div class="worker-actions">
+
+${
+worker.active
+?
+`
+
+<button
+class="danger small"
+onclick="deleteWorker(
+'${esc(worker.user_id)}',
+'${esc(worker.full_name || worker.worker_id)}'
+)">
+
+Delete Worker
+
+</button>
+
+`
+:
+`
+
+<span class="protected">
+
+Inactive
+
+</span>
+
+`
+}
+
+</div>
+
+</div>
+
+`;
+
+}
+)
+.join("");
 
 }
 
@@ -1441,131 +1681,144 @@ async function loadWorkers(){
 ========================= */
 
 async function deleteWorker(
-  userId,
-  workerName
+userId,
+workerName
 ){
 
-  if(!userId){
+if(!userId){
 
-    alert(
-      "Worker login account ID is missing."
-    );
+alert(
+"Worker login account ID is missing."
+);
 
-    return;
-  }
+return;
 
-
-  const confirmed =
-    confirm(
-      "DELETE WORKER\n\n" +
-      "Worker: " +
-      workerName +
-      "\n\n" +
-      "This will permanently delete:\n" +
-      "• Worker profile\n" +
-      "• Worker sales\n" +
-      "• Worker login account\n\n" +
-      "This action cannot be undone.\n\n" +
-      "Continue?"
-    );
+}
 
 
-  if(!confirmed){
-    return;
-  }
+const confirmed =
+confirm(
+
+"DELETE WORKER\n\n" +
+
+"Worker: " +
+workerName +
+
+"\n\n" +
+
+"This will permanently delete:\n" +
+
+"• Worker profile\n" +
+"• Worker sales\n" +
+"• Worker login account\n\n" +
+
+"This action cannot be undone.\n\n" +
+
+"Continue?"
+
+);
 
 
-  showMsg(
-    "workerMsg",
-    "Deleting " +
-    workerName +
-    "..."
-  );
+if(!confirmed){
+return;
+}
 
 
-  try{
-
-    const {
-      data:{
-        session
-      }
-    } =
-      await db.auth.getSession();
+showMsg(
+"workerMsg",
+"Deleting " +
+workerName +
+"..."
+);
 
 
-    if(!session){
+try{
 
-      throw new Error(
-        "Your admin session has expired. Please log in again."
-      );
-
-    }
-
-
-    const response =
-      await fetch(
-        DELETE_WORKER_URL,
-        {
-          method:"POST",
-
-          headers:{
-            "Content-Type":
-              "application/json",
-
-            "Authorization":
-              "Bearer " +
-              session.access_token
-          },
-
-          body:
-            JSON.stringify({
-              user_id:
-                userId
-            })
-        }
-      );
+const {
+data:{
+session
+}
+} =
+await db.auth.getSession();
 
 
-    const result =
-      await response.json();
+if(!session){
+
+throw new Error(
+"Your admin session has expired. Please log in again."
+);
+
+}
 
 
-    if(
-      !response.ok ||
-      !result.success
-    ){
+const response =
+await fetch(
+DELETE_WORKER_URL,
+{
 
-      throw new Error(
-        result.error ||
-        result.message ||
-        "Worker deletion failed."
-      );
+method:
+"POST",
 
-    }
+headers:{
+"Content-Type":
+"application/json",
+
+"Authorization":
+"Bearer " +
+session.access_token
+},
+
+body:
+JSON.stringify({
+user_id:
+userId
+})
+
+}
+);
 
 
-    showMsg(
-      "workerMsg",
-      result.message ||
-      "Worker deleted successfully."
-    );
+const result =
+await response.json();
 
 
-    await loadWorkers();
+if(
+!response.ok ||
+!result.success
+){
 
-    await loadData();
+throw new Error(
+result.error ||
+result.message ||
+"Worker deletion failed."
+);
+
+}
 
 
-  }catch(error){
+showMsg(
+"workerMsg",
+result.message ||
+"Worker deleted successfully."
+);
 
-    showMsg(
-      "workerMsg",
-      error.message ||
-      "Worker deletion failed.",
-      true
-    );
 
-  }
+await loadWorkers();
+
+await loadData();
+
+
+}
+catch(error){
+
+showMsg(
+"workerMsg",
+error.message ||
+"Worker deletion failed.",
+true
+);
+
+}
 
 }
 
@@ -1575,44 +1828,47 @@ async function deleteWorker(
 ========================= */
 
 $("loginBtn").onclick =
-  async () => {
+async () => {
 
-    showMsg(
-      "loginMsg",
-      "Signing in..."
-    );
-
-
-    const {
-      error
-    } =
-      await db.auth.signInWithPassword({
-        email:
-          $("email")
-            .value
-            .trim(),
-
-        password:
-          $("password")
-            .value
-      });
+showMsg(
+"loginMsg",
+"Signing in..."
+);
 
 
-    if(error){
+const {
+error
+} =
+await db.auth.signInWithPassword({
 
-      showMsg(
-        "loginMsg",
-        error.message,
-        true
-      );
+email:
+$("email")
+.value
+.trim(),
 
-      return;
-    }
+password:
+$("password")
+.value
+
+});
 
 
-    await checkAdmin();
+if(error){
 
-  };
+showMsg(
+"loginMsg",
+error.message,
+true
+);
+
+return;
+
+}
+
+
+await checkAdmin();
+
+};
 
 
 /* =========================
@@ -1620,13 +1876,13 @@ $("loginBtn").onclick =
 ========================= */
 
 $("logoutBtn").onclick =
-  async () => {
+async () => {
 
-    await db.auth.signOut();
+await db.auth.signOut();
 
-    showLogin();
+showLogin();
 
-  };
+};
 
 
 /* =========================
@@ -1634,29 +1890,29 @@ $("logoutBtn").onclick =
 ========================= */
 
 $("refreshBtn").onclick =
-  async () => {
+async () => {
 
-    await loadData();
+await loadData();
 
-    await loadWorkers();
+await loadWorkers();
 
-  };
+};
 
 
 $("filterBtn").onclick =
-  () => {
+() => {
 
-    applyFilters();
+applyFilters();
 
-  };
+};
 
 
 $("csvBtn").onclick =
-  () => {
+() => {
 
-    csv();
+csv();
 
-  };
+};
 
 
 /* =========================
