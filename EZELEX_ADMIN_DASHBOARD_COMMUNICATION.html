@@ -1,4 +1,4 @@
-!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -32,7 +32,7 @@ table{width:100%;border-collapse:collapse;min-width:1050px}th,td{padding:11px;bo
 
 <main id="dashboard" class="wrap hidden"><div id="dashMsg"></div>
 <div class="nav">
-<button class="soft active" data-section="overview">Dashboard</button><button class="soft" data-section="sales">Sales</button><button class="soft" data-section="stock">Stock & Profit</button><button class="soft" data-section="workers">Workers</button><button class="soft" data-section="profile">Admin Profile</button><button class="soft" data-section="security">Security</button>
+<button class="soft active" data-section="overview">Dashboard</button><button class="soft" data-section="sales">Sales</button><button class="soft" data-section="stock">Stock & Profit</button><button class="soft" data-section="workers">Workers</button><button class="soft" data-section="communication">Communication Centre</button><button class="soft" data-section="profile">Admin Profile</button><button class="soft" data-section="security">Security</button>
 </div>
 
 <section id="overview" class="page">
@@ -72,6 +72,20 @@ table{width:100%;border-collapse:collapse;min-width:1050px}th,td{padding:11px;bo
 <div class="section"><h2>Worker Management</h2><button id="refreshWorkers" class="soft">Refresh Workers</button><div class="tablebox" style="margin-top:14px"><table><thead><tr><th>Worker ID</th><th>Name</th><th>Email</th><th>Phone</th><th>Contract</th><th>Status</th><th>Action</th></tr></thead><tbody id="workersBody"></tbody></table></div></div>
 </section>
 
+<section id="communication" class="page hidden">
+<div class="section"><h2>Worker Communication Centre</h2>
+<p class="muted">Send email messages directly to a worker's registered EZELEX email address, or broadcast one message to all active workers.</p>
+<div id="commMsg"></div>
+<div class="grid2">
+<div><label>Recipient</label><select id="commRecipient"><option value="">All Active Workers</option></select></div>
+<div><label>Subject</label><input id="commSubject" maxlength="160" placeholder="EZELEX ENTERPRISE message"></div>
+<div class="full"><label>Message</label><textarea id="commMessage" rows="8" maxlength="5000" placeholder="Write your message to the worker(s)..."></textarea></div>
+<div class="full"><button id="sendCommBtn" class="gold">Send Email</button><button id="refreshCommWorkers" class="soft" style="margin-left:8px">Refresh Workers</button></div>
+</div></div>
+<div class="section"><h2>Communication History</h2><p class="muted">Email history shown here is local to this dashboard session.</p>
+<div class="tablebox"><table><thead><tr><th>Date</th><th>Recipient</th><th>Subject</th><th>Message</th><th>Status</th></tr></thead><tbody id="commHistoryBody"><tr><td colspan="5" class="empty">No messages sent yet.</td></tr></tbody></table></div></div>
+</section>
+
 <section id="profile" class="page hidden"><div class="section"><h2>Admin Profile</h2><div class="profile"><div class="avatar">AD</div><div><h2>EZELEX Administrator</h2><p><b>Admin ID:</b> ADMIN001</p><p><b>Email:</b> <span id="adminEmail">—</span></p><p><b>Status:</b> <span class="badge approved">ACTIVE</span></p><p class="muted">EZELEX ENTERPRISE • Administrator Account</p></div></div></div></section>
 <section id="security" class="page hidden"><div class="section"><h2>Security</h2><div id="securityMsg"></div><div class="grid2"><div><label>New Password</label><input id="newPass" type="password"></div><div><label>Confirm Password</label><input id="confirmPass" type="password"></div></div><button id="changePass" class="primary">Change Password</button></div></section>
 </main>
@@ -98,7 +112,7 @@ function showLogin(){$("loginSection").classList.remove("hidden");$("dashboard")
 async function loadWorkers(){
  const r=await db.from("worker_profiles").select("*").order("full_name",{ascending:true});if(r.error){msg("dashMsg",r.error.message,"error");return}
  workers=(r.data||[]).filter(w=>w.role!=="admin");$("activeWorkers").textContent=workers.filter(w=>w.active).length;
- ["workerFilter","invWorkerFilter"].forEach(id=>{const s=$(id);s.innerHTML='<option value="">All workers</option>';workers.forEach(w=>{const o=document.createElement("option");o.value=w.user_id||w.id;o.textContent=`${w.full_name||"Worker"} (${w.worker_id||""})`;s.appendChild(o)})});renderWorkers()
+ ["workerFilter","invWorkerFilter"].forEach(id=>{const s=$(id);s.innerHTML='<option value="">All workers</option>';workers.forEach(w=>{const o=document.createElement("option");o.value=w.user_id||w.id;o.textContent=`${w.full_name||"Worker"} (${w.worker_id||""})`;s.appendChild(o)})});renderWorkers();if($("commRecipient"))populateCommRecipients()
 }
 async function loadSales(){const r=await db.from("sales").select("*").order("sale_date",{ascending:false}).order("created_at",{ascending:false});if(r.error){msg("dashMsg","Could not load sales: "+r.error.message,"error");return}allSales=r.data||[];updateSummary();applyFilters()}
 function approvedSales(){return allSales.filter(s=>status(s)==="approved")}
@@ -113,8 +127,13 @@ function applyFilters(){const st=$("statusFilter").value,wid=$("workerFilter").v
 function renderSales(){
  $("salesBody").innerHTML=filteredSales.length?filteredSales.map(s=>{const w=workerInfo(s.worker_id),st=status(s),actions=st==="pending"?`<button class="success" onclick="approveSale('${esc(s.id)}')">✓ Approve</button> <button class="reject" onclick="rejectSale('${esc(s.id)}')">✕ Disapprove</button>`:`<span class="muted">${st==="approved"?"Approved":"Disapproved"}</span>`;return `<tr><td>${esc(dateOnly(s.sale_date||s.created_at))}</td><td>${esc(w.full_name||"")}</td><td>${esc(w.worker_id||s.worker_id||"")}</td><td>${esc(s.product_service||"")}</td><td>${esc(s.quantity??"")}</td><td>${money(amount(s))}</td><td>${esc(s.payment_method||"")}</td><td><span class="badge ${st}">${st.toUpperCase()}</span>${st==="rejected"&&s.rejection_reason?`<br><small>${esc(s.rejection_reason)}</small>`:""}</td><td>${actions}</td></tr>`}).join(""):'<tr><td colspan="9" class="empty">No sales found.</td></tr>'
 }
-window.approveSale=async id=>{if(!confirm("Approve this worker sale?"))return;const r=await db.from("sales").update({status:"approved",rejection_reason:null,approved_at:new Date().toISOString()}).eq("id",id);if(r.error){msg("dashMsg",r.error.message,"error");return}await loadSales()}
-window.rejectSale=async id=>{const reason=prompt("Reason for disapproving this sale:");if(reason===null)return;const r=await db.from("sales").update({status:"rejected",rejection_reason:reason.trim()||"No reason provided",approved_at:null}).eq("id",id);if(r.error){msg("dashMsg",r.error.message,"error");return}await loadSales()}
+window.approveSale=async id=>{if(!confirm("Approve this worker sale?"))return;const sale=allSales.find(x=>x.id===id);if(!sale){msg("dashMsg","Sale not found.","error");return}const r=await db.from("sales").update({status:"approved",rejection_reason:null,approved_at:new Date().toISOString()}).eq("id",id);if(r.error){msg("dashMsg",r.error.message,"error");return}await notifySaleStatus(sale,"approved","");await loadSales()}
+window.rejectSale=async id=>{const reason=prompt("Reason for disapproving this sale:");if(reason===null)return;const clean=reason.trim()||"No reason provided";const sale=allSales.find(x=>x.id===id);if(!sale){msg("dashMsg","Sale not found.","error");return}const r=await db.from("sales").update({status:"rejected",rejection_reason:clean,approved_at:null}).eq("id",id);if(r.error){msg("dashMsg",r.error.message,"error");return}await notifySaleStatus(sale,"rejected",clean);await loadSales()}
+async function notifySaleStatus(sale,statusValue,reason){try{const r=await fetch(SUPABASE_URL+"/functions/v1/notify-sale-status",{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+session.access_token,"apikey":SUPABASE_PUBLISHABLE_KEY},body:JSON.stringify({sale_id:sale.id,status:statusValue,rejection_reason:reason||""})});if(!r.ok){const j=await r.json().catch(()=>({}));msg("dashMsg","Sale updated, but worker email could not be sent: "+(j.error||"email service error"),"error");return false}return true}catch(e){msg("dashMsg","Sale updated, but worker email could not be sent: "+e.message,"error");return false}}
+function populateCommRecipients(){const s=$("commRecipient");s.innerHTML='<option value="">All Active Workers</option>';workers.filter(w=>w.active).forEach(w=>{const o=document.createElement("option");o.value=w.user_id;o.textContent=`${w.full_name||"Worker"} (${w.worker_id||""})`;s.appendChild(o)})}
+const commHistory=[];
+function renderCommHistory(){const b=$("commHistoryBody");b.innerHTML=commHistory.length?commHistory.map(x=>`<tr><td>${esc(x.date)}</td><td>${esc(x.recipient)}</td><td>${esc(x.subject)}</td><td>${esc(x.message)}</td><td><span class="badge approved">${esc(x.status)}</span></td></tr>`).join(""): '<tr><td colspan="5" class="empty">No messages sent yet.</td></tr>'}
+async function sendCommunication(){const workerId=$("commRecipient").value,subject=$("commSubject").value.trim(),message=$("commMessage").value.trim();if(!subject||!message){msg("commMsg","Please enter a subject and message.","error");return}const btn=$("sendCommBtn");btn.disabled=true;btn.textContent="Sending...";try{const r=await fetch(SUPABASE_URL+"/functions/v1/send-worker-message",{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+session.access_token,"apikey":SUPABASE_PUBLISHABLE_KEY},body:JSON.stringify({worker_id:workerId||null,subject,message})});const j=await r.json().catch(()=>({}));if(!r.ok||j.success===false){msg("commMsg",j.error||"Could not send email.","error");return}const count=Number(j.sent_count||0);commHistory.unshift({date:new Date().toLocaleString(),recipient:workerId?($("commRecipient").selectedOptions[0]?.textContent||"Worker"):"All Active Workers",subject,message,status:`Sent to ${count} worker${count===1?"":"s"}`});renderCommHistory();msg("commMsg",`Email sent successfully to ${count} worker${count===1?"":"s"}.`,"ok");$("commSubject").value="";$("commMessage").value=""}catch(e){msg("commMsg","Connection error: "+e.message,"error")}finally{btn.disabled=false;btn.textContent="Send Email"}}
 async function loadInventory(){const r=await db.from("worker_inventory").select("*").order("stock_date",{ascending:false}).order("created_at",{ascending:false});if(r.error){msg("dashMsg","Stock tracker: "+r.error.message,"error");return}allInventory=r.data||[];applyInvFilters();updateInventorySummary()}
 function applyInvFilters(){const wid=$("invWorkerFilter").value,from=$("invFromDate").value,to=$("invToDate").value;filteredInventory=allInventory.filter(r=>{let d=dateOnly(r.stock_date||r.created_at);return(!wid||r.worker_id===wid)&&(!from||d>=from)&&(!to||d<=to)});renderInventory();updateInventorySummary()}
 function renderInventory(){
@@ -132,7 +151,7 @@ $("loginBtn").onclick=async()=>{msg("loginMsg","Signing in...");const r=await db
 $("forgotBtn").onclick=async()=>{const email=$("email").value.trim();if(!email){msg("loginMsg","Enter your admin email first.","error");return}const r=await db.auth.resetPasswordForEmail(email,{redirectTo:location.href});msg("loginMsg",r.error?r.error.message:"Password recovery email sent. Check your inbox.",r.error?"error":"ok")}
 $("logoutBtn").onclick=async()=>{await db.auth.signOut();showLogin()}
 $("refreshBtn").onclick=async()=>{await loadWorkers();await Promise.all([loadSales(),loadInventory()])}
-$("refreshWorkers").onclick=loadWorkers;$("applyFilters").onclick=applyFilters;$("statusFilter").onchange=applyFilters;$("workerFilter").onchange=applyFilters;$("refreshInventory").onclick=loadInventory;$("applyInvFilters").onclick=applyInvFilters;$("invWorkerFilter").onchange=applyInvFilters
+$("refreshWorkers").onclick=loadWorkers;$("sendCommBtn").onclick=sendCommunication;$("refreshCommWorkers").onclick=async()=>{await loadWorkers();populateCommRecipients()};$("applyFilters").onclick=applyFilters;$("statusFilter").onchange=applyFilters;$("workerFilter").onchange=applyFilters;$("refreshInventory").onclick=loadInventory;$("applyInvFilters").onclick=applyInvFilters;$("invWorkerFilter").onchange=applyInvFilters
 document.querySelectorAll(".nav button").forEach(b=>b.onclick=()=>{document.querySelectorAll(".nav button").forEach(x=>x.classList.remove("active"));b.classList.add("active");document.querySelectorAll(".page").forEach(p=>p.classList.add("hidden"));$(b.dataset.section).classList.remove("hidden")})
 $("changePass").onclick=async()=>{const a=$("newPass").value,b=$("confirmPass").value;if(a.length<8){msg("securityMsg","Password must be at least 8 characters.","error");return}if(a!==b){msg("securityMsg","Passwords do not match.","error");return}const r=await db.auth.updateUser({password:a});msg("securityMsg",r.error?r.error.message:"Password changed successfully.",r.error?"error":"ok");if(!r.error){$("newPass").value="";$("confirmPass").value=""}}
 $("csvBtn").onclick=()=>{const rows=[["Date","Worker","Worker ID","Product/Service","Quantity","Amount","Payment","Status","Reason"],...filteredSales.map(s=>{const w=workerInfo(s.worker_id);return[dateOnly(s.sale_date||s.created_at),w.full_name||"",w.worker_id||"",s.product_service||"",s.quantity??"",amount(s).toFixed(2),s.payment_method||"",status(s),s.rejection_reason||""]})];const csv=rows.map(r=>r.map(x=>`"${String(x).replace(/"/g,'""')}"`).join(",")).join("\n");const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([csv],{type:"text/csv"}));a.download="EZELEX-sales.csv";a.click()}
