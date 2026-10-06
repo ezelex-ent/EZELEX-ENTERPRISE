@@ -1,83 +1,421 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>EZELEX Worker Portal</title>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-<style>
-:root{--ink:#101828;--muted:#667085;--line:#e4e7ec;--bg:#f5f7fa;--card:#fff;--accent:#111827;--green:#067647;--red:#b42318;--gold:#b54708}
-*{box-sizing:border-box}body{margin:0;font-family:Inter,Arial,sans-serif;background:var(--bg);color:var(--ink)}
-header{background:#0b1220;color:#fff;padding:18px 5%;display:flex;align-items:center;justify-content:space-between;gap:16px;position:sticky;top:0;z-index:5;box-shadow:0 4px 20px #0002}header h1{margin:0;font-size:21px}header small{display:block;color:#98a2b3;margin-top:3px}.hidden{display:none!important}
-button{border:0;border-radius:10px;padding:12px 16px;font-weight:800;cursor:pointer}.primary{background:#111827;color:#fff}.danger{background:#b42318;color:#fff}.secondary{background:#eef2f6;color:#111827}.successbtn{background:#067647;color:#fff}
-.login{max-width:450px;margin:65px auto;background:#fff;padding:32px;border-radius:18px;box-shadow:0 12px 45px #10182818}.login h2{margin-top:0}.wrap{max-width:1180px;margin:28px auto;padding:0 18px}.panel{background:var(--card);padding:24px;border-radius:18px;margin-bottom:20px;box-shadow:0 5px 24px #1018280c;border:1px solid #eef0f3}.hero{display:flex;justify-content:space-between;align-items:center;gap:20px}.hero h2{margin:0 0 6px}.workerInfo{color:var(--muted);line-height:1.7}.grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}.full{grid-column:1/-1}label{display:block;font-size:13px;font-weight:800;margin-bottom:6px}input,select,textarea{width:100%;padding:12px 13px;border:1px solid #d0d5dd;border-radius:10px;font-size:15px;background:#fff}textarea{min-height:90px;resize:vertical}
-.nav{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 20px}.nav button{background:#fff;border:1px solid var(--line);color:#344054}.nav button.active{background:#111827;color:#fff;border-color:#111827}
-.section{display:none}.section.active{display:block}.cards{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}.stat{padding:18px;border:1px solid var(--line);border-radius:14px;background:#fff}.stat span{display:block;color:var(--muted);font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.04em}.stat strong{display:block;font-size:25px;margin-top:8px}.stockcards{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}.stockcards .stat strong{font-size:21px}.msg{padding:11px 13px;border-radius:10px;margin:12px 0;background:#fff4cc;color:#7a2e0b}.error{background:#fee4e2;color:#912018}.success{background:#dcfae6;color:#067647}.info{background:#eaf2ff;color:#1849a9}
-.calc{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:18px}.calcbox{background:#f8fafc;border:1px solid var(--line);padding:14px;border-radius:12px}.calcbox small{color:var(--muted);display:block}.calcbox strong{font-size:19px;display:block;margin-top:4px}.profit{background:#ecfdf3}.loss{background:#fff1f0}.tablebox{overflow:auto}table{width:100%;border-collapse:collapse;min-width:900px}th,td{padding:12px;border-bottom:1px solid #eaecf0;text-align:left;font-size:13px}th{background:#f8fafc;color:#475467}.pill{display:inline-block;padding:5px 8px;border-radius:99px;font-size:11px;font-weight:800}.pending{background:#fff4cc;color:#7a2e0b}.approved{background:#dcfae6;color:#067647}.rejected{background:#fee4e2;color:#912018}.actions{display:flex;gap:8px;flex-wrap:wrap}.muted{color:var(--muted)}.dangerText{color:var(--red)}.greenText{color:var(--green)}
-@media(max-width:850px){.cards,.stockcards{grid-template-columns:1fr 1fr}.calc{grid-template-columns:1fr 1fr}}@media(max-width:650px){.grid{grid-template-columns:1fr}.full{grid-column:auto}.cards,.stockcards,.calc{grid-template-columns:1fr}.login{margin:30px 15px}.hero{display:block}}
-</style></head><body>
-<header><div><h1>EZELEX Worker Portal</h1><small>Worker access • Sales • Stock & Profit</small></div><button id="logoutBtn" class="danger hidden">Log out</button></header>
-<section id="loginSection" class="login"><h2>Worker Login</h2><p class="muted">Sign in with your EZELEX worker account.</p><div id="loginMsg"></div><label>Email</label><input id="email" type="email" autocomplete="email" placeholder="Worker email"><label style="margin-top:12px">Password</label><input id="password" type="password" autocomplete="current-password" placeholder="Password"><button id="loginBtn" class="primary" style="width:100%;margin-top:8px">Sign in</button><button id="forgotBtn" class="secondary" style="width:100%;margin-top:10px">Forgot Password?</button></section>
-<section id="recoverySection" class="login hidden"><h2>Set Your New Password</h2><p class="muted">Create a secure password for your EZELEX account.</p><div id="recoveryMsg"></div><label>New Password</label><input id="newPassword" type="password" autocomplete="new-password"><label style="margin-top:12px">Confirm Password</label><input id="confirmPassword" type="password" autocomplete="new-password"><button id="savePasswordBtn" class="primary" style="width:100%;margin-top:12px">Save Password</button></section>
-<main id="portal" class="wrap hidden">
-<div class="panel hero"><div><h2>Welcome, <span id="workerName">Worker</span> 👋</h2><div class="workerInfo"><b>Worker ID:</b> <span id="workerId">—</span> &nbsp; • &nbsp; <b>Role:</b> <span id="workerRole">worker</span></div></div></div>
-<div class="nav"><button data-tab="dashboard" class="active">Dashboard</button><button data-tab="sales">Sales</button><button data-tab="stock">Stock & Profit</button><button data-tab="profile">My Profile</button><button data-tab="security">Security</button></div>
-<section id="dashboard" class="section active"><div class="panel"><h2>My Sales Overview</h2><div class="cards"><div class="stat"><span>Today</span><strong id="todaySales">GH₵0.00</strong></div><div class="stat"><span>This Week</span><strong id="weekSales">GH₵0.00</strong></div><div class="stat"><span>This Month</span><strong id="monthSales">GH₵0.00</strong></div><div class="stat"><span>All Time</span><strong id="allSales">GH₵0.00</strong></div></div></div><div class="panel"><h2>Stock Overview</h2><div class="stockcards"><div class="stat"><span>Total Stock</span><strong id="dashTotal">0</strong></div><div class="stat"><span>Sold</span><strong id="dashSold">0</strong></div><div class="stat"><span>Damaged</span><strong id="dashDamage">0</strong></div><div class="stat"><span>Remaining</span><strong id="dashRemain">0</strong></div><div class="stat"><span>Purchase Value</span><strong id="dashPurchase">GH₵0.00</strong></div><div class="stat"><span>Revenue</span><strong id="dashRevenue">GH₵0.00</strong></div><div class="stat"><span>Damage Value</span><strong id="dashDamageValue">GH₵0.00</strong></div><div class="stat"><span>Profit / Loss</span><strong id="dashProfit">GH₵0.00</strong></div></div></div></section>
-<section id="sales" class="section"><div class="panel"><h2>Record a Sale</h2><div id="saleMsg"></div><form id="saleForm" class="grid"><div><label>Sale Date</label><input id="saleDate" type="date" required></div><div><label>Customer / Reference</label><input id="customer" placeholder="Customer name or reference"></div><div><label>Product / Service</label><input id="product" required placeholder="What was sold?"></div><div><label>Quantity</label><input id="quantity" type="number" min="1" step="1" value="1" required></div><div><label>Sale Amount</label><input id="amount" type="number" min="0" step="0.01" required placeholder="0.00"></div><div><label>Payment Method</label><select id="payment" required><option value="">Select payment method</option><option>Cash</option><option>Mobile Money</option><option>Bank Transfer</option><option>Card</option><option>Other</option></select></div><div class="full"><label>Notes</label><textarea id="notes" placeholder="Optional notes"></textarea></div><div class="full"><button class="primary" type="submit">Record Sale</button></div></form></div><div class="panel"><div class="hero"><h2>My Sales History</h2><div class="actions"><button class="secondary" type="button" onclick="downloadSalesPDF()">📄 Sales PDF</button><button class="secondary" type="button" onclick="shareSales()">↗ Share Sales</button></div></div><div class="tablebox"><table><thead><tr><th>Date</th><th>Customer</th><th>Product</th><th>Qty</th><th>Amount</th><th>Payment</th><th>Status</th><th>Notes</th></tr></thead><tbody id="salesBody"></tbody></table></div></div></section>
-<section id="stock" class="section"><div class="panel"><h2>Stock & Profit Tracker</h2><div id="stockMsg"></div><form id="stockForm" class="grid"><input id="stockId" type="hidden"><div><label>Stock Date</label><input id="stockDate" type="date" required></div><div><label>Product</label><input id="stockProduct" placeholder="e.g. Eggs / Crates" required></div><div><label>Total Quantity Bought</label><input id="totalQty" type="number" min="0.01" step="0.01" required></div><div><label>Total Purchase Cost</label><input id="purchaseTotal" type="number" min="0" step="0.01" required placeholder="4500"></div><div><label>Selling Price Per Unit</label><input id="sellingPrice" type="number" min="0" step="0.01" required placeholder="50"></div><div><label>Quantity Sold</label><input id="soldQty" type="number" min="0" step="0.01" value="0" required></div><div><label>Damage Quantity</label><input id="damageQty" type="number" min="0" step="0.01" value="0" required></div><div><label>Notes</label><input id="stockNotes" placeholder="Optional notes"></div><div class="full"><div class="calc"><div class="calcbox"><small>Unit Cost</small><strong id="unitCost">GH₵0.00</strong></div><div class="calcbox"><small>Remaining</small><strong id="remaining">0</strong></div><div class="calcbox"><small>Revenue</small><strong id="revenue">GH₵0.00</strong></div><div class="calcbox"><small>Sold Cost</small><strong id="soldCost">GH₵0.00</strong></div><div class="calcbox"><small>Damage Value</small><strong id="damageValue">GH₵0.00</strong></div><div class="calcbox"><small>Remaining Value</small><strong id="remainingValue">GH₵0.00</strong></div><div id="profitBox" class="calcbox profit"><small>Profit / Loss So Far</small><strong id="profitLoss">GH₵0.00</strong></div><div class="calcbox"><small>Potential Profit on Remaining</small><strong id="potentialProfit">GH₵0.00</strong></div></div></div><div class="full actions"><button id="saveStockBtn" class="successbtn" type="submit">Save Stock Record</button><button id="clearStockBtn" class="secondary" type="button">Clear</button></div></form></div><div class="panel"><div class="hero"><h2>My Stock Records</h2><div class="actions"><button class="secondary" type="button" onclick="downloadStockPDF()">📄 Stock PDF</button><button class="secondary" type="button" onclick="shareStock()">↗ Share Stock</button></div></div><div class="tablebox"><table><thead><tr><th>Date</th><th>Product</th><th>Total</th><th>Sold</th><th>Damaged</th><th>Remaining</th><th>Purchase</th><th>Revenue</th><th>Profit/Loss</th><th>Action</th></tr></thead><tbody id="stockBody"></tbody></table></div></div></section>
-<section id="profile" class="section"><div class="panel"><h2>My Profile</h2><div class="grid"><div><label>Worker ID</label><input id="pWorkerId" readonly></div><div><label>Full Name</label><input id="pName" readonly></div><div><label>Email</label><input id="pEmail" readonly></div><div><label>Phone</label><input id="pPhone" readonly></div><div><label>Role</label><input id="pRole" readonly></div><div><label>Status</label><input id="pActive" readonly></div><div><label>Contract Start</label><input id="pStart" readonly></div><div><label>Contract End</label><input id="pEnd" readonly></div></div></div></section>
-<section id="security" class="section"><div class="panel"><h2>Security</h2><p class="muted">Change your password while logged in.</p><div id="securityMsg"></div><div style="max-width:500px"><label>New Password</label><input id="changePassword" type="password" autocomplete="new-password"><label style="margin-top:12px">Confirm New Password</label><input id="changePassword2" type="password" autocomplete="new-password"><button id="changePasswordBtn" class="primary" style="margin-top:12px">Update Password</button></div></div></section>
-</main>
-<script>
-const SUPABASE_URL="https://hweczhwoggmsrwhkktrx.supabase.co";const SUPABASE_PUBLISHABLE_KEY="sb_publishable_D0o90HRJ1AfROf_DAj7ZAg_uaPDwqvV";const db=supabase.createClient(SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY);let profile=null,sessionUser=null,sales=[],stock=[];
-const $=id=>document.getElementById(id);const money=v=>"GH₵"+Number(v||0).toLocaleString("en-GH",{minimumFractionDigits:2,maximumFractionDigits:2});const esc=v=>String(v??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[m]));function today(){let d=new Date();return d.toISOString().slice(0,10)}function msg(id,t,type=""){ $(id).innerHTML=t?`<div class="msg ${type}">${esc(t)}</div>`:"" }
-function showLogin(){ $("loginSection").classList.remove("hidden");$("portal").classList.add("hidden");$("logoutBtn").classList.add("hidden");$("recoverySection").classList.add("hidden") }
-function showRecovery(){ $("loginSection").classList.add("hidden");$("portal").classList.add("hidden");$("recoverySection").classList.remove("hidden");$("logoutBtn").classList.add("hidden") }
-function showPortal(){ $("loginSection").classList.add("hidden");$("recoverySection").classList.add("hidden");$("portal").classList.remove("hidden");$("logoutBtn").classList.remove("hidden") }
-async function loadProfile(uid){const r=await db.from("worker_profiles").select("user_id,worker_id,full_name,phone,role,active,contract_start,contract_end").eq("user_id",uid).maybeSingle();if(r.error||!r.data||!r.data.active||r.data.role==="admin"){await db.auth.signOut();showLogin();msg("loginMsg","This account is not an active worker account.","error");return false}profile=r.data;sessionUser=uid;showPortal();$("workerName").textContent=profile.full_name||"Worker";$("workerId").textContent=profile.worker_id||"—";$("workerRole").textContent=profile.role||"worker";$("saleDate").value=today();$("stockDate").value=today();fillProfile();await Promise.all([loadSales(),loadStock()]);return true}
-function fillProfile(){const x=profile;$("pWorkerId").value=x.worker_id||"";$("pName").value=x.full_name||"";$("pEmail").value=sessionUser?((db.auth.getUser&&"")||""):"";$("pPhone").value=x.phone||"";$("pRole").value=x.role||"";$("pActive").value=x.active?"Active":"Inactive";$("pStart").value=x.contract_start||"";$("pEnd").value=x.contract_end||"";db.auth.getUser().then(({data})=>{$("pEmail").value=data.user?.email||""})}
-async function loadSales(){const r=await db.from("sales").select("*").eq("worker_id",sessionUser).order("sale_date",{ascending:false});if(r.error){msg("saleMsg","Could not load sales: "+r.error.message,"error");return}sales=r.data||[];renderSales();updateSalesSummary()}
-function renderSales(){let b=$("salesBody");if(!sales.length){b.innerHTML='<tr><td colspan="8">No sales recorded yet.</td></tr>';return}b.innerHTML=sales.map(s=>`<tr><td>${esc(String(s.sale_date||"").slice(0,10))}</td><td>${esc(s.customer_reference||"")}</td><td>${esc(s.product_service||"")}</td><td>${esc(s.quantity??"")}</td><td>${money(s.sale_amount)}</td><td>${esc(s.payment_method||"")}</td><td><span class="pill ${esc(s.status||"pending")}">${esc(s.status||"pending")}</span></td><td>${esc(s.notes||"")}</td></tr>`).join("")}
-function updateSalesSummary(){let now=new Date(),td=today(),m=td.slice(0,7),week=new Date(now);week.setHours(0,0,0,0);week.setDate(week.getDate()-((week.getDay()+6)%7));let w=week.toISOString().slice(0,10);let approved=sales.filter(s=>(s.status||"pending")==="approved");let sum=a=>a.reduce((n,s)=>n+Number(s.sale_amount||0),0);$("todaySales").textContent=money(sum(approved.filter(s=>String(s.sale_date).slice(0,10)===td)));$("weekSales").textContent=money(sum(approved.filter(s=>String(s.sale_date).slice(0,10)>=w)));$("monthSales").textContent=money(sum(approved.filter(s=>String(s.sale_date).slice(0,7)===m)));$("allSales").textContent=money(sum(approved))}
-$("saleForm").onsubmit=async e=>{e.preventDefault();msg("saleMsg","Saving sale...");let row={worker_id:sessionUser,sale_date:$("saleDate").value,customer_reference:$("customer").value.trim()||null,product_service:$("product").value.trim(),quantity:Number($("quantity").value),sale_amount:Number($("amount").value),payment_method:$("payment").value,notes:$("notes").value.trim()||null};let r=await db.from("sales").insert(row);if(r.error){msg("saleMsg","Sale could not be saved: "+r.error.message,"error");return}msg("saleMsg","Sale recorded successfully. It is now pending admin approval.","success");$("saleForm").reset();$("saleDate").value=today();$("quantity").value=1;await loadSales()}
-async function downloadSalesPDF(){
- if(!sales.length){msg("saleMsg","There are no sales to export yet.","error");return}
- const {jsPDF}=window.jspdf; const doc=new jsPDF();
- doc.setFontSize(18);doc.text("EZELEX ENTERPRISE - Sales Report",14,18);doc.setFontSize(10);doc.text(`Worker: ${profile?.full_name||""} | ID: ${profile?.worker_id||""}`,14,27);
- let y=38;doc.text("Date",14,y);doc.text("Product",38,y);doc.text("Qty",95,y);doc.text("Amount",115,y);doc.text("Status",150,y);y+=7;
- sales.forEach(s=>{if(y>280){doc.addPage();y=18}doc.text(String(s.sale_date||"").slice(0,10),14,y);doc.text(String(s.product_service||"").slice(0,25),38,y);doc.text(String(s.quantity??""),95,y);doc.text(money(s.sale_amount),115,y);doc.text(String(s.status||"pending"),150,y);y+=6});
- doc.save(`EZELEX-Sales-${today()}.pdf`);
-}
-async function shareSales(){
- if(!sales.length){msg("saleMsg","There are no sales to share yet.","error");return}
- const text=`EZELEX ENTERPRISE Sales Report\nWorker: ${profile?.full_name||""} (${profile?.worker_id||""})\nTotal records: ${sales.length}\nApproved sales: ${money(sales.filter(s=>(s.status||"pending")==="approved").reduce((n,s)=>n+Number(s.sale_amount||0),0))}`;
- if(navigator.share){try{await navigator.share({title:"EZELEX Sales Report",text});}catch(e){}}else{await navigator.clipboard?.writeText(text);msg("saleMsg","Sales summary copied. You can paste it into WhatsApp, email or messages.","success")}
-}
-function downloadStockPDF(){
- if(!stock.length){msg("stockMsg","There are no stock records to export yet.","error");return}
- const {jsPDF}=window.jspdf; const doc=new jsPDF();doc.setFontSize(18);doc.text("EZELEX ENTERPRISE - Stock Report",14,18);doc.setFontSize(10);doc.text(`Worker: ${profile?.full_name||""} | ID: ${profile?.worker_id||""}`,14,27);let y=38;doc.text("Date",14,y);doc.text("Product",38,y);doc.text("Total",95,y);doc.text("Remain",120,y);doc.text("Profit/Loss",150,y);y+=7;
- stock.forEach(x=>{let c=stockCalcRow(x);if(y>280){doc.addPage();y=18}doc.text(String(x.stock_date||"").slice(0,10),14,y);doc.text(String(x.product||"").slice(0,25),38,y);doc.text(String(c.t),95,y);doc.text(String(c.r),120,y);doc.text(money(c.profit),150,y);y+=6});doc.save(`EZELEX-Stock-${today()}.pdf`);
-}
-async function shareStock(){
- if(!stock.length){msg("stockMsg","There are no stock records to share yet.","error");return}
- const totals={t:0,r:0,profit:0};stock.forEach(x=>{const c=stockCalcRow(x);totals.t+=c.t;totals.r+=c.r;totals.profit+=c.profit});const text=`EZELEX ENTERPRISE Stock Report\nWorker: ${profile?.full_name||""} (${profile?.worker_id||""})\nTotal stock: ${totals.t}\nRemaining: ${totals.r}\nProfit/Loss: ${money(totals.profit)}`;
- if(navigator.share){try{await navigator.share({title:"EZELEX Stock Report",text});}catch(e){}}else{await navigator.clipboard?.writeText(text);msg("stockMsg","Stock summary copied. You can paste it into WhatsApp, email or messages.","success")}
-}
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ezelex Enterprise - Worker Profile</title>
 
-function calc(){let t=Number($("totalQty").value)||0,p=Number($("purchaseTotal").value)||0,s=Number($("sellingPrice").value)||0,q=Number($("soldQty").value)||0,d=Number($("damageQty").value)||0;let u=t?p/t:0,r=t-q-d,revenue=q*s,soldCost=q*u,damageValue=d*u,remainingValue=Math.max(0,r)*u,profit=revenue-soldCost-damageValue,potential=Math.max(0,r)*(s-u);$("unitCost").textContent=money(u);$("remaining").textContent=r;$("revenue").textContent=money(revenue);$("soldCost").textContent=money(soldCost);$("damageValue").textContent=money(damageValue);$("remainingValue").textContent=money(remainingValue);$("profitLoss").textContent=money(profit);$("potentialProfit").textContent=money(potential);$("profitBox").className="calcbox "+(profit<0?"loss":"profit")}
-["totalQty","purchaseTotal","sellingPrice","soldQty","damageQty"].forEach(id=>$(id).addEventListener("input",calc));
-function stockCalcRow(x){let t=Number(x.total_quantity)||0,p=Number(x.purchase_total)||0,s=Number(x.selling_price)||0,q=Number(x.sold_quantity)||0,d=Number(x.damaged_quantity)||0,u=t?p/t:0,r=Math.max(0,t-q-d),rev=q*s,sc=q*u,dv=d*u,profit=rev-sc-dv;return{t,p,s,q,d,u,r,rev,sc,dv,profit,rv:r*u,potential:r*(s-u)}}
-async function loadStock(){let r=await db.from("worker_inventory").select("*").eq("worker_id",sessionUser).order("stock_date",{ascending:false});if(r.error){msg("stockMsg","Could not load stock: "+r.error.message,"error");return}stock=r.data||[];renderStock();updateStockDashboard()}
-function renderStock(){let b=$("stockBody");if(!stock.length){b.innerHTML='<tr><td colspan="10">No stock records yet.</td></tr>';return}b.innerHTML=stock.map(x=>{let c=stockCalcRow(x);return`<tr><td>${esc(String(x.stock_date||"").slice(0,10))}</td><td>${esc(x.product)}</td><td>${c.t}</td><td>${c.q}</td><td>${c.d}</td><td>${c.r}</td><td>${money(c.p)}</td><td>${money(c.rev)}</td><td class="${c.profit<0?"dangerText":"greenText"}">${money(c.profit)}</td><td><button class="secondary" onclick="editStock('${x.id}')">Edit</button></td></tr>`}).join("")}
-function updateStockDashboard(){let a={t:0,q:0,d:0,r:0,p:0,rev:0,dv:0,profit:0};stock.forEach(x=>{let c=stockCalcRow(x);a.t+=c.t;a.q+=c.q;a.d+=c.d;a.r+=c.r;a.p+=c.p;a.rev+=c.rev;a.dv+=c.dv;a.profit+=c.profit});$("dashTotal").textContent=a.t;$("dashSold").textContent=a.q;$("dashDamage").textContent=a.d;$("dashRemain").textContent=a.r;$("dashPurchase").textContent=money(a.p);$("dashRevenue").textContent=money(a.rev);$("dashDamageValue").textContent=money(a.dv);$("dashProfit").textContent=money(a.profit)}
-$("stockForm").onsubmit=async e=>{e.preventDefault();let t=Number($("totalQty").value)||0,q=Number($("soldQty").value)||0,d=Number($("damageQty").value)||0;if(q+d>t){msg("stockMsg","Sold quantity plus damage quantity cannot be greater than total quantity.","error");return}let row={worker_id:sessionUser,stock_date:$("stockDate").value,product:$("stockProduct").value.trim(),total_quantity:t,purchase_total:Number($("purchaseTotal").value)||0,selling_price:Number($("sellingPrice").value)||0,sold_quantity:q,damaged_quantity:d,notes:$("stockNotes").value.trim()||null};let id=$("stockId").value;let r=id?await db.from("worker_inventory").update(row).eq("id",id).eq("worker_id",sessionUser):await db.from("worker_inventory").insert(row);if(r.error){msg("stockMsg","Stock could not be saved: "+r.error.message,"error");return}msg("stockMsg",id?"Stock record updated successfully.":"Stock record saved successfully.","success");clearStock();await loadStock()}
-function clearStock(){$("stockForm").reset();$("stockId").value="";$("stockDate").value=today();$("soldQty").value=0;$("damageQty").value=0;calc()}
-window.editStock=id=>{let x=stock.find(a=>a.id===id);if(!x)return;$("stockId").value=x.id;$("stockDate").value=x.stock_date||today();$("stockProduct").value=x.product||"";$("totalQty").value=x.total_quantity;$("purchaseTotal").value=x.purchase_total;$("sellingPrice").value=x.selling_price;$("soldQty").value=x.sold_quantity;$("damageQty").value=x.damaged_quantity;$("stockNotes").value=x.notes||"";calc();window.scrollTo({top:0,behavior:"smooth"})};$("clearStockBtn").onclick=clearStock;
-$("loginBtn").onclick=async()=>{msg("loginMsg","Signing in...");let r=await db.auth.signInWithPassword({email:$("email").value.trim(),password:$("password").value});if(r.error){msg("loginMsg",r.error.message,"error");return}await loadProfile(r.data.user.id)};
-$("forgotBtn").onclick=async()=>{let email=$("email").value.trim();if(!email){msg("loginMsg","Enter your worker email first.","error");return}let redirect=location.origin+location.pathname;let r=await db.auth.resetPasswordForEmail(email,{redirectTo:redirect});if(r.error){msg("loginMsg",r.error.message,"error");return}msg("loginMsg","Password reset email sent. Check your inbox.","success")};
-$("savePasswordBtn").onclick=async()=>{let a=$("newPassword").value,b=$("confirmPassword").value;if(a.length<8){msg("recoveryMsg","Password must be at least 8 characters.","error");return}if(a!==b){msg("recoveryMsg","Passwords do not match.","error");return}let r=await db.auth.updateUser({password:a});if(r.error){msg("recoveryMsg",r.error.message,"error");return}msg("recoveryMsg","Password updated successfully. You can now log in.","success");setTimeout(()=>{db.auth.signOut();showLogin()},1200)};
-$("changePasswordBtn").onclick=async()=>{let a=$("changePassword").value,b=$("changePassword2").value;if(a.length<8){msg("securityMsg","Password must be at least 8 characters.","error");return}if(a!==b){msg("securityMsg","Passwords do not match.","error");return}let r=await db.auth.updateUser({password:a});if(r.error){msg("securityMsg",r.error.message,"error");return}$("changePassword").value="";$("changePassword2").value="";msg("securityMsg","Password updated successfully.","success")};
-$("logoutBtn").onclick=async()=>{await db.auth.signOut();profile=null;sessionUser=null;showLogin()};document.querySelectorAll(".nav button").forEach(b=>b.onclick=()=>{document.querySelectorAll(".nav button").forEach(x=>x.classList.remove("active"));document.querySelectorAll(".section").forEach(x=>x.classList.remove("active"));b.classList.add("active");$(b.dataset.tab).classList.add("active")});
-db.auth.onAuthStateChange(async(event,s)=>{if(event==="PASSWORD_RECOVERY"){showRecovery()}else if(event==="SIGNED_OUT"){showLogin()}});
-(async()=>{let r=await db.auth.getSession();if(r.data.session){if(location.hash.includes("access_token")||location.search.includes("code=")){showRecovery()}else await loadProfile(r.data.session.user.id)}else if(location.hash.includes("access_token")||location.search.includes("code=")){showRecovery()}else showLogin();calc()})();
-</script></body></html>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: Arial, sans-serif;
+    }
+
+    body {
+      background: #f4f6f8;
+      color: #222;
+      min-height: 100vh;
+    }
+
+    header {
+      background: #111827;
+      color: white;
+      padding: 18px 22px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 15px;
+    }
+
+    .brand {
+      font-size: 21px;
+      font-weight: bold;
+    }
+
+    .logout-btn {
+      background: #dc2626;
+      color: white;
+      border: none;
+      padding: 10px 16px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: bold;
+    }
+
+    .container {
+      max-width: 900px;
+      margin: 30px auto;
+      padding: 0 18px;
+    }
+
+    .welcome {
+      background: white;
+      border-radius: 14px;
+      padding: 25px;
+      box-shadow: 0 3px 12px rgba(0,0,0,0.08);
+      margin-bottom: 20px;
+    }
+
+    .welcome h1 {
+      font-size: 27px;
+      margin-bottom: 8px;
+    }
+
+    .welcome p {
+      color: #666;
+    }
+
+    .profile-card {
+      background: white;
+      border-radius: 14px;
+      padding: 25px;
+      box-shadow: 0 3px 12px rgba(0,0,0,0.08);
+    }
+
+    .profile-card h2 {
+      margin-bottom: 20px;
+      font-size: 22px;
+    }
+
+    .profile-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 16px;
+    }
+
+    .field {
+      background: #f8fafc;
+      border: 1px solid #e5e7eb;
+      border-radius: 10px;
+      padding: 15px;
+    }
+
+    .field-label {
+      font-size: 12px;
+      color: #6b7280;
+      margin-bottom: 6px;
+      text-transform: uppercase;
+      font-weight: bold;
+    }
+
+    .field-value {
+      font-size: 16px;
+      font-weight: 600;
+      word-break: break-word;
+    }
+
+    .status-active {
+      color: #15803d;
+    }
+
+    .status-inactive {
+      color: #dc2626;
+    }
+
+    .buttons {
+      margin-top: 25px;
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .action-btn {
+      display: inline-block;
+      text-decoration: none;
+      border: none;
+      padding: 12px 18px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: bold;
+      background: #111827;
+      color: white;
+    }
+
+    .home-btn {
+      background: #2563eb;
+    }
+
+    .loading {
+      text-align: center;
+      padding: 50px 20px;
+      color: #666;
+    }
+
+    .error {
+      background: #fee2e2;
+      color: #991b1b;
+      padding: 18px;
+      border-radius: 10px;
+      margin-top: 20px;
+      display: none;
+    }
+
+    footer {
+      text-align: center;
+      padding: 30px 15px;
+      color: #777;
+      font-size: 13px;
+    }
+
+    @media (max-width: 650px) {
+      .profile-grid {
+        grid-template-columns: 1fr;
+      }
+
+      header {
+        align-items: flex-start;
+      }
+
+      .welcome h1 {
+        font-size: 23px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+<header>
+  <div class="brand">Ezelex Enterprise</div>
+  <button class="logout-btn" onclick="logout()">Logout</button>
+</header>
+
+<div class="container">
+
+  <div id="loading" class="loading">
+    Loading your worker profile...
+  </div>
+
+  <div id="content" style="display:none;">
+
+    <div class="welcome">
+      <h1 id="welcomeName">Welcome!</h1>
+      <p>Welcome to your Ezelex Enterprise worker profile.</p>
+    </div>
+
+    <div class="profile-card">
+      <h2>My Worker Profile</h2>
+
+      <div class="profile-grid">
+
+        <div class="field">
+          <div class="field-label">Worker ID</div>
+          <div class="field-value" id="workerId">-</div>
+        </div>
+
+        <div class="field">
+          <div class="field-label">Full Name</div>
+          <div class="field-value" id="fullName">-</div>
+        </div>
+
+        <div class="field">
+          <div class="field-label">Phone</div>
+          <div class="field-value" id="phone">-</div>
+        </div>
+
+        <div class="field">
+          <div class="field-label">Role</div>
+          <div class="field-value" id="role">-</div>
+        </div>
+
+        <div class="field">
+          <div class="field-label">Account Status</div>
+          <div class="field-value" id="active">-</div>
+        </div>
+
+        <div class="field">
+          <div class="field-label">Contract Start</div>
+          <div class="field-value" id="contractStart">-</div>
+        </div>
+
+        <div class="field">
+          <div class="field-label">Contract End</div>
+          <div class="field-value" id="contractEnd">-</div>
+        </div>
+
+        <div class="field">
+          <div class="field-label">Email</div>
+          <div class="field-value" id="email">-</div>
+        </div>
+
+      </div>
+
+      <div class="buttons">
+        <a class="action-btn home-btn"
+           href="https://ezelexenterprise.com">
+          Ezelex Enterprise Home
+        </a>
+
+        <a class="action-btn"
+           href="https://ezelexenterprise.com/EZELEX_WORKER_PORTAL.html">
+          Worker Portal
+        </a>
+      </div>
+
+    </div>
+
+  </div>
+
+  <div id="errorBox" class="error"></div>
+
+</div>
+
+<footer>
+  © 2026 Ezelex Enterprise. All rights reserved.
+</footer>
+
+<script>
+  const SUPABASE_URL = "https://hweczhwoggmsrwhkktrx.supabase.co";
+
+  const SUPABASE_KEY =
+    "sb_publishable_D0o90HRJ1AfROf_DAj7ZAg_uaPDwqvV";
+
+  const supabaseClient = window.supabase.createClient(
+    SUPABASE_URL,
+    SUPABASE_KEY
+  );
+
+  async function loadWorkerProfile() {
+
+    try {
+
+      const {
+        data: { user },
+        error: authError
+      } = await supabaseClient.auth.getUser();
+
+      if (authError || !user) {
+        window.location.href =
+          "https://ezelexenterprise.com/EZELEX_WORKER_PORTAL.html";
+        return;
+      }
+
+      const { data: profile, error } =
+        await supabaseClient
+          .from("worker_profiles")
+          .select(`
+            worker_id,
+            full_name,
+            phone,
+            role,
+            active,
+            contract_start,
+            contract_end
+          `)
+          .eq("id", user.id)
+          .single();
+
+      if (error) {
+        console.error(error);
+        showError(
+          "We could not load your worker profile. Please contact Ezelex Enterprise."
+        );
+        return;
+      }
+
+      document.getElementById("welcomeName").textContent =
+        "Welcome, " + (profile.full_name || "Worker") + "!";
+
+      document.getElementById("workerId").textContent =
+        profile.worker_id || "-";
+
+      document.getElementById("fullName").textContent =
+        profile.full_name || "-";
+
+      document.getElementById("phone").textContent =
+        profile.phone || "-";
+
+      document.getElementById("role").textContent =
+        profile.role || "-";
+
+      const activeElement =
+        document.getElementById("active");
+
+      if (profile.active === true) {
+        activeElement.textContent = "Active";
+        activeElement.className =
+          "field-value status-active";
+      } else {
+        activeElement.textContent = "Inactive";
+        activeElement.className =
+          "field-value status-inactive";
+      }
+
+      document.getElementById("contractStart").textContent =
+        formatDate(profile.contract_start);
+
+      document.getElementById("contractEnd").textContent =
+        formatDate(profile.contract_end);
+
+      document.getElementById("email").textContent =
+        user.email || "-";
+
+      document.getElementById("loading").style.display =
+        "none";
+
+      document.getElementById("content").style.display =
+        "block";
+
+    } catch (error) {
+
+      console.error(error);
+
+      showError(
+        "Something went wrong while loading your profile."
+      );
+    }
+  }
+
+  function formatDate(date) {
+
+    if (!date) {
+      return "-";
+    }
+
+    const d = new Date(date);
+
+    if (isNaN(d.getTime())) {
+      return date;
+    }
+
+    return d.toLocaleDateString("en-GB", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric"
+    });
+  }
+
+  function showError(message) {
+
+    document.getElementById("loading").style.display =
+      "none";
+
+    const box = document.getElementById("errorBox");
+
+    box.textContent = message;
+    box.style.display = "block";
+  }
+
+  async function logout() {
+
+    const { error } =
+      await supabaseClient.auth.signOut();
+
+    if (error) {
+      alert("Unable to log out. Please try again.");
+      return;
+    }
+
+    window.location.href =
+      "https://ezelexenterprise.com/EZELEX_WORKER_PORTAL.html";
+  }
+
+  loadWorkerProfile();
+</script>
+
+</body>
+</html>
