@@ -1,359 +1,715 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
 
-<title>EZELEX Enterprise — Administrator Dashboard</title>
+<title>EZELEX Enterprise — Admin Command Centre</title>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
 <style>
+*{box-sizing:border-box}
 
-*{
-box-sizing:border-box;
+:root{
+  --navy:#0b1220;
+  --navy2:#111c33;
+  --blue:#2563eb;
+  --blue2:#3b82f6;
+  --gold:#d4a72c;
+  --gold2:#f2c94c;
+  --white:#fff;
+  --bg:#f3f6fb;
+  --text:#172033;
+  --muted:#64748b;
+  --border:#e2e8f0;
+  --green:#15803d;
+  --red:#b42318;
 }
 
 body{
-margin:0;
-font-family:Arial,Helvetica,sans-serif;
-background:#f4f6f8;
-color:#17202a;
+  margin:0;
+  font-family:Arial,Helvetica,sans-serif;
+  background:var(--bg);
+  color:var(--text);
 }
 
-header{
-background:linear-gradient(135deg,#111827,#1e293b);
-color:white;
-padding:22px 5%;
-display:flex;
-justify-content:space-between;
-align-items:center;
-gap:15px;
-box-shadow:0 4px 20px #0002;
-}
-
-header h1{
-margin:0;
-font-size:24px;
-}
+.hidden{display:none!important}
 
 button{
-border:0;
-border-radius:8px;
-padding:11px 16px;
-cursor:pointer;
-font-weight:700;
-font-size:14px;
+  border:0;
+  border-radius:10px;
+  padding:11px 16px;
+  cursor:pointer;
+  font-weight:700;
+  transition:.2s;
 }
 
-button:disabled{
-opacity:.6;
-cursor:not-allowed;
-}
+button:hover{transform:translateY(-1px)}
+button:disabled{opacity:.55;cursor:not-allowed;transform:none}
 
 .primary{
-background:#111827;
-color:white;
+  background:var(--blue);
+  color:white;
 }
 
-.primary:hover{
-background:#1f2937;
+.primary:hover{background:#1d4ed8}
+
+.gold{
+  background:linear-gradient(135deg,var(--gold),var(--gold2));
+  color:#111827;
 }
 
 .danger{
-background:#b42318;
-color:white;
-}
-
-.danger:hover{
-background:#912018;
-}
-
-.secondary{
-background:#e5e7eb;
-color:#111827;
+  background:var(--red);
+  color:white;
 }
 
 .success{
-background:#15803d;
-color:white;
+  background:var(--green);
+  color:white;
 }
 
-.hidden{
-display:none!important;
+.secondary{
+  background:#e8edf5;
+  color:#172033;
 }
 
-.login{
-max-width:430px;
-margin:70px auto;
-background:white;
-padding:30px;
-border-radius:14px;
-box-shadow:0 8px 30px #0001;
+.dark{
+  background:var(--navy);
+  color:white;
 }
 
-.login h2{
-margin-top:0;
+/* LOGIN */
+
+.login-page{
+  min-height:100vh;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:25px;
+  background:
+    radial-gradient(circle at top right,#243b66 0,#0b1220 45%,#060b14 100%);
 }
 
-input,
-select,
+.login-card{
+  width:100%;
+  max-width:430px;
+  background:white;
+  border-radius:24px;
+  padding:34px;
+  box-shadow:0 25px 70px #0008;
+}
+
+.logo{
+  width:72px;
+  height:72px;
+  border-radius:20px;
+  background:linear-gradient(135deg,var(--gold),var(--gold2));
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-size:28px;
+  font-weight:900;
+  color:#111827;
+  margin-bottom:18px;
+}
+
+.login-card h1{
+  margin:0 0 7px;
+}
+
+.login-card p{
+  color:var(--muted);
+}
+
+input,select,textarea{
+  width:100%;
+  padding:12px 13px;
+  margin:7px 0 15px;
+  border:1px solid #d6dee9;
+  border-radius:10px;
+  font-size:15px;
+  background:white;
+  font-family:Arial,Helvetica,sans-serif;
+}
+
 textarea{
-width:100%;
-padding:12px;
-margin:7px 0 14px;
-border:1px solid #d5dbe1;
-border-radius:8px;
-font-size:15px;
-background:white;
-font-family:Arial,Helvetica,sans-serif;
+  min-height:140px;
+  resize:vertical;
 }
 
-textarea{
-min-height:140px;
-resize:vertical;
-}
-
-input:focus,
-select:focus,
-textarea:focus{
-outline:none;
-border-color:#2563eb;
-box-shadow:0 0 0 3px #2563eb18;
+input:focus,select:focus,textarea:focus{
+  outline:none;
+  border-color:var(--blue);
+  box-shadow:0 0 0 3px #2563eb18;
 }
 
 label{
-font-weight:700;
-font-size:14px;
+  display:block;
+  font-size:13px;
+  font-weight:800;
+  color:#344054;
 }
 
-.wrap{
-max-width:1250px;
-margin:30px auto;
-padding:0 18px;
+/* APP */
+
+.app{
+  min-height:100vh;
 }
 
-.cards{
-display:grid;
-grid-template-columns:repeat(5,1fr);
-gap:15px;
+.topbar{
+  height:76px;
+  background:linear-gradient(135deg,var(--navy),var(--navy2));
+  color:white;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  padding:0 28px;
+  position:sticky;
+  top:0;
+  z-index:50;
+  box-shadow:0 5px 25px #0003;
 }
+
+.brand{
+  display:flex;
+  align-items:center;
+  gap:13px;
+}
+
+.brand-mark{
+  width:42px;
+  height:42px;
+  border-radius:12px;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  background:linear-gradient(135deg,var(--gold),var(--gold2));
+  color:#111827;
+  font-weight:900;
+}
+
+.brand-text strong{
+  display:block;
+  font-size:16px;
+}
+
+.brand-text span{
+  font-size:11px;
+  color:#cbd5e1;
+  letter-spacing:1.2px;
+}
+
+.admin-mini{
+  display:flex;
+  align-items:center;
+  gap:12px;
+}
+
+.admin-avatar{
+  width:42px;
+  height:42px;
+  border-radius:50%;
+  background:linear-gradient(135deg,#2563eb,#60a5fa);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-weight:900;
+}
+
+.admin-mini-text{
+  display:block;
+}
+
+.admin-mini-text strong{
+  display:block;
+}
+
+.admin-mini-text span{
+  font-size:11px;
+  color:#94a3b8;
+}
+
+.layout{
+  display:flex;
+  min-height:calc(100vh - 76px);
+}
+
+.sidebar{
+  width:245px;
+  background:#fff;
+  border-right:1px solid var(--border);
+  padding:22px 14px;
+  position:sticky;
+  top:76px;
+  height:calc(100vh - 76px);
+}
+
+.nav-title{
+  font-size:11px;
+  font-weight:800;
+  color:#94a3b8;
+  letter-spacing:1px;
+  padding:10px 12px;
+}
+
+.nav-btn{
+  width:100%;
+  text-align:left;
+  background:transparent;
+  color:#475569;
+  margin:3px 0;
+  padding:12px;
+}
+
+.nav-btn:hover,
+.nav-btn.active{
+  background:#eff6ff;
+  color:var(--blue);
+}
+
+.content{
+  flex:1;
+  padding:28px;
+  max-width:1500px;
+}
+
+.page{
+  display:none;
+}
+
+.page.active{
+  display:block;
+}
+
+.page-title{
+  margin-bottom:22px;
+}
+
+.page-title h1{
+  margin:0;
+  font-size:29px;
+}
+
+.page-title p{
+  color:var(--muted);
+  margin:7px 0 0;
+}
+
+/* STATS */
+
+.stats{
+  display:grid;
+  grid-template-columns:repeat(5,1fr);
+  gap:16px;
+}
+
+.stat{
+  background:white;
+  border:1px solid var(--border);
+  border-radius:17px;
+  padding:21px;
+  box-shadow:0 5px 20px #00000008;
+}
+
+.stat-top{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+}
+
+.stat-icon{
+  width:38px;
+  height:38px;
+  border-radius:11px;
+  background:#eff6ff;
+  color:var(--blue);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-weight:900;
+}
+
+.stat small{
+  color:var(--muted);
+  font-weight:700;
+}
+
+.stat strong{
+  display:block;
+  font-size:25px;
+  margin-top:14px;
+}
+
+/* CARDS */
 
 .card{
-background:white;
-padding:20px;
-border-radius:12px;
-box-shadow:0 3px 15px #0000000d;
+  background:white;
+  border:1px solid var(--border);
+  border-radius:17px;
+  padding:22px;
+  margin-top:20px;
+  box-shadow:0 5px 20px #00000008;
 }
 
-.label{
-color:#667085;
-font-size:13px;
+.card-header{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:15px;
+  margin-bottom:17px;
 }
 
-.value{
-font-size:27px;
-font-weight:800;
-margin-top:8px;
+.card-header h2{
+  margin:0;
+  font-size:19px;
 }
 
-.section{
-background:white;
-margin-top:25px;
-padding:22px;
-border-radius:14px;
-box-shadow:0 3px 15px #0000000d;
-}
-
-.section h2{
-margin-top:0;
-}
-
-.filters{
-display:grid;
-grid-template-columns:1.3fr 1fr 1fr auto;
-gap:12px;
-align-items:end;
+.card-header p{
+  color:var(--muted);
+  margin:5px 0 0;
+  font-size:13px;
 }
 
 .actions{
-display:flex;
-gap:10px;
-margin-bottom:15px;
-flex-wrap:wrap;
+  display:flex;
+  gap:9px;
+  flex-wrap:wrap;
 }
 
-.tablebox{
-background:white;
-border-radius:12px;
-overflow:auto;
-box-shadow:0 3px 15px #0000000d;
+/* PROFILE */
+
+.profile-hero{
+  background:linear-gradient(135deg,var(--navy),#172a4d);
+  color:white;
+  border-radius:20px;
+  padding:28px;
+  display:flex;
+  align-items:center;
+  gap:22px;
+  position:relative;
+  overflow:hidden;
+}
+
+.profile-hero:after{
+  content:"";
+  position:absolute;
+  width:250px;
+  height:250px;
+  right:-90px;
+  top:-120px;
+  border-radius:50%;
+  background:#d4a72c22;
+}
+
+.big-avatar{
+  width:92px;
+  height:92px;
+  border-radius:50%;
+  background:linear-gradient(135deg,var(--gold),var(--gold2));
+  color:#111827;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-size:30px;
+  font-weight:900;
+  border:4px solid #fff3;
+  z-index:1;
+}
+
+.profile-hero-text{
+  z-index:1;
+}
+
+.profile-hero h2{
+  margin:0 0 6px;
+}
+
+.profile-hero p{
+  margin:3px 0;
+  color:#cbd5e1;
+}
+
+.status{
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+  padding:5px 10px;
+  border-radius:999px;
+  font-size:12px;
+  font-weight:800;
+}
+
+.status.active{
+  background:#dcfce7;
+  color:#166534;
+}
+
+.status.inactive{
+  background:#fee2e2;
+  color:#991b1b;
+}
+
+.info-grid{
+  display:grid;
+  grid-template-columns:repeat(2,1fr);
+  gap:15px;
+}
+
+.info{
+  background:#f8fafc;
+  border:1px solid var(--border);
+  border-radius:13px;
+  padding:15px;
+}
+
+.info small{
+  color:var(--muted);
+  display:block;
+  margin-bottom:5px;
+}
+
+.info strong{
+  word-break:break-word;
+}
+
+/* TABLE */
+
+.table-wrap{
+  overflow:auto;
 }
 
 table{
-width:100%;
-border-collapse:collapse;
-min-width:900px;
+  width:100%;
+  border-collapse:collapse;
+  min-width:950px;
 }
 
-th,
-td{
-padding:12px;
-border-bottom:1px solid #eee;
-text-align:left;
-font-size:14px;
+th,td{
+  padding:13px;
+  border-bottom:1px solid #edf0f4;
+  text-align:left;
+  font-size:13px;
 }
 
 th{
-background:#f8fafc;
-font-weight:700;
+  background:#f8fafc;
+  color:#475569;
+  font-size:12px;
+  text-transform:uppercase;
+  letter-spacing:.3px;
 }
 
 tr:hover td{
-background:#fafafa;
-}
-
-.msg{
-padding:11px;
-border-radius:8px;
-margin:10px 0;
-background:#fef3c7;
-color:#78350f;
-}
-
-.msg.error{
-background:#fee4e2;
-color:#912018;
-}
-
-.msg.success{
-background:#dcfce7;
-color:#166534;
-}
-
-.worker-grid{
-display:grid;
-grid-template-columns:repeat(3,1fr);
-gap:15px;
-}
-
-.worker-card{
-border:1px solid #e5e7eb;
-border-radius:12px;
-padding:18px;
-background:white;
-}
-
-.worker-card h3{
-margin-top:0;
-margin-bottom:8px;
-}
-
-.worker-meta{
-color:#667085;
-font-size:14px;
-line-height:1.7;
-}
-
-.badge{
-display:inline-block;
-padding:5px 9px;
-border-radius:999px;
-font-size:12px;
-font-weight:700;
-}
-
-.badge.active{
-background:#dcfce7;
-color:#166534;
-}
-
-.badge.inactive{
-background:#fee2e2;
-color:#991b1b;
-}
-
-.worker-actions{
-display:flex;
-gap:8px;
-margin-top:15px;
-flex-wrap:wrap;
-}
-
-.small{
-padding:8px 12px;
-font-size:13px;
-}
-
-.form-grid{
-display:grid;
-grid-template-columns:1fr 1fr;
-gap:0 15px;
-}
-
-.full{
-grid-column:1/-1;
+  background:#fafcff;
 }
 
 .empty{
-padding:20px;
-text-align:center;
-color:#667085;
+  text-align:center;
+  color:var(--muted);
+  padding:30px;
 }
 
-@media(max-width:1050px){
-
-.cards{
-grid-template-columns:repeat(2,1fr);
-}
+/* WORKERS */
 
 .worker-grid{
-grid-template-columns:repeat(2,1fr);
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:15px;
 }
 
+.worker{
+  border:1px solid var(--border);
+  border-radius:15px;
+  padding:18px;
 }
 
-@media(max-width:700px){
-
-header{
-padding:18px;
+.worker-head{
+  display:flex;
+  justify-content:space-between;
+  gap:10px;
 }
 
-header h1{
-font-size:19px;
+.worker-avatar{
+  width:48px;
+  height:48px;
+  border-radius:14px;
+  background:#eff6ff;
+  color:var(--blue);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-weight:900;
 }
 
-.cards{
-grid-template-columns:1fr;
+.worker h3{
+  margin:0;
 }
 
-.filters{
-grid-template-columns:1fr;
+.worker-id{
+  color:var(--muted);
+  font-size:12px;
+  margin-top:4px;
 }
 
-.worker-grid{
-grid-template-columns:1fr;
+.worker-details{
+  margin-top:15px;
+  line-height:1.8;
+  color:#475569;
+  font-size:13px;
 }
+
+.worker-actions{
+  margin-top:15px;
+  display:flex;
+  gap:8px;
+  flex-wrap:wrap;
+}
+
+/* FORMS */
 
 .form-grid{
-grid-template-columns:1fr;
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:0 16px;
 }
 
 .full{
-grid-column:auto;
+  grid-column:1/-1;
 }
 
-.wrap{
-padding:0 12px;
+.form-section{
+  margin-top:15px;
 }
 
-.section{
-padding:17px;
+/* MESSAGES */
+
+.msg{
+  padding:12px;
+  border-radius:10px;
+  margin:10px 0;
+  font-size:14px;
+}
+
+.msg.error{
+  background:#fee4e2;
+  color:#912018;
+}
+
+.msg.success{
+  background:#dcfce7;
+  color:#166534;
+}
+
+.msg.info{
+  background:#eff6ff;
+  color:#1d4ed8;
+}
+
+/* MOBILE */
+
+.mobile-nav{
+  display:none;
+}
+
+@media(max-width:1150px){
+
+.stats{
+  grid-template-columns:repeat(3,1fr);
+}
+
+.worker-grid{
+  grid-template-columns:repeat(2,1fr);
 }
 
 }
 
+@media(max-width:850px){
+
+.sidebar{
+  display:none;
+}
+
+.content{
+  padding:18px 13px 90px;
+}
+
+.topbar{
+  padding:0 15px;
+}
+
+.admin-mini-text{
+  display:none;
+}
+
+.mobile-nav{
+  display:flex;
+  position:fixed;
+  bottom:0;
+  left:0;
+  right:0;
+  background:#fff;
+  border-top:1px solid var(--border);
+  z-index:100;
+  padding:7px;
+  justify-content:space-around;
+}
+
+.mobile-nav button{
+  background:transparent;
+  color:#64748b;
+  font-size:11px;
+  padding:8px;
+}
+
+.mobile-nav button.active{
+  color:var(--blue);
+}
+
+.stats{
+  grid-template-columns:1fr 1fr;
+}
+
+.worker-grid{
+  grid-template-columns:1fr;
+}
+
+.info-grid{
+  grid-template-columns:1fr;
+}
+
+}
+
+@media(max-width:560px){
+
+.stats{
+  grid-template-columns:1fr;
+}
+
+.form-grid{
+  grid-template-columns:1fr;
+}
+
+.full{
+  grid-column:auto;
+}
+
+.profile-hero{
+  align-items:flex-start;
+  flex-direction:column;
+}
+
+.page-title h1{
+  font-size:24px;
+}
+
+.brand-text{
+  display:none;
+}
+
+}
 </style>
 </head>
 
@@ -361,53 +717,38 @@ padding:17px;
 <body>
 
 
-<header>
+<!-- =====================================================
+     LOGIN
+===================================================== -->
 
-<h1>
-EZELEX Enterprise — Administrator Dashboard
-</h1>
+<section id="loginPage" class="login-page">
 
-<button
-id="logoutBtn"
-class="danger hidden">
-Log out
-</button>
+<div class="login-card">
 
-</header>
+<div class="logo">
+EZ
+</div>
 
-
-<!-- LOGIN -->
-
-<section
-id="loginSection"
-class="login">
-
-<h2>
-Administrator Login
-</h2>
+<h1>EZELEX ENTERPRISE</h1>
 
 <p>
-Sign in with your secure EZELEX administrator account.
+Administrator Command Centre
 </p>
 
 <div id="loginMsg"></div>
 
-<label>
-Email
-</label>
+<label>Email</label>
 
 <input
-id="email"
+id="loginEmail"
 type="email"
-placeholder="Admin email"
+placeholder="Administrator email"
 autocomplete="username">
 
-<label>
-Password
-</label>
+<label>Password</label>
 
 <input
-id="password"
+id="loginPassword"
 type="password"
 placeholder="Password"
 autocomplete="current-password">
@@ -416,165 +757,509 @@ autocomplete="current-password">
 id="loginBtn"
 class="primary"
 style="width:100%">
-Sign in
+Sign in to Command Centre
 </button>
+
+</div>
 
 </section>
 
 
 
-<!-- DASHBOARD -->
+<!-- =====================================================
+     APPLICATION
+===================================================== -->
 
-<main
-id="dashboard"
-class="wrap hidden">
-
-
-<div id="dashMsg"></div>
+<section id="app" class="app hidden">
 
 
+<!-- TOP BAR -->
 
-<!-- STATS -->
+<header class="topbar">
 
-<div class="cards">
+<div class="brand">
 
-<div class="card">
-
-<div class="label">
-Today Sale
+<div class="brand-mark">
+EZ
 </div>
 
-<div
-class="value"
-id="today">
-GH₵0.00
-</div>
+<div class="brand-text">
 
-</div>
+<strong>
+EZELEX ENTERPRISE
+</strong>
 
-
-<div class="card">
-
-<div class="label">
-This Week Sale
-</div>
-
-<div
-class="value"
-id="week">
-GH₵0.00
-</div>
-
-</div>
-
-
-<div class="card">
-
-<div class="label">
-This Month Sale
-</div>
-
-<div
-class="value"
-id="month">
-GH₵0.00
-</div>
-
-</div>
-
-
-<div class="card">
-
-<div class="label">
-All Time Sale
-</div>
-
-<div
-class="value"
-id="alltime">
-GH₵0.00
-</div>
-
-</div>
-
-
-<div class="card">
-
-<div class="label">
-Active Workers
-</div>
-
-<div
-class="value"
-id="workers">
-0
-</div>
+<span>
+ADMIN COMMAND CENTRE
+</span>
 
 </div>
 
 </div>
 
 
+<div class="admin-mini">
 
-<!-- SALES -->
+<div class="admin-mini-text">
 
-<section class="section">
+<strong id="topAdminName">
+Administrator
+</strong>
 
-<h2>
-Sales Dashboard
-</h2>
-
-
-<div class="filters">
-
-<div>
-
-<label>
-Worker
-</label>
-
-<select id="workerFilter">
-
-<option value="">
-All workers
-</option>
-
-</select>
+<span>
+ADMIN001 • Active
+</span>
 
 </div>
 
-
-<div>
-
-<label>
-From
-</label>
-
-<input
-id="fromDate"
-type="date">
-
+<div class="admin-avatar">
+A
 </div>
-
-
-<div>
-
-<label>
-To
-</label>
-
-<input
-id="toDate"
-type="date">
-
-</div>
-
 
 <button
-id="filterBtn"
-class="primary">
-Apply Filters
+id="logoutBtn"
+class="danger">
+Logout
 </button>
+
+</div>
+
+</header>
+
+
+
+<div class="layout">
+
+
+<!-- SIDEBAR -->
+
+<aside class="sidebar">
+
+<div class="nav-title">
+COMMAND CENTRE
+</div>
+
+<button
+class="nav-btn active"
+data-page="dashboardPage">
+📊 Dashboard
+</button>
+
+<button
+class="nav-btn"
+data-page="profilePage">
+👑 Admin Profile
+</button>
+
+<button
+class="nav-btn"
+data-page="workersPage">
+👥 Workers
+</button>
+
+<button
+class="nav-btn"
+data-page="salesPage">
+💰 Central Sales
+</button>
+
+<button
+class="nav-btn"
+data-page="reportsPage">
+📄 Reports
+</button>
+
+<button
+class="nav-btn"
+data-page="communicationPage">
+💬 Communication
+</button>
+
+<div class="nav-title">
+SECURITY
+</div>
+
+<button
+class="nav-btn"
+data-page="securityPage">
+🔐 Security
+</button>
+
+</aside>
+
+
+
+<!-- CONTENT -->
+
+<main class="content">
+
+
+
+<!-- =====================================================
+     DASHBOARD
+===================================================== -->
+
+<section
+id="dashboardPage"
+class="page active">
+
+<div class="page-title">
+
+<h1>
+Good to see you, <span id="dashboardName">
+Administrator
+</span> 👑
+</h1>
+
+<p>
+Welcome to your EZELEX Enterprise command centre.
+</p>
+
+</div>
+
+
+<div class="stats">
+
+
+<div class="stat">
+
+<div class="stat-top">
+
+<small>
+Today Sale
+</small>
+
+<div class="stat-icon">
+₵
+</div>
+
+</div>
+
+<strong id="todaySale">
+GH₵0.00
+</strong>
+
+</div>
+
+
+<div class="stat">
+
+<div class="stat-top">
+
+<small>
+This Week
+</small>
+
+<div class="stat-icon">
+W
+</div>
+
+</div>
+
+<strong id="weekSale">
+GH₵0.00
+</strong>
+
+</div>
+
+
+<div class="stat">
+
+<div class="stat-top">
+
+<small>
+This Month
+</small>
+
+<div class="stat-icon">
+M
+</div>
+
+</div>
+
+<strong id="monthSale">
+GH₵0.00
+</strong>
+
+</div>
+
+
+<div class="stat">
+
+<div class="stat-top">
+
+<small>
+All Time
+</small>
+
+<div class="stat-icon">
+A
+</div>
+
+</div>
+
+<strong id="allSale">
+GH₵0.00
+</strong>
+
+</div>
+
+
+<div class="stat">
+
+<div class="stat-top">
+
+<small>
+Active Workers
+</small>
+
+<div class="stat-icon">
+👥
+</div>
+
+</div>
+
+<strong id="activeWorkers">
+0
+</strong>
+
+</div>
+
+
+</div>
+
+
+<div class="card">
+
+<div class="card-header">
+
+<div>
+
+<h2>
+Command Centre Overview
+</h2>
+
+<p>
+Your EZELEX business activity at a glance.
+</p>
+
+</div>
+
+<button
+id="dashboardRefresh"
+class="primary">
+Refresh Data
+</button>
+
+</div>
+
+
+<div id="dashboardMsg"></div>
+
+</div>
+
+</section>
+
+
+
+<!-- =====================================================
+     ADMIN PROFILE
+===================================================== -->
+
+<section
+id="profilePage"
+class="page">
+
+<div class="page-title">
+
+<h1>
+Admin Profile
+</h1>
+
+<p>
+Your EZELEX Enterprise administrator identity.
+</p>
+
+</div>
+
+
+<div class="profile-hero">
+
+<div class="big-avatar">
+A
+</div>
+
+<div class="profile-hero-text">
+
+<h2 id="profileName">
+EZELEX Administrator
+</h2>
+
+<p id="profileEmail">
+Administrator
+</p>
+
+<p>
+ADMIN001 • EZELEX ENTERPRISE
+</p>
+
+<br>
+
+<span class="status active">
+● Active Administrator
+</span>
+
+</div>
+
+</div>
+
+
+<div class="card">
+
+<div class="card-header">
+
+<div>
+
+<h2>
+Administrator Information
+</h2>
+
+<p>
+Official administrator account information.
+</p>
+
+</div>
+
+</div>
+
+
+<div class="info-grid">
+
+
+<div class="info">
+
+<small>
+Full Name
+</small>
+
+<strong id="profileFullName">
+Administrator
+</strong>
+
+</div>
+
+
+<div class="info">
+
+<small>
+Worker / Admin ID
+</small>
+
+<strong>
+ADMIN001
+</strong>
+
+</div>
+
+
+<div class="info">
+
+<small>
+Email
+</small>
+
+<strong id="profileEmail2">
+-
+</strong>
+
+</div>
+
+
+<div class="info">
+
+<small>
+Phone
+</small>
+
+<strong id="profilePhone">
+Not provided
+</strong>
+
+</div>
+
+
+<div class="info">
+
+<small>
+Role
+</small>
+
+<strong>
+Administrator
+</strong>
+
+</div>
+
+
+<div class="info">
+
+<small>
+Company
+</small>
+
+<strong>
+EZELEX ENTERPRISE
+</strong>
+
+</div>
+
+
+<div class="info">
+
+<small>
+Account Status
+</small>
+
+<strong>
+Active
+</strong>
+
+</div>
+
+
+<div class="info">
+
+<small>
+Company Access
+</small>
+
+<strong>
+Full Administrator Access
+</strong>
+
+</div>
+
+
+</div>
+
+</div>
+
+
+<div class="card">
+
+<div class="card-header">
+
+<div>
+
+<h2>
+Account Actions
+</h2>
+
+<p>
+Manage your administrator account.
+</p>
+
+</div>
 
 </div>
 
@@ -582,86 +1267,18 @@ Apply Filters
 <div class="actions">
 
 <button
-id="refreshSalesBtn"
-class="primary">
-Refresh Sales
+class="primary"
+onclick="openPage('securityPage')">
+🔐 Security Settings
 </button>
 
 <button
-id="csvBtn"
-class="secondary">
-Download CSV
+class="danger"
+onclick="logout()">
+Logout
 </button>
 
 </div>
-
-
-<div class="tablebox">
-
-<table>
-
-<thead>
-
-<tr>
-
-<th>
-Date
-</th>
-
-<th>
-Worker
-</th>
-
-<th>
-Worker ID
-</th>
-
-<th>
-Customer
-</th>
-
-<th>
-Product / Service
-</th>
-
-<th>
-Qty
-</th>
-
-<th>
-Amount
-</th>
-
-<th>
-Payment
-</th>
-
-<th>
-Notes
-</th>
-
-</tr>
-
-</thead>
-
-
-<tbody id="salesBody">
-
-<tr>
-
-<td
-colspan="9"
-class="empty">
-
-Loading sales...
-
-</td>
-
-</tr>
-
-</tbody>
-
-</table>
 
 </div>
 
@@ -669,17 +1286,51 @@ Loading sales...
 
 
 
-<!-- WORKER MANAGEMENT -->
+<!-- =====================================================
+     WORKERS
+===================================================== -->
 
-<section class="section">
+<section
+id="workersPage"
+class="page">
+
+<div class="page-title">
+
+<h1>
+Worker Management
+</h1>
+
+<p>
+Create, manage and securely remove EZELEX workers.
+</p>
+
+</div>
+
+
+<div class="card">
+
+<div class="card-header">
+
+<div>
 
 <h2>
-Worker Management
+EZELEX Workforce
 </h2>
 
 <p>
-Create, manage and remove EZELEX workers.
+All active and inactive worker accounts.
 </p>
+
+</div>
+
+<button
+id="refreshWorkers"
+class="primary">
+Refresh
+</button>
+
+</div>
+
 
 <div id="workerMsg"></div>
 
@@ -694,28 +1345,33 @@ Loading workers...
 
 </div>
 
-</section>
+</div>
 
 
 
-<!-- CREATE WORKER -->
+<div class="card">
 
-<section class="section">
+<div class="card-header">
+
+<div>
 
 <h2>
 Create New Worker
 </h2>
 
 <p>
-Create a worker account and send the worker their password setup email.
+Create a worker account and send their password setup email.
 </p>
 
+</div>
 
-<div id="addMsg"></div>
+</div>
 
 
-<form id="addWorkerForm">
+<div id="createMsg"></div>
 
+
+<form id="createWorkerForm">
 
 <div class="form-grid">
 
@@ -727,7 +1383,7 @@ Worker ID
 </label>
 
 <input
-id="worker_id"
+id="workerId"
 required
 placeholder="EZE-001">
 
@@ -741,7 +1397,7 @@ Full Name
 </label>
 
 <input
-id="full_name"
+id="workerName"
 required
 placeholder="Worker full name">
 
@@ -755,7 +1411,7 @@ Phone
 </label>
 
 <input
-id="phone"
+id="workerPhone"
 required
 placeholder="Phone number">
 
@@ -769,7 +1425,7 @@ Email
 </label>
 
 <input
-id="worker_email"
+id="workerEmail"
 type="email"
 required
 placeholder="worker@example.com">
@@ -784,7 +1440,7 @@ Contract Start
 </label>
 
 <input
-id="contract_start"
+id="contractStart"
 type="date">
 
 </div>
@@ -797,7 +1453,7 @@ Contract End
 </label>
 
 <input
-id="contract_end"
+id="contractEnd"
 type="date">
 
 </div>
@@ -807,35 +1463,401 @@ type="date">
 
 
 <button
-id="createBtn"
-class="primary"
-type="submit">
+id="createWorkerBtn"
+type="submit"
+class="gold">
 
 Create Worker & Send Welcome Email
 
 </button>
 
-
 </form>
+
+</div>
 
 </section>
 
 
 
-<!-- COMMUNICATION -->
+<!-- =====================================================
+     CENTRAL SALES
+===================================================== -->
 
-<section class="section">
+<section
+id="salesPage"
+class="page">
+
+<div class="page-title">
+
+<h1>
+Central Sales
+</h1>
+
+<p>
+All worker sales collected in one EZELEX command centre.
+</p>
+
+</div>
+
+
+<div class="card">
+
+<div class="card-header">
+
+<div>
 
 <h2>
-Communication Center
+Sales Records
 </h2>
 
 <p>
-Send important updates directly to your EZELEX workers.
+View and filter every worker's sales.
 </p>
 
+</div>
 
-<div id="commMsg"></div>
+<div class="actions">
+
+<button
+id="refreshSales"
+class="primary">
+Refresh
+</button>
+
+<button
+id="downloadCsv"
+class="secondary">
+CSV
+</button>
+
+</div>
+
+</div>
+
+
+<div class="form-grid">
+
+<div>
+
+<label>
+Worker
+</label>
+
+<select id="salesWorkerFilter">
+
+<option value="">
+All Workers
+</option>
+
+</select>
+
+</div>
+
+
+<div>
+
+<label>
+From Date
+</label>
+
+<input
+id="salesFrom"
+type="date">
+
+</div>
+
+
+<div>
+
+<label>
+To Date
+</label>
+
+<input
+id="salesTo"
+type="date">
+
+</div>
+
+
+<div>
+
+<label>
+Filter
+</label>
+
+<button
+id="applySalesFilter"
+class="primary"
+style="width:100%">
+Apply Filters
+</button>
+
+</div>
+
+</div>
+
+
+<div id="salesMsg"></div>
+
+
+<div class="table-wrap">
+
+<table>
+
+<thead>
+
+<tr>
+
+<th>Date</th>
+<th>Worker</th>
+<th>Worker ID</th>
+<th>Customer</th>
+<th>Product / Service</th>
+<th>Qty</th>
+<th>Amount</th>
+<th>Payment</th>
+<th>Notes</th>
+
+</tr>
+
+</thead>
+
+<tbody id="salesTable">
+
+<tr>
+<td colspan="9" class="empty">
+Loading sales...
+</td>
+</tr>
+
+</tbody>
+
+</table>
+
+</div>
+
+</div>
+
+</section>
+
+
+
+<!-- =====================================================
+     REPORTS
+===================================================== -->
+
+<section
+id="reportsPage"
+class="page">
+
+<div class="page-title">
+
+<h1>
+Reports
+</h1>
+
+<p>
+Generate professional EZELEX sales reports.
+</p>
+
+</div>
+
+
+<div class="card">
+
+<div class="card-header">
+
+<div>
+
+<h2>
+Sales Report
+</h2>
+
+<p>
+Choose a worker and date range, then generate a PDF.
+</p>
+
+</div>
+
+</div>
+
+
+<div class="form-grid">
+
+
+<div>
+
+<label>
+Worker
+</label>
+
+<select id="reportWorker">
+
+<option value="">
+All Workers
+</option>
+
+</select>
+
+</div>
+
+
+<div>
+
+<label>
+From Date
+</label>
+
+<input
+id="reportFrom"
+type="date">
+
+</div>
+
+
+<div>
+
+<label>
+To Date
+</label>
+
+<input
+id="reportTo"
+type="date">
+
+</div>
+
+
+<div>
+
+<label>
+Action
+</label>
+
+<button
+id="generatePdf"
+class="gold"
+style="width:100%">
+Generate PDF Report
+</button>
+
+</div>
+
+
+</div>
+
+
+<div id="reportMsg"></div>
+
+</div>
+
+
+<div class="card">
+
+<div class="card-header">
+
+<div>
+
+<h2>
+Report Summary
+</h2>
+
+</div>
+
+</div>
+
+
+<div class="stats"
+style="grid-template-columns:repeat(3,1fr)">
+
+<div class="stat">
+
+<small>
+Sales Count
+</small>
+
+<strong id="reportCount">
+0
+</strong>
+
+</div>
+
+
+<div class="stat">
+
+<small>
+Total Sales
+</small>
+
+<strong id="reportTotal">
+GH₵0.00
+</strong>
+
+</div>
+
+
+<div class="stat">
+
+<small>
+Average Sale
+</small>
+
+<strong id="reportAverage">
+GH₵0.00
+</strong>
+
+</div>
+
+</div>
+
+</div>
+
+</section>
+
+
+
+<!-- =====================================================
+     COMMUNICATION
+===================================================== -->
+
+<section
+id="communicationPage"
+class="page">
+
+<div class="page-title">
+
+<h1>
+Communication Centre
+</h1>
+
+<p>
+Send important messages and updates to your workforce.
+</p>
+
+</div>
+
+
+<div class="card">
+
+<div class="card-header">
+
+<div>
+
+<h2>
+Send Worker Message
+</h2>
+
+<p>
+Communicate directly with one worker or everyone.
+</p>
+
+</div>
+
+</div>
+
+
+<div id="communicationMsg"></div>
 
 
 <form id="communicationForm">
@@ -845,7 +1867,7 @@ Send important updates directly to your EZELEX workers.
 Send To
 </label>
 
-<select id="commRecipient">
+<select id="communicationRecipient">
 
 <option value="ALL">
 All Active Workers
@@ -859,7 +1881,7 @@ Subject
 </label>
 
 <input
-id="commSubject"
+id="communicationSubject"
 required
 placeholder="EZELEX Update">
 
@@ -869,15 +1891,14 @@ Message
 </label>
 
 <textarea
-id="commBody"
+id="communicationBody"
 required
-placeholder="Write your message to the worker(s)..."></textarea>
+placeholder="Write your message here..."></textarea>
 
 
 <button
-id="sendCommBtn"
-class="primary"
-type="submit">
+id="sendMessageBtn"
+class="primary">
 
 Send Message
 
@@ -886,27 +1907,230 @@ Send Message
 
 </form>
 
+</div>
+
+</section>
+
+
+
+<!-- =====================================================
+     SECURITY
+===================================================== -->
+
+<section
+id="securityPage"
+class="page">
+
+<div class="page-title">
+
+<h1>
+Security
+</h1>
+
+<p>
+Protect your EZELEX administrator account.
+</p>
+
+</div>
+
+
+<div class="card">
+
+<div class="card-header">
+
+<div>
+
+<h2>
+Change Password
+</h2>
+
+<p>
+Set a new secure administrator password.
+</p>
+
+</div>
+
+</div>
+
+
+<div id="passwordMsg"></div>
+
+
+<form id="passwordForm">
+
+<label>
+New Password
+</label>
+
+<input
+id="newPassword"
+type="password"
+required
+minlength="8"
+placeholder="At least 8 characters">
+
+
+<label>
+Confirm New Password
+</label>
+
+<input
+id="confirmPassword"
+type="password"
+required
+minlength="8"
+placeholder="Repeat your new password">
+
+
+<button
+class="primary"
+type="submit">
+
+Change Password
+
+</button>
+
+</form>
+
+</div>
+
+
+<div class="card">
+
+<div class="card-header">
+
+<div>
+
+<h2>
+Administrator Access
+</h2>
+
+<p>
+Your administrator account has full EZELEX management access.
+</p>
+
+</div>
+
+<span class="status active">
+● Active
+</span>
+
+</div>
+
+
+<div class="info-grid">
+
+<div class="info">
+
+<small>
+Administrator ID
+</small>
+
+<strong>
+ADMIN001
+</strong>
+
+</div>
+
+
+<div class="info">
+
+<small>
+Role
+</small>
+
+<strong>
+Administrator
+</strong>
+
+</div>
+
+
+<div class="info">
+
+<small>
+Authentication
+</small>
+
+<strong>
+Supabase Secure Authentication
+</strong>
+
+</div>
+
+
+<div class="info">
+
+<small>
+Protected Account
+</small>
+
+<strong>
+ADMIN001 cannot be deleted
+</strong>
+
+</div>
+
+</div>
+
+</div>
+
 </section>
 
 
 </main>
 
+</div>
+
+
+<!-- MOBILE NAV -->
+
+<nav class="mobile-nav">
+
+<button
+data-page="dashboardPage"
+class="active">
+📊<br>Home
+</button>
+
+<button
+data-page="workersPage">
+👥<br>Workers
+</button>
+
+<button
+data-page="salesPage">
+💰<br>Sales
+</button>
+
+<button
+data-page="reportsPage">
+📄<br>Reports
+</button>
+
+<button
+data-page="profilePage">
+👑<br>Profile
+</button>
+
+</nav>
+
+
+</section>
+
 
 
 <script>
 
-
-/* =========================================================
+/* =====================================================
    SUPABASE
-========================================================= */
+===================================================== */
 
 const SUPABASE_URL =
 "https://hweczhwoggmsrwhkktrx.supabase.co";
 
-
 const SUPABASE_ANON_KEY =
-"sb_publishable_D0o90HRJ1AfROf_DAj7ZAg_uaPDwqvV";
-
+"sb_publishable_D0o90HR1AfROf_DAj7ZAg_uaPDwqvV";
 
 const db =
 supabase.createClient(
@@ -915,47 +2139,42 @@ SUPABASE_ANON_KEY
 );
 
 
-/* =========================================================
+/* =====================================================
    EDGE FUNCTIONS
-========================================================= */
+===================================================== */
 
 const CREATE_WORKER_URL =
 SUPABASE_URL +
 "/functions/v1/create-worker";
 
-
 const DELETE_WORKER_URL =
 SUPABASE_URL +
 "/functions/v1/delete-worker";
-
 
 const SEND_MESSAGE_URL =
 SUPABASE_URL +
 "/functions/v1/send-worker-message";
 
 
+/* =====================================================
+   STATE
+===================================================== */
 
-/* =========================================================
-   VARIABLES
-========================================================= */
+let currentAdmin = null;
+let adminProfile = null;
 
-let allSales = [];
-
+let workers = [];
+let sales = [];
 let filteredSales = [];
 
-let allWorkers = [];
 
-
+/* =====================================================
+   HELPERS
+===================================================== */
 
 const $ =
-id =>
-document.getElementById(id);
+id => document.getElementById(id);
 
-
-
-/* =========================================================
-   MONEY
-========================================================= */
 
 function money(value){
 
@@ -971,11 +2190,6 @@ maximumFractionDigits:2
 }
 
 
-
-/* =========================================================
-   DATE
-========================================================= */
-
 function dateOnly(value){
 
 if(!value){
@@ -987,57 +2201,47 @@ return String(value).slice(0,10);
 }
 
 
-
-/* =========================================================
-   ESCAPE HTML
-========================================================= */
-
 function esc(value){
 
 return String(value ?? "")
 .replace(
 /[&<>"']/g,
-character => ({
+c => ({
 "&":"&amp;",
 "<":"&lt;",
 ">":"&gt;",
 '"':"&quot;",
 "'":"&#039;"
-}[character])
+}[c])
 );
 
 }
 
 
-
-/* =========================================================
-   MESSAGE
-========================================================= */
-
 function showMsg(
 id,
 text,
-error=false
+type="success"
 ){
 
-const element =
+const el =
 $(id);
 
-if(!element){
+if(!el){
 return;
 }
 
 if(!text){
 
-element.innerHTML="";
+el.innerHTML="";
 
 return;
 
 }
 
-element.innerHTML =
+el.innerHTML =
 `
-<div class="msg ${error ? "error" : "success"}">
+<div class="msg ${type}">
 ${esc(text)}
 </div>
 `;
@@ -1045,54 +2249,115 @@ ${esc(text)}
 }
 
 
+/* =====================================================
+   NAVIGATION
+===================================================== */
 
-/* =========================================================
+function openPage(pageId){
+
+document
+.querySelectorAll(".page")
+.forEach(
+page =>
+page.classList.remove("active")
+);
+
+const page =
+$(pageId);
+
+if(page){
+page.classList.add("active");
+}
+
+
+document
+.querySelectorAll(".nav-btn")
+.forEach(
+button => {
+
+button.classList.toggle(
+"active",
+button.dataset.page === pageId
+);
+
+}
+);
+
+
+document
+.querySelectorAll(".mobile-nav button")
+.forEach(
+button => {
+
+button.classList.toggle(
+"active",
+button.dataset.page === pageId
+);
+
+}
+);
+
+
+window.scrollTo({
+top:0,
+behavior:"smooth"
+});
+
+}
+
+
+document
+.querySelectorAll(
+".nav-btn,.mobile-nav button"
+)
+.forEach(
+button => {
+
+button.addEventListener(
+"click",
+() =>
+openPage(
+button.dataset.page
+)
+);
+
+}
+);
+
+
+/* =====================================================
    LOGIN SCREEN
-========================================================= */
+===================================================== */
 
 function showLogin(){
 
-$("loginSection")
+$("loginPage")
 .classList
 .remove("hidden");
 
-$("dashboard")
-.classList
-.add("hidden");
-
-$("logoutBtn")
+$("app")
 .classList
 .add("hidden");
 
 }
 
 
+function showApp(){
 
-/* =========================================================
-   DASHBOARD SCREEN
-========================================================= */
-
-function showDashboard(){
-
-$("loginSection")
+$("loginPage")
 .classList
 .add("hidden");
 
-$("dashboard")
-.classList
-.remove("hidden");
-
-$("logoutBtn")
+$("app")
 .classList
 .remove("hidden");
 
 }
 
 
-
-/* =========================================================
-   CHECK ADMIN
-========================================================= */
+/* =====================================================
+   ADMIN CHECK
+===================================================== */
 
 async function checkAdmin(){
 
@@ -1115,11 +2380,9 @@ return;
 }
 
 
-/*
-IMPORTANT:
-Your worker_profiles table uses user_id
-for the Supabase Auth account.
-*/
+currentAdmin =
+session.user;
+
 
 const {
 data,
@@ -1128,7 +2391,7 @@ error
 await db
 .from("worker_profiles")
 .select(
-"user_id,worker_id,full_name,role,active"
+"user_id,worker_id,full_name,phone,role,active,contract_start,contract_end"
 )
 .eq(
 "user_id",
@@ -1155,7 +2418,7 @@ showMsg(
 "loginMsg",
 "Administrator verification failed: " +
 error.message,
-true
+"error"
 );
 
 return;
@@ -1175,8 +2438,8 @@ showLogin();
 
 showMsg(
 "loginMsg",
-"This account does not have active EZELEX administrator access.",
-true
+"This account does not have active administrator access.",
+"error"
 );
 
 return;
@@ -1184,10 +2447,16 @@ return;
 }
 
 
-showDashboard();
+adminProfile =
+data;
 
 
-await loadDashboard();
+showApp();
+
+
+loadAdminProfile();
+
+await loadEverything();
 
 
 }
@@ -1200,7 +2469,7 @@ showLogin();
 showMsg(
 "loginMsg",
 "Administrator verification failed.",
-true
+"error"
 );
 
 }
@@ -1208,21 +2477,22 @@ true
 }
 
 
-
-/* =========================================================
+/* =====================================================
    LOGIN
-========================================================= */
+===================================================== */
 
-$("loginBtn").onclick =
+$("loginBtn")
+.addEventListener(
+"click",
 async function(){
 
 const email =
-$("email")
+$("loginEmail")
 .value
 .trim();
 
 const password =
-$("password")
+$("loginPassword")
 .value;
 
 
@@ -1231,7 +2501,7 @@ if(!email || !password){
 showMsg(
 "loginMsg",
 "Enter your email and password.",
-true
+"error"
 );
 
 return;
@@ -1244,7 +2514,8 @@ $("loginBtn");
 
 button.disabled=true;
 
-button.textContent="Signing in...";
+button.textContent =
+"Signing in...";
 
 
 try{
@@ -1254,9 +2525,8 @@ error
 } =
 await db.auth.signInWithPassword({
 
-email:email,
-
-password:password
+email,
+password
 
 });
 
@@ -1266,7 +2536,7 @@ if(error){
 showMsg(
 "loginMsg",
 error.message,
-true
+"error"
 );
 
 return;
@@ -1284,7 +2554,7 @@ showMsg(
 "loginMsg",
 error.message ||
 "Login failed.",
-true
+"error"
 );
 
 }
@@ -1292,34 +2562,96 @@ finally{
 
 button.disabled=false;
 
-button.textContent="Sign in";
+button.textContent =
+"Sign in to Command Centre";
 
 }
 
-};
+}
+);
 
 
-
-/* =========================================================
+/* =====================================================
    LOGOUT
-========================================================= */
+===================================================== */
 
-$("logoutBtn").onclick =
-async function(){
+async function logout(){
 
 await db.auth.signOut();
 
 showLogin();
 
-};
+}
 
 
+$("logoutBtn")
+.addEventListener(
+"click",
+logout
+);
 
-/* =========================================================
+
+/* =====================================================
+   ADMIN PROFILE
+===================================================== */
+
+function loadAdminProfile(){
+
+const name =
+adminProfile?.full_name ||
+"EZELEX Administrator";
+
+const email =
+currentAdmin?.email ||
+"-";
+
+const phone =
+adminProfile?.phone ||
+"Not provided";
+
+
+$("topAdminName")
+.textContent =
+name;
+
+
+$("dashboardName")
+.textContent =
+name;
+
+
+$("profileName")
+.textContent =
+name;
+
+
+$("profileEmail")
+.textContent =
+email;
+
+
+$("profileFullName")
+.textContent =
+name;
+
+
+$("profileEmail2")
+.textContent =
+email;
+
+
+$("profilePhone")
+.textContent =
+phone;
+
+}
+
+
+/* =====================================================
    LOAD EVERYTHING
-========================================================= */
+===================================================== */
 
-async function loadDashboard(){
+async function loadEverything(){
 
 await loadWorkers();
 
@@ -1327,13 +2659,14 @@ await loadSales();
 
 await loadCommunicationRecipients();
 
+populateReportWorkers();
+
 }
 
 
-
-/* =========================================================
-   LOAD WORKERS
-========================================================= */
+/* =====================================================
+   WORKERS
+===================================================== */
 
 async function loadWorkers(){
 
@@ -1371,8 +2704,7 @@ if(error){
 grid.innerHTML =
 `
 <div class="msg error">
-Could not load workers:
-${esc(error.message)}
+Could not load workers: ${esc(error.message)}
 </div>
 `;
 
@@ -1381,31 +2713,35 @@ return;
 }
 
 
-allWorkers =
+workers =
 data || [];
 
 
-const workers =
-allWorkers.filter(
+const realWorkers =
+workers.filter(
 worker =>
 worker.role !== "admin"
 );
 
 
-$("workers")
-.textContent =
-workers.filter(
+const activeCount =
+realWorkers.filter(
 worker =>
 worker.active === true
 ).length;
 
 
-if(!workers.length){
+$("activeWorkers")
+.textContent =
+activeCount;
+
+
+if(!realWorkers.length){
 
 grid.innerHTML =
 `
 <div class="empty">
-No workers found.
+No workers have been created yet.
 </div>
 `;
 
@@ -1415,21 +2751,36 @@ return;
 
 
 grid.innerHTML =
-workers
+realWorkers
 .map(
 worker => {
 
-const status =
-worker.active
-?
-"Active"
-:
-"Inactive";
+const initials =
+(worker.full_name || "W")
+.trim()
+.split(/\s+/)
+.map(
+part =>
+part[0]
+)
+.join("")
+.slice(0,2)
+.toUpperCase();
 
 
 return `
 
-<div class="worker-card">
+<div class="worker">
+
+<div class="worker-head">
+
+<div style="display:flex;gap:12px;align-items:center">
+
+<div class="worker-avatar">
+${esc(initials)}
+</div>
+
+<div>
 
 <h3>
 ${esc(
@@ -1438,54 +2789,19 @@ worker.full_name ||
 )}
 </h3>
 
-
-<div class="worker-meta">
-
-<strong>
-Worker ID:
-</strong>
-
+<div class="worker-id">
 ${esc(
 worker.worker_id ||
 ""
 )}
+</div>
 
-<br>
+</div>
 
-
-<strong>
-Phone:
-</strong>
-
-${esc(
-worker.phone ||
-"Not provided"
-)}
-
-<br>
+</div>
 
 
-<strong>
-Contract:
-</strong>
-
-${esc(
-worker.contract_start ||
-"-"
-)}
-
-to
-
-${esc(
-worker.contract_end ||
-"-"
-)}
-
-<br><br>
-
-
-<span
-class="badge ${
+<span class="status ${
 worker.active
 ?
 "active"
@@ -1493,65 +2809,82 @@ worker.active
 "inactive"
 }">
 
-${status}
+${worker.active
+?
+"● Active"
+:
+"● Inactive"}
 
 </span>
 
+</div>
+
+
+<div class="worker-details">
+
+<strong>Phone:</strong>
+${esc(
+worker.phone ||
+"Not provided"
+)}
+
+<br>
+
+<strong>Contract:</strong>
+${esc(
+worker.contract_start ||
+"-"
+)}
+ →
+${esc(
+worker.contract_end ||
+"-"
+)}
+
+<br>
+
+<strong>Role:</strong>
+${esc(
+worker.role ||
+"worker"
+)}
 
 </div>
 
 
 <div class="worker-actions">
 
-
 ${
 worker.active
 ?
 `
 <button
-class="danger small"
-onclick="deleteWorker(
-'${esc(worker.user_id)}',
-'${esc(
-worker.full_name ||
-worker.worker_id
-)}'
-)">
-Delete Worker
+class="secondary"
+onclick="endContract('${esc(worker.worker_id)}')">
+End Contract
 </button>
 `
 :
 `
 <button
-class="success small"
-onclick="reactivateWorker(
-'${esc(worker.worker_id)}'
-)">
+class="success"
+onclick="reactivateWorker('${esc(worker.worker_id)}')">
 Reactivate
 </button>
 `
 }
 
 
-${
-worker.active
-?
-`
 <button
-class="secondary small"
-onclick="endWorkerContract(
-'${esc(worker.worker_id)}'
+class="danger"
+onclick="deleteWorker(
+'${esc(worker.user_id)}',
+'${esc(worker.full_name || worker.worker_id)}'
 )">
-End Contract
+Delete
 </button>
-`
-:
-""
-}
-
 
 </div>
-
 
 </div>
 
@@ -1564,27 +2897,24 @@ End Contract
 }
 
 
-
-/* =========================================================
+/* =====================================================
    END CONTRACT
-========================================================= */
+===================================================== */
 
-async function endWorkerContract(
+async function endContract(
 workerId
 ){
 
 const confirmed =
 confirm(
-"End the contract for Worker " +
+"End the contract for " +
 workerId +
 "?\n\nThe worker will become inactive."
 );
 
 
 if(!confirmed){
-
 return;
-
 }
 
 
@@ -1607,7 +2937,7 @@ if(error){
 showMsg(
 "workerMsg",
 error.message,
-true
+"error"
 );
 
 return;
@@ -1628,10 +2958,9 @@ await loadCommunicationRecipients();
 }
 
 
-
-/* =========================================================
-   REACTIVATE WORKER
-========================================================= */
+/* =====================================================
+   REACTIVATE
+===================================================== */
 
 async function reactivateWorker(
 workerId
@@ -1646,9 +2975,7 @@ workerId +
 
 
 if(!confirmed){
-
 return;
-
 }
 
 
@@ -1671,7 +2998,7 @@ if(error){
 showMsg(
 "workerMsg",
 error.message,
-true
+"error"
 );
 
 return;
@@ -1692,10 +3019,9 @@ await loadCommunicationRecipients();
 }
 
 
-
-/* =========================================================
+/* =====================================================
    DELETE WORKER
-========================================================= */
+===================================================== */
 
 async function deleteWorker(
 userId,
@@ -1716,30 +3042,20 @@ return;
 const confirmed =
 confirm(
 "DELETE WORKER\n\n" +
-
 "Worker: " +
 workerName +
-
 "\n\n" +
-
-"This will permanently delete:\n" +
-
+"This permanently deletes:\n" +
 "• Worker profile\n" +
-
 "• Worker sales\n" +
-
 "• Worker login account\n\n" +
-
-"This action cannot be undone.\n\n" +
-
+"This cannot be undone.\n\n" +
 "Continue?"
 );
 
 
 if(!confirmed){
-
 return;
-
 }
 
 
@@ -1747,12 +3063,12 @@ showMsg(
 "workerMsg",
 "Deleting " +
 workerName +
-"..."
+"...",
+"info"
 );
 
 
 try{
-
 
 const {
 data:{
@@ -1765,17 +3081,11 @@ await db.auth.getSession();
 if(!session){
 
 throw new Error(
-"Your admin session has expired. Please log in again."
+"Admin session expired. Please log in again."
 );
 
 }
 
-
-/*
-IMPORTANT:
-The new delete-worker Edge Function
-expects user_id.
-*/
 
 const response =
 await fetch(
@@ -1794,7 +3104,6 @@ session.access_token,
 
 "apikey":
 SUPABASE_ANON_KEY
-
 },
 
 body:
@@ -1841,6 +3150,8 @@ await loadSales();
 
 await loadCommunicationRecipients();
 
+populateReportWorkers();
+
 
 }
 catch(error){
@@ -1851,7 +3162,7 @@ showMsg(
 "workerMsg",
 error.message ||
 "Worker deletion failed.",
-true
+"error"
 );
 
 }
@@ -1859,20 +3170,20 @@ true
 }
 
 
-
-/* =========================================================
+/* =====================================================
    CREATE WORKER
-========================================================= */
+===================================================== */
 
-$("addWorkerForm").onsubmit =
+$("createWorkerForm")
+.addEventListener(
+"submit",
 async function(event){
 
 event.preventDefault();
 
 
 const button =
-$("createBtn");
-
+$("createWorkerBtn");
 
 button.disabled=true;
 
@@ -1881,13 +3192,13 @@ button.textContent =
 
 
 showMsg(
-"addMsg",
-"Creating worker and sending welcome email..."
+"createMsg",
+"Creating worker and sending welcome email...",
+"info"
 );
 
 
 try{
-
 
 const {
 data:{
@@ -1900,7 +3211,7 @@ await db.auth.getSession();
 if(!session){
 
 throw new Error(
-"Admin session expired. Please log in again."
+"Admin session expired."
 );
 
 }
@@ -1909,32 +3220,32 @@ throw new Error(
 const payload = {
 
 worker_id:
-$("worker_id")
+$("workerId")
 .value
 .trim(),
 
 full_name:
-$("full_name")
+$("workerName")
 .value
 .trim(),
 
 phone:
-$("phone")
+$("workerPhone")
 .value
 .trim(),
 
 email:
-$("worker_email")
+$("workerEmail")
 .value
 .trim(),
 
 contract_start:
-$("contract_start")
+$("contractStart")
 .value ||
 null,
 
 contract_end:
-$("contract_end")
+$("contractEnd")
 .value ||
 null
 
@@ -1958,7 +3269,6 @@ session.access_token,
 
 "apikey":
 SUPABASE_ANON_KEY
-
 },
 
 body:
@@ -1991,18 +3301,20 @@ result.message ||
 
 
 showMsg(
-"addMsg",
-"Worker created successfully. Welcome email sent."
+"createMsg",
+"Worker created successfully and welcome email sent."
 );
 
 
-$("addWorkerForm")
+$("createWorkerForm")
 .reset();
 
 
 await loadWorkers();
 
 await loadCommunicationRecipients();
+
+populateReportWorkers();
 
 
 }
@@ -2011,10 +3323,10 @@ catch(error){
 console.error(error);
 
 showMsg(
-"addMsg",
+"createMsg",
 error.message ||
 "Worker creation failed.",
-true
+"error"
 );
 
 }
@@ -2027,24 +3339,25 @@ button.textContent =
 
 }
 
-};
+}
+);
 
 
-
-/* =========================================================
-   LOAD SALES
-========================================================= */
+/* =====================================================
+   SALES
+===================================================== */
 
 async function loadSales(){
 
 showMsg(
-"dashMsg",
-"Loading sales..."
+"salesMsg",
+"Loading sales...",
+"info"
 );
 
 
 const {
-data:sales,
+data,
 error
 } =
 await db
@@ -2069,10 +3382,10 @@ ascending:false
 if(error){
 
 showMsg(
-"dashMsg",
+"salesMsg",
 "Could not load sales: " +
 error.message,
-true
+"error"
 );
 
 return;
@@ -2084,7 +3397,7 @@ const workerMap =
 new Map();
 
 
-allWorkers.forEach(
+workers.forEach(
 worker => {
 
 workerMap.set(
@@ -2096,8 +3409,8 @@ worker
 );
 
 
-allSales =
-(sales || [])
+sales =
+(data || [])
 .map(
 sale => {
 
@@ -2115,7 +3428,7 @@ worker_name:
 worker?.full_name ||
 "Unknown Worker",
 
-worker_worker_id:
+worker_id_display:
 worker?.worker_id ||
 sale.worker_id ||
 ""
@@ -2126,57 +3439,31 @@ sale.worker_id ||
 );
 
 
-updateSummary(
-allSales
-);
+updateDashboardTotals();
 
+populateSalesWorkers();
 
-populateWorkerFilter();
-
-applyFilters();
-
+applySalesFilter();
 
 showMsg(
-"dashMsg",
+"salesMsg",
 ""
 );
 
 }
 
 
+/* =====================================================
+   TOTALS
+===================================================== */
 
-/* =========================================================
-   AMOUNT
-========================================================= */
-
-function amount(sale){
-
-return Number(
-sale.sale_amount ||
-0
-);
-
-}
-
-
-
-/* =========================================================
-   SUMMARY
-========================================================= */
-
-function updateSummary(
-sales
-){
+function updateDashboardTotals(){
 
 const now =
 new Date();
 
-
-const today =
-dateOnly(
-now
-);
-
+const todayKey =
+dateOnly(now);
 
 const monthKey =
 now.getFullYear() +
@@ -2187,55 +3474,38 @@ now.getMonth()+1
 .padStart(2,"0");
 
 
-const monday =
+const weekStart =
 new Date(now);
 
-
-monday.setHours(
-0,
-0,
-0,
-0
+weekStart.setHours(
+0,0,0,0
 );
 
-
-monday.setDate(
-monday.getDate() -
+weekStart.setDate(
+weekStart.getDate() -
 (
-(monday.getDay()+6)%7
+(weekStart.getDay()+6)%7
 )
 );
 
 
-const mondayKey =
-dateOnly(
-monday
-);
+const weekKey =
+dateOnly(weekStart);
 
 
-const todayTotal =
-sales
-.filter(
-sale =>
-dateOnly(
-sale.sale_date ||
-sale.created_at
-)
-===
-today
-)
-.reduce(
-(total,sale) =>
-total +
-amount(sale),
-0
-);
+let today=0;
+let week=0;
+let month=0;
+let all=0;
 
 
-const weekTotal =
-sales
-.filter(
+sales.forEach(
 sale => {
+
+const amount =
+Number(
+sale.sale_amount || 0
+);
 
 const d =
 dateOnly(
@@ -2243,134 +3513,74 @@ sale.sale_date ||
 sale.created_at
 );
 
-return (
-d >= mondayKey &&
-d <= today
-);
+
+all += amount;
+
+
+if(d === todayKey){
+today += amount;
+}
+
+
+if(
+d >= weekKey &&
+d <= todayKey
+){
+week += amount;
+}
+
+
+if(
+d.startsWith(monthKey)
+){
+month += amount;
+}
 
 }
-)
-.reduce(
-(total,sale) =>
-total +
-amount(sale),
-0
 );
 
 
-const monthTotal =
-sales
-.filter(
-sale =>
-dateOnly(
-sale.sale_date ||
-sale.created_at
-)
-.startsWith(
-monthKey
-)
-)
-.reduce(
-(total,sale) =>
-total +
-amount(sale),
-0
-);
-
-
-const allTotal =
-sales
-.reduce(
-(total,sale) =>
-total +
-amount(sale),
-0
-);
-
-
-$("today")
+$("todaySale")
 .textContent =
-money(
-todayTotal
-);
+money(today);
 
-
-$("week")
+$("weekSale")
 .textContent =
-money(
-weekTotal
-);
+money(week);
 
-
-$("month")
+$("monthSale")
 .textContent =
-money(
-monthTotal
-);
+money(month);
 
-
-$("alltime")
+$("allSale")
 .textContent =
-money(
-allTotal
-);
+money(all);
 
 }
 
 
+/* =====================================================
+   SALES WORKER FILTERS
+===================================================== */
 
-/* =========================================================
-   WORKER FILTER
-========================================================= */
-
-function populateWorkerFilter(){
+function populateSalesWorkers(){
 
 const select =
-$("workerFilter");
-
-
-const workers =
-new Map();
-
-
-allWorkers
-.filter(
-worker =>
-worker.role !== "admin"
-)
-.forEach(
-worker => {
-
-workers.set(
-worker.user_id,
-worker
-);
-
-}
-);
+$("salesWorkerFilter");
 
 
 select.innerHTML =
 `
 <option value="">
-All workers
+All Workers
 </option>
 `;
 
 
-[
-...workers.values()
-]
-.sort(
-(a,b) =>
-String(
-a.full_name || ""
-)
-.localeCompare(
-String(
-b.full_name || ""
-)
-)
+workers
+.filter(
+worker =>
+worker.role !== "admin"
 )
 .forEach(
 worker => {
@@ -2380,10 +3590,8 @@ document.createElement(
 "option"
 );
 
-
 option.value =
 worker.user_id;
-
 
 option.textContent =
 (
@@ -2393,7 +3601,6 @@ worker.worker_id
 " (" +
 worker.worker_id +
 ")";
-
 
 select.appendChild(
 option
@@ -2405,32 +3612,26 @@ option
 }
 
 
-
-/* =========================================================
-   FILTER SALES
-========================================================= */
-
-function applyFilters(){
+function applySalesFilter(){
 
 const worker =
-$("workerFilter")
+$("salesWorkerFilter")
 .value;
 
 const from =
-$("fromDate")
+$("salesFrom")
 .value;
 
 const to =
-$("toDate")
+$("salesTo")
 .value;
 
 
 filteredSales =
-allSales
-.filter(
+sales.filter(
 sale => {
 
-const saleDate =
+const d =
 dateOnly(
 sale.sale_date ||
 sale.created_at
@@ -2445,12 +3646,12 @@ sale.worker_id === worker)
 &&
 
 (!from ||
-saleDate >= from)
+d >= from)
 
 &&
 
 (!to ||
-saleDate <= to)
+d <= to)
 
 );
 
@@ -2463,15 +3664,10 @@ renderSales();
 }
 
 
-
-/* =========================================================
-   RENDER SALES
-========================================================= */
-
 function renderSales(){
 
 const body =
-$("salesBody");
+$("salesTable");
 
 
 if(!filteredSales.length){
@@ -2482,9 +3678,7 @@ body.innerHTML =
 <td
 colspan="9"
 class="empty">
-
 No sales records found.
-
 </td>
 </tr>
 `;
@@ -2510,23 +3704,17 @@ sale.created_at
 )}
 </td>
 
-
 <td>
 ${esc(
-sale.worker_name ||
-"Unknown Worker"
+sale.worker_name
 )}
 </td>
 
-
 <td>
 ${esc(
-sale.worker_worker_id ||
-sale.worker_id ||
-""
+sale.worker_id_display
 )}
 </td>
-
 
 <td>
 ${esc(
@@ -2535,14 +3723,12 @@ sale.customer_reference ||
 )}
 </td>
 
-
 <td>
 ${esc(
 sale.product_service ||
 ""
 )}
 </td>
-
 
 <td>
 ${esc(
@@ -2551,13 +3737,13 @@ sale.quantity ??
 )}
 </td>
 
-
 <td>
+<strong>
 ${money(
-amount(sale)
+sale.sale_amount
 )}
+</strong>
 </td>
-
 
 <td>
 ${esc(
@@ -2565,7 +3751,6 @@ sale.payment_method ||
 ""
 )}
 </td>
-
 
 <td>
 ${esc(
@@ -2583,40 +3768,30 @@ sale.notes ||
 }
 
 
-
-/* =========================================================
+/* =====================================================
    CSV
-========================================================= */
+===================================================== */
 
-$("csvBtn").onclick =
+$("downloadCsv")
+.addEventListener(
+"click",
 function(){
 
 const headers = [
-
 "Date",
-
 "Worker",
-
 "Worker ID",
-
 "Customer",
-
 "Product/Service",
-
 "Quantity",
-
 "Amount GH₵",
-
 "Payment",
-
 "Notes"
-
 ];
 
 
 const rows =
-filteredSales
-.map(
+filteredSales.map(
 sale => [
 
 dateOnly(
@@ -2624,41 +3799,33 @@ sale.sale_date ||
 sale.created_at
 ),
 
-sale.worker_name ||
-"",
+sale.worker_name,
 
-sale.worker_worker_id ||
-sale.worker_id ||
-"",
+sale.worker_id_display,
 
-sale.customer_reference ||
-"",
+sale.customer_reference || "",
 
-sale.product_service ||
-"",
+sale.product_service || "",
 
-sale.quantity ??
-"",
+sale.quantity ?? "",
 
-amount(sale)
-.toFixed(2),
+Number(
+sale.sale_amount || 0
+).toFixed(2),
 
-sale.payment_method ||
-"",
+sale.payment_method || "",
 
-sale.notes ||
-""
+sale.notes || ""
 
 ]
 );
 
 
-const output =
+const csv =
 [headers,...rows]
 .map(
 row =>
-row
-.map(
+row.map(
 value =>
 `"${String(
 value ?? ""
@@ -2675,7 +3842,7 @@ value ?? ""
 
 const blob =
 new Blob(
-[output],
+[csv],
 {
 type:"text/csv"
 }
@@ -2689,31 +3856,525 @@ blob
 
 
 const link =
-document.createElement(
-"a"
-);
+document.createElement("a");
 
+link.href=url;
 
-link.href =
-url;
-
-link.download =
+link.download=
 "ezelex-sales.csv";
 
 link.click();
 
+URL.revokeObjectURL(url);
 
-URL.revokeObjectURL(
-url
+}
 );
 
-};
+
+/* =====================================================
+   REPORT WORKERS
+===================================================== */
+
+function populateReportWorkers(){
+
+const select =
+$("reportWorker");
 
 
+select.innerHTML =
+`
+<option value="">
+All Workers
+</option>
+`;
 
-/* =========================================================
-   COMMUNICATION RECIPIENTS
-========================================================= */
+
+workers
+.filter(
+worker =>
+worker.role !== "admin"
+)
+.forEach(
+worker => {
+
+const option =
+document.createElement(
+"option"
+);
+
+option.value =
+worker.user_id;
+
+option.textContent =
+(
+worker.full_name ||
+worker.worker_id
+) +
+" (" +
+worker.worker_id +
+")";
+
+select.appendChild(
+option
+);
+
+}
+);
+
+}
+
+
+/* =====================================================
+   REPORT SUMMARY
+===================================================== */
+
+function getReportSales(){
+
+const worker =
+$("reportWorker")
+.value;
+
+const from =
+$("reportFrom")
+.value;
+
+const to =
+$("reportTo")
+.value;
+
+
+return sales.filter(
+sale => {
+
+const d =
+dateOnly(
+sale.sale_date ||
+sale.created_at
+);
+
+
+return (
+
+(!worker ||
+sale.worker_id === worker)
+
+&&
+
+(!from ||
+d >= from)
+
+&&
+
+(!to ||
+d <= to)
+
+);
+
+}
+);
+
+
+}
+
+
+/* =====================================================
+   PDF REPORT
+===================================================== */
+
+$("generatePdf")
+.addEventListener(
+"click",
+function(){
+
+const reportSales =
+getReportSales();
+
+
+const total =
+reportSales.reduce(
+(sum,sale) =>
+sum +
+Number(
+sale.sale_amount || 0
+),
+0
+);
+
+
+const count =
+reportSales.length;
+
+
+const average =
+count
+?
+total/count
+:
+0;
+
+
+$("reportCount")
+.textContent =
+count;
+
+
+$("reportTotal")
+.textContent =
+money(total);
+
+
+$("reportAverage")
+.textContent =
+money(average);
+
+
+try{
+
+const {
+jsPDF
+} =
+window.jspdf;
+
+
+const doc =
+new jsPDF();
+
+
+const pageWidth =
+doc.internal.pageSize.getWidth();
+
+
+doc.setFillColor(
+11,
+18,
+32
+);
+
+doc.rect(
+0,
+0,
+pageWidth,
+32,
+"F"
+);
+
+
+doc.setTextColor(
+255,
+255,
+255
+);
+
+doc.setFontSize(19);
+
+doc.setFont(
+"helvetica",
+"bold"
+);
+
+doc.text(
+"EZELEX ENTERPRISE",
+14,
+14
+);
+
+
+doc.setFontSize(10);
+
+doc.setFont(
+"helvetica",
+"normal"
+);
+
+doc.text(
+"ADMINISTRATOR SALES REPORT",
+14,
+23
+);
+
+
+doc.setTextColor(
+30,
+41,
+59
+);
+
+doc.setFontSize(10);
+
+
+let y=45;
+
+
+const selectedWorker =
+$("reportWorker")
+selectedOptions[0]
+.textContent;
+
+
+doc.text(
+"Worker: " +
+selectedWorker,
+14,
+y
+);
+
+y += 7;
+
+
+doc.text(
+"Period: " +
+(
+$("reportFrom").value ||
+"All dates"
+) +
+" to " +
+(
+$("reportTo").value ||
+"All dates"
+),
+14,
+y
+);
+
+y += 12;
+
+
+doc.setFont(
+"helvetica",
+"bold"
+);
+
+doc.text(
+"SUMMARY",
+14,
+y
+);
+
+y += 8;
+
+
+doc.setFont(
+"helvetica",
+"normal"
+);
+
+doc.text(
+"Sales Count: " +
+count,
+14,
+y
+);
+
+y += 6;
+
+doc.text(
+"Total Sales: " +
+money(total),
+14,
+y
+);
+
+y += 6;
+
+doc.text(
+"Average Sale: " +
+money(average),
+14,
+y
+);
+
+y += 13;
+
+
+doc.setFont(
+"helvetica",
+"bold"
+);
+
+doc.text(
+"SALES RECORDS",
+14,
+y
+);
+
+y += 8;
+
+
+doc.setFont(
+"helvetica",
+"normal"
+);
+
+
+reportSales.forEach(
+(sale,index) => {
+
+if(y > 270){
+
+doc.addPage();
+
+y=20;
+
+}
+
+
+const line =
+(
+index+1
+) +
+". " +
+dateOnly(
+sale.sale_date ||
+sale.created_at
+) +
+" | " +
+(sale.worker_name || "") +
+" | " +
+(sale.product_service || "") +
+" | " +
+money(
+sale.sale_amount
+);
+
+
+const wrapped =
+doc.splitTextToSize(
+line,
+180
+);
+
+
+doc.text(
+wrapped,
+14,
+y
+);
+
+
+y +=
+wrapped.length * 5 + 2;
+
+}
+);
+
+
+if(!reportSales.length){
+
+doc.text(
+"No sales records found for the selected period.",
+14,
+y
+);
+
+}
+
+
+doc.setFontSize(8);
+
+doc.setTextColor(
+100,
+116,
+139
+);
+
+doc.text(
+"EZELEX ENTERPRISE • Administrator Command Centre",
+14,
+287
+);
+
+
+doc.save(
+"ezelex-sales-report.pdf"
+);
+
+
+showMsg(
+"reportMsg",
+"PDF report generated successfully."
+);
+
+
+}
+catch(error){
+
+console.error(error);
+
+showMsg(
+"reportMsg",
+"Could not generate PDF: " +
+error.message,
+"error"
+);
+
+}
+
+}
+);
+
+
+/* =====================================================
+   REPORT FILTER CHANGE
+===================================================== */
+
+[
+"reportWorker",
+"reportFrom",
+"reportTo"
+]
+.forEach(
+id => {
+
+$(id)
+.addEventListener(
+"change",
+function(){
+
+const data =
+getReportSales();
+
+
+const total =
+data.reduce(
+(sum,sale) =>
+sum +
+Number(
+sale.sale_amount || 0
+),
+0
+);
+
+
+$("reportCount")
+.textContent =
+data.length;
+
+
+$("reportTotal")
+.textContent =
+money(total);
+
+
+$("reportAverage")
+.textContent =
+money(
+data.length
+?
+total/data.length
+:
+0
+);
+
+}
+);
+
+}
+);
+
+
+/* =====================================================
+   COMMUNICATION
+===================================================== */
 
 async function loadCommunicationRecipients(){
 
@@ -2734,9 +4395,7 @@ true
 
 if(error){
 
-console.error(
-error
-);
+console.error(error);
 
 return;
 
@@ -2744,7 +4403,7 @@ return;
 
 
 const select =
-$("commRecipient");
+$("communicationRecipient");
 
 
 select.innerHTML =
@@ -2768,10 +4427,8 @@ document.createElement(
 "option"
 );
 
-
 option.value =
 worker.worker_id;
-
 
 option.textContent =
 (
@@ -2781,7 +4438,6 @@ worker.worker_id
 " (" +
 worker.worker_id +
 ")";
-
 
 select.appendChild(
 option
@@ -2793,20 +4449,20 @@ option
 }
 
 
-
-/* =========================================================
+/* =====================================================
    SEND MESSAGE
-========================================================= */
+===================================================== */
 
-$("communicationForm").onsubmit =
+$("communicationForm")
+.addEventListener(
+"submit",
 async function(event){
 
 event.preventDefault();
 
 
 const button =
-$("sendCommBtn");
-
+$("sendMessageBtn");
 
 button.disabled=true;
 
@@ -2815,7 +4471,6 @@ button.textContent =
 
 
 try{
-
 
 const {
 data:{
@@ -2837,16 +4492,16 @@ throw new Error(
 const payload = {
 
 worker_id:
-$("commRecipient")
+$("communicationRecipient")
 .value,
 
 subject:
-$("commSubject")
+$("communicationSubject")
 .value
 .trim(),
 
 message:
-$("commBody")
+$("communicationBody")
 .value
 .trim()
 
@@ -2882,13 +4537,10 @@ session.access_token,
 
 "apikey":
 SUPABASE_ANON_KEY
-
 },
 
 body:
-JSON.stringify(
-payload
-)
+JSON.stringify(payload)
 
 }
 );
@@ -2910,23 +4562,23 @@ if(
 throw new Error(
 result.error ||
 result.message ||
-"Message sending failed."
+"Message failed."
 );
 
 }
 
 
 showMsg(
-"commMsg",
+"communicationMsg",
 result.message ||
 "Message sent successfully."
 );
 
 
-$("commSubject")
+$("communicationSubject")
 .value="";
 
-$("commBody")
+$("communicationBody")
 .value="";
 
 
@@ -2936,10 +4588,10 @@ catch(error){
 console.error(error);
 
 showMsg(
-"commMsg",
+"communicationMsg",
 error.message ||
 "Message sending failed.",
-true
+"error"
 );
 
 }
@@ -2952,38 +4604,160 @@ button.textContent =
 
 }
 
-};
+}
+);
 
 
+/* =====================================================
+   CHANGE PASSWORD
+===================================================== */
 
-/* =========================================================
-   REFRESH
-========================================================= */
+$("passwordForm")
+.addEventListener(
+"submit",
+async function(event){
 
-$("refreshSalesBtn").onclick =
+event.preventDefault();
+
+
+const newPassword =
+$("newPassword")
+.value;
+
+const confirmPassword =
+$("confirmPassword")
+.value;
+
+
+if(newPassword.length < 8){
+
+showMsg(
+"passwordMsg",
+"Password must be at least 8 characters.",
+"error"
+);
+
+return;
+
+}
+
+
+if(newPassword !== confirmPassword){
+
+showMsg(
+"passwordMsg",
+"Passwords do not match.",
+"error"
+);
+
+return;
+
+}
+
+
+try{
+
+const {
+error
+} =
+await db.auth.updateUser({
+password:newPassword
+});
+
+
+if(error){
+
+throw error;
+
+}
+
+
+$("passwordForm")
+.reset();
+
+
+showMsg(
+"passwordMsg",
+"Password changed successfully."
+);
+
+
+}
+catch(error){
+
+showMsg(
+"passwordMsg",
+error.message ||
+"Could not change password.",
+"error"
+);
+
+}
+
+}
+);
+
+
+/* =====================================================
+   REFRESH BUTTONS
+===================================================== */
+
+$("dashboardRefresh")
+.addEventListener(
+"click",
+async function(){
+
+await loadEverything();
+
+showMsg(
+"dashboardMsg",
+"Dashboard refreshed successfully."
+);
+
+}
+);
+
+
+$("refreshWorkers")
+.addEventListener(
+"click",
+async function(){
+
+await loadWorkers();
+
+await loadCommunicationRecipients();
+
+populateReportWorkers();
+
+}
+);
+
+
+$("refreshSales")
+.addEventListener(
+"click",
 async function(){
 
 await loadWorkers();
 
 await loadSales();
 
-await loadCommunicationRecipients();
+populateReportWorkers();
 
-};
-
-
-$("filterBtn").onclick =
-function(){
-
-applyFilters();
-
-};
+}
+);
 
 
+$("applySalesFilter")
+.addEventListener(
+"click",
+applySalesFilter
+);
 
-/* =========================================================
+
+/* =====================================================
    AUTH STATE
-========================================================= */
+===================================================== */
 
 db.auth.onAuthStateChange(
 (event,session) => {
@@ -2998,13 +4772,11 @@ showLogin();
 );
 
 
-
-/* =========================================================
+/* =====================================================
    START
-========================================================= */
+===================================================== */
 
 checkAdmin();
-
 
 </script>
 
