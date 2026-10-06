@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>EZELEX Enterprise — Admin Command Centre</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+*{box-sizing:border-box}
+body{margin:0;font-family:Inter,Arial,sans-serif;background:#f4f7fb;color:#17202a}
+header{background:linear-gradient(135deg,#081426,#142b4a);color:#fff;padding:18px 4%;display:flex;justify-content:space-between;align-items:center;gap:15px;position:sticky;top:0;z-index:10}
+.brand{display:flex;align-items:center;gap:12px}.logo{width:44px;height:44px;border-radius:12px;background:#d9a441;display:grid;place-items:center;color:#081426;font-weight:900}.brand h1{margin:0;font-size:20px}.brand small{opacity:.7}
+button{border:0;border-radius:9px;padding:11px 15px;cursor:pointer;font-weight:700}
+.primary{background:#12355b;color:#fff}.gold{background:#d9a441;color:#081426}.danger{background:#b42318;color:#fff}.soft{background:#e9eef5;color:#17202a}.success{background:#087443;color:#fff}.reject{background:#b42318;color:#fff}
+.hidden{display:none!important}.wrap{max-width:1280px;margin:28px auto;padding:0 18px}
+.login{max-width:430px;margin:70px auto;background:#fff;padding:30px;border-radius:16px;box-shadow:0 12px 40px #102a430d}
+input,select{width:100%;padding:12px;margin:6px 0 13px;border:1px solid #d5dce5;border-radius:9px;font-size:15px;background:#fff}
+.msg{padding:11px;border-radius:9px;margin:12px 0;background:#fff3cd}.error{background:#fee4e2;color:#912018}.ok{background:#dcfae6;color:#067647}
+.nav{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px}.nav button.active{background:#12355b;color:#fff}
+.cards{display:grid;grid-template-columns:repeat(5,1fr);gap:14px}.card{background:#fff;padding:19px;border-radius:14px;box-shadow:0 4px 18px #102a430b}.label{color:#667085;font-size:13px}.value{font-size:25px;font-weight:850;margin-top:8px}
+.section{background:#fff;padding:20px;border-radius:14px;margin-top:20px;box-shadow:0 4px 18px #102a430b}.section h2{margin:0 0 15px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+.toolbar{display:flex;gap:9px;flex-wrap:wrap;margin-bottom:14px}.tablebox{overflow:auto;border:1px solid #edf0f3;border-radius:10px}
+table{width:100%;border-collapse:collapse;min-width:950px}th,td{padding:11px;border-bottom:1px solid #edf0f3;text-align:left;font-size:13px;vertical-align:top}th{background:#f8fafc}
+.badge{display:inline-block;padding:5px 9px;border-radius:999px;font-size:11px;font-weight:800}.pending{background:#fff3cd;color:#8a5b00}.approved{background:#dcfae6;color:#067647}.rejected{background:#fee4e2;color:#b42318}
+.profile{display:grid;grid-template-columns:110px 1fr;gap:18px;align-items:center}.avatar{width:92px;height:92px;border-radius:50%;background:linear-gradient(135deg,#12355b,#d9a441);display:grid;place-items:center;color:#fff;font-size:30px;font-weight:900}
+.muted{color:#667085}.statline{display:flex;justify-content:space-between;border-bottom:1px solid #eee;padding:9px 0}.empty{text-align:center;padding:30px;color:#667085}
+@media(max-width:1000px){.cards{grid-template-columns:repeat(2,1fr)}.grid3{grid-template-columns:1fr}.profile{grid-template-columns:1fr;text-align:center}.avatar{margin:auto}}
+@media(max-width:650px){.cards,.grid2{grid-template-columns:1fr}.wrap{padding:0 11px}.brand h1{font-size:16px}}
+</style>
+</head>
+<body>
+<header>
+ <div class="brand"><div class="logo">EZ</div><div><h1>EZELEX ENTERPRISE</h1><small>Admin Command Centre</small></div></div>
+ <button id="logoutBtn" class="danger hidden">Log out</button>
+</header>
+
+<section id="loginSection" class="login">
+ <h2>Admin Login</h2><p class="muted">Sign in with your EZELEX administrator account.</p>
+ <div id="loginMsg"></div>
+ <label>Email</label><input id="email" type="email" placeholder="Admin email">
+ <label>Password</label><input id="password" type="password" placeholder="Password">
+ <button id="loginBtn" class="primary" style="width:100%">Sign in</button>
+ <button id="forgotBtn" class="soft" style="width:100%;margin-top:8px">Forgot password?</button>
+</section>
+
+<main id="dashboard" class="wrap hidden">
+ <div id="dashMsg"></div>
+ <div class="nav">
+  <button class="soft active" data-section="overview">Dashboard</button>
+  <button class="soft" data-section="sales">Sales</button>
+  <button class="soft" data-section="workers">Workers</button>
+  <button class="soft" data-section="profile">Admin Profile</button>
+  <button class="soft" data-section="security">Security</button>
+ </div>
+
+ <section id="overview" class="page">
+  <div class="cards">
+   <div class="card"><div class="label">Today Sale</div><div class="value" id="today">GH₵0.00</div></div>
+   <div class="card"><div class="label">This Week Sale</div><div class="value" id="week">GH₵0.00</div></div>
+   <div class="card"><div class="label">This Month Sale</div><div class="value" id="month">GH₵0.00</div></div>
+   <div class="card"><div class="label">All Time</div><div class="value" id="alltime">GH₵0.00</div></div>
+   <div class="card"><div class="label">Active Workers</div><div class="value" id="activeWorkers">0</div></div>
+  </div>
+  <div class="section">
+   <h2>Sales approval overview</h2>
+   <div class="grid3">
+    <div class="card"><div class="label">Pending</div><div class="value" id="pendingCount">0</div></div>
+    <div class="card"><div class="label">Approved</div><div class="value" id="approvedCount">0</div></div>
+    <div class="card"><div class="label">Rejected</div><div class="value" id="rejectedCount">0</div></div>
+   </div>
+  </div>
+ </section>
+
+ <section id="sales" class="page hidden">
+  <div class="section">
+   <h2>Central Sales Management</h2>
+   <p class="muted" style="margin-top:-6px">Pending worker sales appear below with <b>Approve</b> and <b>Disapprove</b> buttons.</p>
+   <div class="toolbar">
+    <select id="statusFilter" style="max-width:180px"><option value="">All statuses</option><option value="pending">Pending</option><option value="approved">Approved</option><option value="rejected">Rejected</option></select>
+    <select id="workerFilter" style="max-width:240px"><option value="">All workers</option></select>
+    <input id="fromDate" type="date" style="max-width:170px"><input id="toDate" type="date" style="max-width:170px">
+    <button id="applyFilters" class="primary">Apply</button><button id="refreshBtn" class="soft">Refresh</button>
+    <button id="pdfBtn" class="gold">PDF Report</button><button id="csvBtn" class="soft">CSV</button>
+   </div>
+   <div class="tablebox"><table><thead><tr><th>Date</th><th>Worker</th><th>Worker ID</th><th>Product/Service</th><th>Qty</th><th>Amount</th><th>Payment</th><th>Status</th><th>Approval</th></tr></thead><tbody id="salesBody"></tbody></table></div>
+  </div>
+ </section>
+
+ <section id="workers" class="page hidden">
+  <div class="section">
+   <h2>Create Worker</h2>
+   <div id="workerMsg"></div>
+   <div class="grid3">
+    <div><label>Worker ID</label><input id="wId" placeholder="e.g. EZ001"></div>
+    <div><label>Full Name</label><input id="wName" placeholder="Worker full name"></div>
+    <div><label>Phone</label><input id="wPhone" placeholder="Phone number"></div>
+    <div><label>Email</label><input id="wEmail" type="email" placeholder="Worker email"></div>
+    <div><label>Contract Start</label><input id="wStart" type="date"></div>
+    <div><label>Contract End</label><input id="wEnd" type="date"></div>
+   </div>
+   <button id="createWorkerBtn" class="gold">Create Worker & Send Welcome Email</button>
+  </div>
+  <div class="section">
+   <h2>Worker Management</h2>
+   <div class="toolbar"><button id="refreshWorkers" class="soft">Refresh Workers</button></div>
+   <div class="tablebox"><table><thead><tr><th>Worker ID</th><th>Name</th><th>Email</th><th>Phone</th><th>Contract</th><th>Status</th><th>Action</th></tr></thead><tbody id="workersBody"></tbody></table></div>
+  </div>
+ </section>
+
+ <section id="profile" class="page hidden">
+  <div class="section">
+   <h2>Admin Profile</h2>
+   <div class="profile">
+    <div class="avatar">AD</div>
+    <div>
+     <h2 id="adminName">EZELEX Administrator</h2>
+     <p><b>Admin ID:</b> ADMIN001</p><p><b>Email:</b> <span id="adminEmail">—</span></p><p><b>Status:</b> <span class="badge approved">ACTIVE</span></p>
+     <p class="muted">EZELEX ENTERPRISE • Administrator Account</p>
+    </div>
+   </div>
+  </div>
+ </section>
+
+ <section id="security" class="page hidden">
+  <div class="section">
+   <h2>Security</h2><p class="muted">Change the administrator password while signed in.</p>
+   <div id="securityMsg"></div>
+   <div class="grid2">
+    <div><label>New Password</label><input id="newPass" type="password"></div>
+    <div><label>Confirm Password</label><input id="confirmPass" type="password"></div>
+   </div>
+   <button id="changePass" class="primary">Change Password</button>
+  </div>
+ </section>
+</main>
+
+<script>
+const SUPABASE_URL="https://hweczhwoggmsrwhkktrx.supabase.co";
+const SUPABASE_PUBLISHABLE_KEY="sb_publishable_D0o90HRJ1AfROf_DAj7ZAg_uaPDwqvV";
+const db=supabase.createClient(SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY);
+const $=id=>document.getElementById(id);
+let session=null, allSales=[], filteredSales=[], workers=[];
+const money=n=>"GH₵"+Number(n||0).toLocaleString("en-GH",{minimumFractionDigits:2,maximumFractionDigits:2});
+const esc=v=>String(v??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[m]));
+function msg(id,t,type=""){ $(id).innerHTML=t?`<div class="msg ${type}">${esc(t)}</div>`:""; }
+function dateOnly(v){return v?String(v).slice(0,10):""}
+function amount(s){return Number(s.sale_amount??s.amount??s.total_amount??0)}
+function status(s){return String(s.status||"pending").toLowerCase()}
+function workerInfo(id){
+ const w=workers.find(x=>x.user_id===id)||workers.find(x=>x.id===id);
+ return w||{};
+}
+async function adminCheck(){
+ const {data:{session:s}}=await db.auth.getSession(); session=s;
+ if(!s){showLogin();return false}
+ let {data}=await db.from("worker_profiles").select("*").eq("id",s.user.id).maybeSingle();
+ if(!data){({data}=await db.from("worker_profiles").select("*").eq("user_id",s.user.id).maybeSingle())}
+ if(!data||data.role!=="admin"||!data.active){await db.auth.signOut();showLogin();msg("loginMsg","This account does not have active EZELEX admin access.","error");return false}
+ $("loginSection").classList.add("hidden");$("dashboard").classList.remove("hidden");$("logoutBtn").classList.remove("hidden");$("adminEmail").textContent=s.user.email||"";
+ await loadWorkers(); await loadSales(); return true;
+}
+function showLogin(){$("loginSection").classList.remove("hidden");$("dashboard").classList.add("hidden");$("logoutBtn").classList.add("hidden")}
+async function loadWorkers(){
+ const r=await db.from("worker_profiles").select("*").order("full_name",{ascending:true});
+ if(r.error){msg("dashMsg",r.error.message,"error");return}
+ workers=(r.data||[]).filter(w=>w.role!=="admin");
+ $("activeWorkers").textContent=workers.filter(w=>w.active).length;
+ const sel=$("workerFilter");sel.innerHTML='<option value="">All workers</option>';
+ workers.forEach(w=>{const o=document.createElement("option");o.value=w.user_id||w.id;o.textContent=`${w.full_name||"Worker"} (${w.worker_id||""})`;sel.appendChild(o)});
+ renderWorkers();
+}
+async function loadSales(){
+ const r=await db.from("sales").select("*").order("sale_date",{ascending:false}).order("created_at",{ascending:false});
+ if(r.error){msg("dashMsg","Could not load sales: "+r.error.message,"error");return}
+ allSales=r.data||[]; updateSummary(); applyFilters();
+}
+function approvedSales(){return allSales.filter(s=>status(s)==="approved")}
+function updateSummary(){
+ const approved=approvedSales(), now=new Date(), today=dateOnly(now), month=today.slice(0,7);
+ const monday=new Date(now);monday.setHours(0,0,0,0);monday.setDate(monday.getDate()-((monday.getDay()+6)%7));const week=dateOnly(monday);
+ $("today").textContent=money(approved.filter(s=>dateOnly(s.sale_date||s.created_at)===today).reduce((a,s)=>a+amount(s),0));
+ $("week").textContent=money(approved.filter(s=>{let d=dateOnly(s.sale_date||s.created_at);return d>=week&&d<=today}).reduce((a,s)=>a+amount(s),0));
+ $("month").textContent=money(approved.filter(s=>dateOnly(s.sale_date||s.created_at).startsWith(month)).reduce((a,s)=>a+amount(s),0));
+ $("alltime").textContent=money(approved.reduce((a,s)=>a+amount(s),0));
+ $("pendingCount").textContent=allSales.filter(s=>status(s)==="pending").length;
+ $("approvedCount").textContent=allSales.filter(s=>status(s)==="approved").length;
+ $("rejectedCount").textContent=allSales.filter(s=>status(s)==="rejected").length;
+}
+function applyFilters(){
+ const st=$("statusFilter").value,wid=$("workerFilter").value,from=$("fromDate").value,to=$("toDate").value;
+ filteredSales=allSales.filter(s=>{let d=dateOnly(s.sale_date||s.created_at);return(!st||status(s)===st)&&(!wid||s.worker_id===wid)&&(!from||d>=from)&&(!to||d<=to)});
+ renderSales();
+}
+function renderSales(){
+ const body=$("salesBody");if(!filteredSales.length){body.innerHTML='<tr><td colspan="9" class="empty">No sales found.</td></tr>';return}
+ body.innerHTML=filteredSales.map(s=>{
+  const w=workerInfo(s.worker_id), st=status(s);
+  const actions = st==="pending"
+    ? `<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center"><button class="success" onclick="approveSale('${esc(s.id)}')">✓ Approve</button><button class="reject" onclick="rejectSale('${esc(s.id)}')">✕ Disapprove</button></div>`
+    : `<span class="muted">${st==="approved"?"Approved":"Disapproved"}</span>`;
+  return `<tr><td>${esc(dateOnly(s.sale_date||s.created_at))}</td><td>${esc(w.full_name||"")}</td><td>${esc(w.worker_id||s.worker_id||"")}</td><td>${esc(s.product_service||"")}</td><td>${esc(s.quantity??"")}</td><td>${money(amount(s))}</td><td>${esc(s.payment_method||"")}</td><td><span class="badge ${st}">${st.toUpperCase()}</span>${st==="rejected"&&s.rejection_reason?`<br><small>${esc(s.rejection_reason)}</small>`:""}</td><td>${actions}</td></tr>`
+ }).join("");
+}
+window.approveSale=async id=>{
+ if(!confirm("Approve this worker sale?"))return;
+ const r=await db.from("sales").update({status:"approved",rejection_reason:null,approved_at:new Date().toISOString()}).eq("id",id);
+ if(r.error){msg("dashMsg",r.error.message,"error");return}await loadSales();
+}
+window.rejectSale=async id=>{
+ const reason=prompt("Reason for disapproving this sale:");
+ if(reason===null)return;
+ const r=await db.from("sales").update({status:"rejected",rejection_reason:reason.trim()||"No reason provided",approved_at:null}).eq("id",id);
+ if(r.error){msg("dashMsg",r.error.message,"error");return}await loadSales();
+}
+function renderWorkers(){
+ $("workersBody").innerHTML=workers.length?workers.map(w=>`<tr><td>${esc(w.worker_id||"")}</td><td>${esc(w.full_name||"")}</td><td>${esc(w.email||"")}</td><td>${esc(w.phone||"")}</td><td>${esc(w.contract_start||"")} → ${esc(w.contract_end||"")}</td><td><span class="badge ${w.active?"approved":"rejected"}">${w.active?"ACTIVE":"INACTIVE"}</span></td><td><button class="danger" onclick="deleteWorker('${esc(w.user_id||w.id)}','${esc(w.worker_id||"")}')">Delete</button></td></tr>`).join(""):'<tr><td colspan="7" class="empty">No workers found.</td></tr>';
+}
+window.deleteWorker=async(uid,wid)=>{
+ if(wid==="ADMIN001"){alert("ADMIN001 cannot be deleted.");return}
+ if(!confirm(`Delete worker ${wid}? This will remove the worker profile and their sales/login account.`))return;
+ const {data:{session:s}}=await db.auth.getSession();
+ const r=await fetch("https://hweczhwoggmsrwhkktrx.supabase.co/functions/v1/delete-worker",{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+s.access_token},body:JSON.stringify({user_id:uid})});
+ let j={};try{j=await r.json()}catch{}
+ if(!r.ok){msg("workerMsg",j.error||"Could not delete worker.","error");return}
+ msg("workerMsg","Worker deleted successfully.","ok");await loadWorkers();await loadSales();
+}
+$("createWorkerBtn").onclick=async()=>{
+ const payload={worker_id:$("wId").value.trim(),full_name:$("wName").value.trim(),phone:$("wPhone").value.trim(),email:$("wEmail").value.trim(),contract_start:$("wStart").value,contract_end:$("wEnd").value};
+ if(!payload.worker_id||!payload.full_name||!payload.email){msg("workerMsg","Worker ID, full name and email are required.","error");return}
+ const {data:{session:s}}=await db.auth.getSession();
+ msg("workerMsg","Creating worker and sending welcome email...");
+ const r=await fetch("https://hweczhwoggmsrwhkktrx.supabase.co/functions/v1/create-worker",{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+s.access_token},body:JSON.stringify(payload)});
+ let j={};try{j=await r.json()}catch{}
+ if(!r.ok){msg("workerMsg",j.error||"Could not create worker.","error");return}
+ msg("workerMsg","Worker created successfully. The welcome email has been sent.","ok");
+ ["wId","wName","wPhone","wEmail","wStart","wEnd"].forEach(id=>$(id).value="");await loadWorkers();
+}
+$("loginBtn").onclick=async()=>{msg("loginMsg","Signing in...");const r=await db.auth.signInWithPassword({email:$("email").value.trim(),password:$("password").value});if(r.error){msg("loginMsg",r.error.message,"error");return}await adminCheck()}
+$("forgotBtn").onclick=async()=>{const email=$("email").value.trim();if(!email){msg("loginMsg","Enter your admin email first.","error");return}const r=await db.auth.resetPasswordForEmail(email,{redirectTo:location.href});msg("loginMsg",r.error?r.error.message:"Password recovery email sent. Check your inbox.",r.error?"error":"ok")}
+$("logoutBtn").onclick=async()=>{await db.auth.signOut();showLogin()}
+$("refreshBtn").onclick=async()=>{await loadWorkers();await loadSales()}
+$("refreshWorkers").onclick=loadWorkers
+$("applyFilters").onclick=applyFilters
+$("statusFilter").onchange=applyFilters
+$("workerFilter").onchange=applyFilters
+document.querySelectorAll(".nav button").forEach(b=>b.onclick=()=>{document.querySelectorAll(".nav button").forEach(x=>x.classList.remove("active"));b.classList.add("active");document.querySelectorAll(".page").forEach(p=>p.classList.add("hidden"));$(b.dataset.section).classList.remove("hidden")})
+$("changePass").onclick=async()=>{const a=$("newPass").value,b=$("confirmPass").value;if(a.length<8){msg("securityMsg","Password must be at least 8 characters.","error");return}if(a!==b){msg("securityMsg","Passwords do not match.","error");return}const r=await db.auth.updateUser({password:a});msg("securityMsg",r.error?r.error.message:"Password changed successfully.",r.error?"error":"ok");if(!r.error){$("newPass").value="";$("confirmPass").value=""}}
+$("csvBtn").onclick=()=>{const rows=[["Date","Worker","Worker ID","Product/Service","Quantity","Amount","Payment","Status","Reason"],...filteredSales.map(s=>{const w=workerInfo(s.worker_id);return[dateOnly(s.sale_date||s.created_at),w.full_name||"",w.worker_id||"",s.product_service||"",s.quantity??"",amount(s).toFixed(2),s.payment_method||"",status(s),s.rejection_reason||""]})];const csv=rows.map(r=>r.map(x=>`"${String(x).replace(/"/g,'""')}"`).join(",")).join("\n");const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([csv],{type:"text/csv"}));a.download="EZELEX-sales.csv";a.click()}
+$("pdfBtn").onclick=()=>{const {jsPDF}=window.jspdf,doc=new jsPDF({orientation:"landscape"});doc.setFontSize(18);doc.text("EZELEX ENTERPRISE — SALES REPORT",14,15);doc.setFontSize(9);doc.text("Generated: "+new Date().toLocaleString(),14,22);let y=32;filteredSales.slice(0,45).forEach((s,i)=>{const w=workerInfo(s.worker_id);doc.text(`${dateOnly(s.sale_date||s.created_at)} | ${String(w.full_name||"").slice(0,18)} | ${String(s.product_service||"").slice(0,20)} | ${money(amount(s))} | ${status(s)}`,14,y);y+=6});doc.save("EZELEX-sales-report.pdf")}
+db.auth.onAuthStateChange((event,s)=>{if(event==="PASSWORD_RECOVERY"){}});
+adminCheck();
+</script>
+</body>
+</html>
