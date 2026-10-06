@@ -13,615 +13,621 @@
 *{box-sizing:border-box}
 
 :root{
-  --navy:#0b1220;
-  --navy2:#111c33;
-  --blue:#2563eb;
-  --blue2:#3b82f6;
-  --gold:#d4a72c;
-  --gold2:#f2c94c;
-  --white:#fff;
-  --bg:#f3f6fb;
-  --text:#172033;
-  --muted:#64748b;
-  --border:#e2e8f0;
-  --green:#15803d;
-  --red:#b42318;
+--navy:#08111f;
+--navy2:#13233d;
+--blue:#2563eb;
+--blue2:#3b82f6;
+--gold:#d4a72c;
+--gold2:#f5cf55;
+--bg:#f4f7fb;
+--white:#fff;
+--text:#172033;
+--muted:#64748b;
+--border:#e2e8f0;
+--green:#15803d;
+--red:#b42318;
 }
 
 body{
-  margin:0;
-  font-family:Arial,Helvetica,sans-serif;
-  background:var(--bg);
-  color:var(--text);
+margin:0;
+font-family:Arial,Helvetica,sans-serif;
+background:var(--bg);
+color:var(--text);
 }
 
 .hidden{display:none!important}
 
 button{
-  border:0;
-  border-radius:10px;
-  padding:11px 16px;
-  cursor:pointer;
-  font-weight:700;
-  transition:.2s;
+border:0;
+border-radius:10px;
+padding:11px 16px;
+cursor:pointer;
+font-weight:700;
+transition:.2s;
 }
 
-button:hover{transform:translateY(-1px)}
-button:disabled{opacity:.55;cursor:not-allowed;transform:none}
+button:hover{
+transform:translateY(-1px);
+}
+
+button:disabled{
+opacity:.55;
+cursor:not-allowed;
+transform:none;
+}
 
 .primary{
-  background:var(--blue);
-  color:white;
+background:var(--blue);
+color:white;
 }
 
-.primary:hover{background:#1d4ed8}
+.primary:hover{
+background:#1d4ed8;
+}
 
 .gold{
-  background:linear-gradient(135deg,var(--gold),var(--gold2));
-  color:#111827;
+background:linear-gradient(135deg,var(--gold),var(--gold2));
+color:#111827;
 }
 
 .danger{
-  background:var(--red);
-  color:white;
+background:var(--red);
+color:white;
 }
 
 .success{
-  background:var(--green);
-  color:white;
+background:var(--green);
+color:white;
 }
 
 .secondary{
-  background:#e8edf5;
-  color:#172033;
+background:#e8edf5;
+color:#172033;
 }
 
 .dark{
-  background:var(--navy);
-  color:white;
+background:var(--navy);
+color:white;
 }
 
 /* LOGIN */
 
 .login-page{
-  min-height:100vh;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  padding:25px;
-  background:
-    radial-gradient(circle at top right,#243b66 0,#0b1220 45%,#060b14 100%);
+min-height:100vh;
+display:flex;
+align-items:center;
+justify-content:center;
+padding:25px;
+background:
+radial-gradient(circle at top right,#243b66 0,#0b1220 45%,#050a12 100%);
 }
 
 .login-card{
-  width:100%;
-  max-width:430px;
-  background:white;
-  border-radius:24px;
-  padding:34px;
-  box-shadow:0 25px 70px #0008;
+width:100%;
+max-width:450px;
+background:white;
+border-radius:25px;
+padding:35px;
+box-shadow:0 25px 70px #0008;
 }
 
 .logo{
-  width:72px;
-  height:72px;
-  border-radius:20px;
-  background:linear-gradient(135deg,var(--gold),var(--gold2));
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  font-size:28px;
-  font-weight:900;
-  color:#111827;
-  margin-bottom:18px;
+width:75px;
+height:75px;
+border-radius:20px;
+background:linear-gradient(135deg,var(--gold),var(--gold2));
+display:flex;
+align-items:center;
+justify-content:center;
+font-size:28px;
+font-weight:900;
+color:#111827;
+margin-bottom:20px;
 }
 
 .login-card h1{
-  margin:0 0 7px;
+margin:0 0 8px;
+font-size:32px;
 }
 
 .login-card p{
-  color:var(--muted);
+color:var(--muted);
+font-size:16px;
 }
 
-input,select,textarea{
-  width:100%;
-  padding:12px 13px;
-  margin:7px 0 15px;
-  border:1px solid #d6dee9;
-  border-radius:10px;
-  font-size:15px;
-  background:white;
-  font-family:Arial,Helvetica,sans-serif;
+input,
+select,
+textarea{
+width:100%;
+padding:12px 13px;
+margin:7px 0 15px;
+border:1px solid #d6dee9;
+border-radius:10px;
+font-size:15px;
+background:white;
+font-family:Arial,Helvetica,sans-serif;
 }
 
 textarea{
-  min-height:140px;
-  resize:vertical;
+min-height:140px;
+resize:vertical;
 }
 
-input:focus,select:focus,textarea:focus{
-  outline:none;
-  border-color:var(--blue);
-  box-shadow:0 0 0 3px #2563eb18;
+input:focus,
+select:focus,
+textarea:focus{
+outline:none;
+border-color:var(--blue);
+box-shadow:0 0 0 3px #2563eb18;
 }
 
 label{
-  display:block;
-  font-size:13px;
-  font-weight:800;
-  color:#344054;
+display:block;
+font-size:13px;
+font-weight:800;
+color:#344054;
 }
 
-/* APP */
-
-.app{
-  min-height:100vh;
-}
+/* TOPBAR */
 
 .topbar{
-  height:76px;
-  background:linear-gradient(135deg,var(--navy),var(--navy2));
-  color:white;
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  padding:0 28px;
-  position:sticky;
-  top:0;
-  z-index:50;
-  box-shadow:0 5px 25px #0003;
+height:76px;
+background:linear-gradient(135deg,var(--navy),var(--navy2));
+color:white;
+display:flex;
+align-items:center;
+justify-content:space-between;
+padding:0 28px;
+position:sticky;
+top:0;
+z-index:50;
+box-shadow:0 5px 25px #0003;
 }
 
 .brand{
-  display:flex;
-  align-items:center;
-  gap:13px;
+display:flex;
+align-items:center;
+gap:13px;
 }
 
 .brand-mark{
-  width:42px;
-  height:42px;
-  border-radius:12px;
-  display:flex;
-  justify-content:center;
-  align-items:center;
-  background:linear-gradient(135deg,var(--gold),var(--gold2));
-  color:#111827;
-  font-weight:900;
+width:43px;
+height:43px;
+border-radius:12px;
+display:flex;
+align-items:center;
+justify-content:center;
+background:linear-gradient(135deg,var(--gold),var(--gold2));
+color:#111827;
+font-weight:900;
 }
 
 .brand-text strong{
-  display:block;
-  font-size:16px;
+display:block;
+font-size:16px;
 }
 
 .brand-text span{
-  font-size:11px;
-  color:#cbd5e1;
-  letter-spacing:1.2px;
+font-size:11px;
+color:#cbd5e1;
+letter-spacing:1.2px;
 }
 
 .admin-mini{
-  display:flex;
-  align-items:center;
-  gap:12px;
+display:flex;
+align-items:center;
+gap:12px;
 }
 
 .admin-avatar{
-  width:42px;
-  height:42px;
-  border-radius:50%;
-  background:linear-gradient(135deg,#2563eb,#60a5fa);
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  font-weight:900;
-}
-
-.admin-mini-text{
-  display:block;
+width:43px;
+height:43px;
+border-radius:50%;
+background:linear-gradient(135deg,#2563eb,#60a5fa);
+display:flex;
+align-items:center;
+justify-content:center;
+font-weight:900;
 }
 
 .admin-mini-text strong{
-  display:block;
+display:block;
 }
 
 .admin-mini-text span{
-  font-size:11px;
-  color:#94a3b8;
+font-size:11px;
+color:#94a3b8;
 }
 
+/* LAYOUT */
+
 .layout{
-  display:flex;
-  min-height:calc(100vh - 76px);
+display:flex;
+min-height:calc(100vh - 76px);
 }
 
 .sidebar{
-  width:245px;
-  background:#fff;
-  border-right:1px solid var(--border);
-  padding:22px 14px;
-  position:sticky;
-  top:76px;
-  height:calc(100vh - 76px);
+width:245px;
+background:white;
+border-right:1px solid var(--border);
+padding:22px 14px;
+position:sticky;
+top:76px;
+height:calc(100vh - 76px);
 }
 
 .nav-title{
-  font-size:11px;
-  font-weight:800;
-  color:#94a3b8;
-  letter-spacing:1px;
-  padding:10px 12px;
+font-size:11px;
+font-weight:800;
+color:#94a3b8;
+letter-spacing:1px;
+padding:10px 12px;
 }
 
 .nav-btn{
-  width:100%;
-  text-align:left;
-  background:transparent;
-  color:#475569;
-  margin:3px 0;
-  padding:12px;
+width:100%;
+text-align:left;
+background:transparent;
+color:#475569;
+margin:3px 0;
+padding:12px;
 }
 
 .nav-btn:hover,
 .nav-btn.active{
-  background:#eff6ff;
-  color:var(--blue);
+background:#eff6ff;
+color:var(--blue);
 }
 
 .content{
-  flex:1;
-  padding:28px;
-  max-width:1500px;
+flex:1;
+padding:28px;
+max-width:1500px;
 }
 
 .page{
-  display:none;
+display:none;
 }
 
 .page.active{
-  display:block;
+display:block;
 }
 
 .page-title{
-  margin-bottom:22px;
+margin-bottom:22px;
 }
 
 .page-title h1{
-  margin:0;
-  font-size:29px;
+margin:0;
+font-size:29px;
 }
 
 .page-title p{
-  color:var(--muted);
-  margin:7px 0 0;
+color:var(--muted);
+margin:7px 0 0;
 }
 
 /* STATS */
 
 .stats{
-  display:grid;
-  grid-template-columns:repeat(5,1fr);
-  gap:16px;
+display:grid;
+grid-template-columns:repeat(5,1fr);
+gap:16px;
 }
 
 .stat{
-  background:white;
-  border:1px solid var(--border);
-  border-radius:17px;
-  padding:21px;
-  box-shadow:0 5px 20px #00000008;
+background:white;
+border:1px solid var(--border);
+border-radius:17px;
+padding:21px;
+box-shadow:0 5px 20px #00000008;
 }
 
 .stat-top{
-  display:flex;
-  justify-content:space-between;
-  align-items:center;
+display:flex;
+justify-content:space-between;
+align-items:center;
 }
 
 .stat-icon{
-  width:38px;
-  height:38px;
-  border-radius:11px;
-  background:#eff6ff;
-  color:var(--blue);
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  font-weight:900;
+width:38px;
+height:38px;
+border-radius:11px;
+background:#eff6ff;
+color:var(--blue);
+display:flex;
+align-items:center;
+justify-content:center;
+font-weight:900;
 }
 
 .stat small{
-  color:var(--muted);
-  font-weight:700;
+color:var(--muted);
+font-weight:700;
 }
 
 .stat strong{
-  display:block;
-  font-size:25px;
-  margin-top:14px;
+display:block;
+font-size:25px;
+margin-top:14px;
 }
 
 /* CARDS */
 
 .card{
-  background:white;
-  border:1px solid var(--border);
-  border-radius:17px;
-  padding:22px;
-  margin-top:20px;
-  box-shadow:0 5px 20px #00000008;
+background:white;
+border:1px solid var(--border);
+border-radius:17px;
+padding:22px;
+margin-top:20px;
+box-shadow:0 5px 20px #00000008;
 }
 
 .card-header{
-  display:flex;
-  justify-content:space-between;
-  align-items:center;
-  gap:15px;
-  margin-bottom:17px;
+display:flex;
+justify-content:space-between;
+align-items:center;
+gap:15px;
+margin-bottom:17px;
 }
 
 .card-header h2{
-  margin:0;
-  font-size:19px;
+margin:0;
+font-size:19px;
 }
 
 .card-header p{
-  color:var(--muted);
-  margin:5px 0 0;
-  font-size:13px;
+color:var(--muted);
+margin:5px 0 0;
+font-size:13px;
 }
 
 .actions{
-  display:flex;
-  gap:9px;
-  flex-wrap:wrap;
+display:flex;
+gap:9px;
+flex-wrap:wrap;
 }
 
 /* PROFILE */
 
 .profile-hero{
-  background:linear-gradient(135deg,var(--navy),#172a4d);
-  color:white;
-  border-radius:20px;
-  padding:28px;
-  display:flex;
-  align-items:center;
-  gap:22px;
-  position:relative;
-  overflow:hidden;
+background:linear-gradient(135deg,var(--navy),#172a4d);
+color:white;
+border-radius:20px;
+padding:28px;
+display:flex;
+align-items:center;
+gap:22px;
+position:relative;
+overflow:hidden;
 }
 
 .profile-hero:after{
-  content:"";
-  position:absolute;
-  width:250px;
-  height:250px;
-  right:-90px;
-  top:-120px;
-  border-radius:50%;
-  background:#d4a72c22;
+content:"";
+position:absolute;
+width:250px;
+height:250px;
+right:-90px;
+top:-120px;
+border-radius:50%;
+background:#d4a72c22;
 }
 
 .big-avatar{
-  width:92px;
-  height:92px;
-  border-radius:50%;
-  background:linear-gradient(135deg,var(--gold),var(--gold2));
-  color:#111827;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  font-size:30px;
-  font-weight:900;
-  border:4px solid #fff3;
-  z-index:1;
+width:92px;
+height:92px;
+border-radius:50%;
+background:linear-gradient(135deg,var(--gold),var(--gold2));
+color:#111827;
+display:flex;
+align-items:center;
+justify-content:center;
+font-size:30px;
+font-weight:900;
+border:4px solid #fff3;
+z-index:1;
 }
 
 .profile-hero-text{
-  z-index:1;
+z-index:1;
 }
 
 .profile-hero h2{
-  margin:0 0 6px;
+margin:0 0 6px;
 }
 
 .profile-hero p{
-  margin:3px 0;
-  color:#cbd5e1;
+margin:3px 0;
+color:#cbd5e1;
 }
 
 .status{
-  display:inline-flex;
-  align-items:center;
-  gap:6px;
-  padding:5px 10px;
-  border-radius:999px;
-  font-size:12px;
-  font-weight:800;
+display:inline-flex;
+align-items:center;
+gap:6px;
+padding:5px 10px;
+border-radius:999px;
+font-size:12px;
+font-weight:800;
 }
 
 .status.active{
-  background:#dcfce7;
-  color:#166534;
+background:#dcfce7;
+color:#166534;
 }
 
 .status.inactive{
-  background:#fee2e2;
-  color:#991b1b;
+background:#fee2e2;
+color:#991b1b;
 }
 
 .info-grid{
-  display:grid;
-  grid-template-columns:repeat(2,1fr);
-  gap:15px;
+display:grid;
+grid-template-columns:repeat(2,1fr);
+gap:15px;
 }
 
 .info{
-  background:#f8fafc;
-  border:1px solid var(--border);
-  border-radius:13px;
-  padding:15px;
+background:#f8fafc;
+border:1px solid var(--border);
+border-radius:13px;
+padding:15px;
 }
 
 .info small{
-  color:var(--muted);
-  display:block;
-  margin-bottom:5px;
+color:var(--muted);
+display:block;
+margin-bottom:5px;
 }
 
 .info strong{
-  word-break:break-word;
+word-break:break-word;
 }
 
 /* TABLE */
 
 .table-wrap{
-  overflow:auto;
+overflow:auto;
 }
 
 table{
-  width:100%;
-  border-collapse:collapse;
-  min-width:950px;
+width:100%;
+border-collapse:collapse;
+min-width:950px;
 }
 
-th,td{
-  padding:13px;
-  border-bottom:1px solid #edf0f4;
-  text-align:left;
-  font-size:13px;
+th,
+td{
+padding:13px;
+border-bottom:1px solid #edf0f4;
+text-align:left;
+font-size:13px;
 }
 
 th{
-  background:#f8fafc;
-  color:#475569;
-  font-size:12px;
-  text-transform:uppercase;
-  letter-spacing:.3px;
+background:#f8fafc;
+color:#475569;
+font-size:12px;
+text-transform:uppercase;
+letter-spacing:.3px;
 }
 
 tr:hover td{
-  background:#fafcff;
+background:#fafcff;
 }
 
 .empty{
-  text-align:center;
-  color:var(--muted);
-  padding:30px;
+text-align:center;
+color:var(--muted);
+padding:30px;
 }
 
 /* WORKERS */
 
 .worker-grid{
-  display:grid;
-  grid-template-columns:repeat(3,1fr);
-  gap:15px;
+display:grid;
+grid-template-columns:repeat(3,1fr);
+gap:15px;
 }
 
 .worker{
-  border:1px solid var(--border);
-  border-radius:15px;
-  padding:18px;
+border:1px solid var(--border);
+border-radius:15px;
+padding:18px;
 }
 
 .worker-head{
-  display:flex;
-  justify-content:space-between;
-  gap:10px;
+display:flex;
+justify-content:space-between;
+gap:10px;
 }
 
 .worker-avatar{
-  width:48px;
-  height:48px;
-  border-radius:14px;
-  background:#eff6ff;
-  color:var(--blue);
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  font-weight:900;
+width:48px;
+height:48px;
+border-radius:14px;
+background:#eff6ff;
+color:var(--blue);
+display:flex;
+align-items:center;
+justify-content:center;
+font-weight:900;
 }
 
 .worker h3{
-  margin:0;
+margin:0;
 }
 
 .worker-id{
-  color:var(--muted);
-  font-size:12px;
-  margin-top:4px;
+color:var(--muted);
+font-size:12px;
+margin-top:4px;
 }
 
 .worker-details{
-  margin-top:15px;
-  line-height:1.8;
-  color:#475569;
-  font-size:13px;
+margin-top:15px;
+line-height:1.8;
+color:#475569;
+font-size:13px;
 }
 
 .worker-actions{
-  margin-top:15px;
-  display:flex;
-  gap:8px;
-  flex-wrap:wrap;
+margin-top:15px;
+display:flex;
+gap:8px;
+flex-wrap:wrap;
 }
 
 /* FORMS */
 
 .form-grid{
-  display:grid;
-  grid-template-columns:1fr 1fr;
-  gap:0 16px;
+display:grid;
+grid-template-columns:1fr 1fr;
+gap:0 16px;
 }
 
 .full{
-  grid-column:1/-1;
-}
-
-.form-section{
-  margin-top:15px;
+grid-column:1/-1;
 }
 
 /* MESSAGES */
 
 .msg{
-  padding:12px;
-  border-radius:10px;
-  margin:10px 0;
-  font-size:14px;
+padding:12px;
+border-radius:10px;
+margin:10px 0;
+font-size:14px;
 }
 
 .msg.error{
-  background:#fee4e2;
-  color:#912018;
+background:#fee4e2;
+color:#912018;
 }
 
 .msg.success{
-  background:#dcfce7;
-  color:#166534;
+background:#dcfce7;
+color:#166534;
 }
 
 .msg.info{
-  background:#eff6ff;
-  color:#1d4ed8;
+background:#eff6ff;
+color:#1d4ed8;
 }
 
 /* MOBILE */
 
 .mobile-nav{
-  display:none;
+display:none;
 }
 
 @media(max-width:1150px){
 
 .stats{
-  grid-template-columns:repeat(3,1fr);
+grid-template-columns:repeat(3,1fr);
 }
 
 .worker-grid{
-  grid-template-columns:repeat(2,1fr);
+grid-template-columns:repeat(2,1fr);
 }
 
 }
@@ -629,55 +635,55 @@ tr:hover td{
 @media(max-width:850px){
 
 .sidebar{
-  display:none;
+display:none;
 }
 
 .content{
-  padding:18px 13px 90px;
+padding:18px 13px 90px;
 }
 
 .topbar{
-  padding:0 15px;
+padding:0 15px;
 }
 
 .admin-mini-text{
-  display:none;
+display:none;
 }
 
 .mobile-nav{
-  display:flex;
-  position:fixed;
-  bottom:0;
-  left:0;
-  right:0;
-  background:#fff;
-  border-top:1px solid var(--border);
-  z-index:100;
-  padding:7px;
-  justify-content:space-around;
+display:flex;
+position:fixed;
+bottom:0;
+left:0;
+right:0;
+background:#fff;
+border-top:1px solid var(--border);
+z-index:100;
+padding:7px;
+justify-content:space-around;
 }
 
 .mobile-nav button{
-  background:transparent;
-  color:#64748b;
-  font-size:11px;
-  padding:8px;
+background:transparent;
+color:#64748b;
+font-size:11px;
+padding:8px;
 }
 
 .mobile-nav button.active{
-  color:var(--blue);
+color:var(--blue);
 }
 
 .stats{
-  grid-template-columns:1fr 1fr;
+grid-template-columns:1fr 1fr;
 }
 
 .worker-grid{
-  grid-template-columns:1fr;
+grid-template-columns:1fr;
 }
 
 .info-grid{
-  grid-template-columns:1fr;
+grid-template-columns:1fr;
 }
 
 }
@@ -685,40 +691,39 @@ tr:hover td{
 @media(max-width:560px){
 
 .stats{
-  grid-template-columns:1fr;
+grid-template-columns:1fr;
 }
 
 .form-grid{
-  grid-template-columns:1fr;
+grid-template-columns:1fr;
 }
 
 .full{
-  grid-column:auto;
+grid-column:auto;
 }
 
 .profile-hero{
-  align-items:flex-start;
-  flex-direction:column;
+align-items:flex-start;
+flex-direction:column;
 }
 
 .page-title h1{
-  font-size:24px;
+font-size:24px;
 }
 
 .brand-text{
-  display:none;
+display:none;
 }
 
 }
 </style>
 </head>
 
-
 <body>
 
 
 <!-- =====================================================
-     LOGIN
+LOGIN
 ===================================================== -->
 
 <section id="loginPage" class="login-page">
@@ -767,13 +772,10 @@ Sign in to Command Centre
 
 
 <!-- =====================================================
-     APPLICATION
+APP
 ===================================================== -->
 
-<section id="app" class="app hidden">
-
-
-<!-- TOP BAR -->
+<section id="app" class="hidden">
 
 <header class="topbar">
 
@@ -827,7 +829,6 @@ Logout
 </header>
 
 
-
 <div class="layout">
 
 
@@ -839,39 +840,27 @@ Logout
 COMMAND CENTRE
 </div>
 
-<button
-class="nav-btn active"
-data-page="dashboardPage">
+<button class="nav-btn active" data-page="dashboardPage">
 📊 Dashboard
 </button>
 
-<button
-class="nav-btn"
-data-page="profilePage">
+<button class="nav-btn" data-page="profilePage">
 👑 Admin Profile
 </button>
 
-<button
-class="nav-btn"
-data-page="workersPage">
+<button class="nav-btn" data-page="workersPage">
 👥 Workers
 </button>
 
-<button
-class="nav-btn"
-data-page="salesPage">
+<button class="nav-btn" data-page="salesPage">
 💰 Central Sales
 </button>
 
-<button
-class="nav-btn"
-data-page="reportsPage">
+<button class="nav-btn" data-page="reportsPage">
 📄 Reports
 </button>
 
-<button
-class="nav-btn"
-data-page="communicationPage">
+<button class="nav-btn" data-page="communicationPage">
 💬 Communication
 </button>
 
@@ -879,9 +868,7 @@ data-page="communicationPage">
 SECURITY
 </div>
 
-<button
-class="nav-btn"
-data-page="securityPage">
+<button class="nav-btn" data-page="securityPage">
 🔐 Security
 </button>
 
@@ -889,26 +876,17 @@ data-page="securityPage">
 
 
 
-<!-- CONTENT -->
-
 <main class="content">
 
 
+<!-- DASHBOARD -->
 
-<!-- =====================================================
-     DASHBOARD
-===================================================== -->
-
-<section
-id="dashboardPage"
-class="page active">
+<section id="dashboardPage" class="page active">
 
 <div class="page-title">
 
 <h1>
-Good to see you, <span id="dashboardName">
-Administrator
-</span> 👑
+Good to see you, <span id="dashboardName">Administrator</span> 👑
 </h1>
 
 <p>
@@ -920,111 +898,45 @@ Welcome to your EZELEX Enterprise command centre.
 
 <div class="stats">
 
+<div class="stat">
+<div class="stat-top">
+<small>Today Sale</small>
+<div class="stat-icon">₵</div>
+</div>
+<strong id="todaySale">GH₵0.00</strong>
+</div>
 
 <div class="stat">
-
 <div class="stat-top">
-
-<small>
-Today Sale
-</small>
-
-<div class="stat-icon">
-₵
+<small>This Week</small>
+<div class="stat-icon">W</div>
 </div>
-
+<strong id="weekSale">GH₵0.00</strong>
 </div>
-
-<strong id="todaySale">
-GH₵0.00
-</strong>
-
-</div>
-
 
 <div class="stat">
-
 <div class="stat-top">
-
-<small>
-This Week
-</small>
-
-<div class="stat-icon">
-W
+<small>This Month</small>
+<div class="stat-icon">M</div>
 </div>
-
+<strong id="monthSale">GH₵0.00</strong>
 </div>
-
-<strong id="weekSale">
-GH₵0.00
-</strong>
-
-</div>
-
 
 <div class="stat">
-
 <div class="stat-top">
-
-<small>
-This Month
-</small>
-
-<div class="stat-icon">
-M
+<small>All Time</small>
+<div class="stat-icon">A</div>
 </div>
-
+<strong id="allSale">GH₵0.00</strong>
 </div>
-
-<strong id="monthSale">
-GH₵0.00
-</strong>
-
-</div>
-
 
 <div class="stat">
-
 <div class="stat-top">
-
-<small>
-All Time
-</small>
-
-<div class="stat-icon">
-A
+<small>Active Workers</small>
+<div class="stat-icon">👥</div>
 </div>
-
+<strong id="activeWorkers">0</strong>
 </div>
-
-<strong id="allSale">
-GH₵0.00
-</strong>
-
-</div>
-
-
-<div class="stat">
-
-<div class="stat-top">
-
-<small>
-Active Workers
-</small>
-
-<div class="stat-icon">
-👥
-</div>
-
-</div>
-
-<strong id="activeWorkers">
-0
-</strong>
-
-</div>
-
 
 </div>
 
@@ -1053,7 +965,6 @@ Refresh Data
 
 </div>
 
-
 <div id="dashboardMsg"></div>
 
 </div>
@@ -1062,13 +973,9 @@ Refresh Data
 
 
 
-<!-- =====================================================
-     ADMIN PROFILE
-===================================================== -->
+<!-- PROFILE -->
 
-<section
-id="profilePage"
-class="page">
+<section id="profilePage" class="page">
 
 <div class="page-title">
 
@@ -1135,110 +1042,45 @@ Official administrator account information.
 
 <div class="info-grid">
 
-
 <div class="info">
-
-<small>
-Full Name
-</small>
-
-<strong id="profileFullName">
-Administrator
-</strong>
-
+<small>Full Name</small>
+<strong id="profileFullName">Administrator</strong>
 </div>
 
-
 <div class="info">
-
-<small>
-Worker / Admin ID
-</small>
-
-<strong>
-ADMIN001
-</strong>
-
+<small>Worker / Admin ID</small>
+<strong>ADMIN001</strong>
 </div>
 
-
 <div class="info">
-
-<small>
-Email
-</small>
-
-<strong id="profileEmail2">
--
-</strong>
-
+<small>Email</small>
+<strong id="profileEmail2">-</strong>
 </div>
 
-
 <div class="info">
-
-<small>
-Phone
-</small>
-
-<strong id="profilePhone">
-Not provided
-</strong>
-
+<small>Phone</small>
+<strong id="profilePhone">Not provided</strong>
 </div>
 
-
 <div class="info">
-
-<small>
-Role
-</small>
-
-<strong>
-Administrator
-</strong>
-
+<small>Role</small>
+<strong>Administrator</strong>
 </div>
 
-
 <div class="info">
-
-<small>
-Company
-</small>
-
-<strong>
-EZELEX ENTERPRISE
-</strong>
-
+<small>Company</small>
+<strong>EZELEX ENTERPRISE</strong>
 </div>
 
-
 <div class="info">
-
-<small>
-Account Status
-</small>
-
-<strong>
-Active
-</strong>
-
+<small>Account Status</small>
+<strong>Active</strong>
 </div>
 
-
 <div class="info">
-
-<small>
-Company Access
-</small>
-
-<strong>
-Full Administrator Access
-</strong>
-
+<small>Company Access</small>
+<strong>Full Administrator Access</strong>
 </div>
-
 
 </div>
 
@@ -1250,19 +1092,11 @@ Full Administrator Access
 <div class="card-header">
 
 <div>
-
-<h2>
-Account Actions
-</h2>
-
-<p>
-Manage your administrator account.
-</p>
-
+<h2>Account Actions</h2>
+<p>Manage your administrator account.</p>
 </div>
 
 </div>
-
 
 <div class="actions">
 
@@ -1286,13 +1120,9 @@ Logout
 
 
 
-<!-- =====================================================
-     WORKERS
-===================================================== -->
+<!-- WORKERS -->
 
-<section
-id="workersPage"
-class="page">
+<section id="workersPage" class="page">
 
 <div class="page-title">
 
@@ -1334,10 +1164,7 @@ Refresh
 
 <div id="workerMsg"></div>
 
-
-<div
-id="workerGrid"
-class="worker-grid">
+<div id="workerGrid" class="worker-grid">
 
 <div class="empty">
 Loading workers...
@@ -1375,12 +1202,9 @@ Create a worker account and send their password setup email.
 
 <div class="form-grid">
 
-
 <div>
 
-<label>
-Worker ID
-</label>
+<label>Worker ID</label>
 
 <input
 id="workerId"
@@ -1392,9 +1216,7 @@ placeholder="EZE-001">
 
 <div>
 
-<label>
-Full Name
-</label>
+<label>Full Name</label>
 
 <input
 id="workerName"
@@ -1406,9 +1228,7 @@ placeholder="Worker full name">
 
 <div>
 
-<label>
-Phone
-</label>
+<label>Phone</label>
 
 <input
 id="workerPhone"
@@ -1420,9 +1240,7 @@ placeholder="Phone number">
 
 <div>
 
-<label>
-Email
-</label>
+<label>Email</label>
 
 <input
 id="workerEmail"
@@ -1435,9 +1253,7 @@ placeholder="worker@example.com">
 
 <div>
 
-<label>
-Contract Start
-</label>
+<label>Contract Start</label>
 
 <input
 id="contractStart"
@@ -1448,16 +1264,13 @@ type="date">
 
 <div>
 
-<label>
-Contract End
-</label>
+<label>Contract End</label>
 
 <input
 id="contractEnd"
 type="date">
 
 </div>
-
 
 </div>
 
@@ -1479,13 +1292,9 @@ Create Worker & Send Welcome Email
 
 
 
-<!-- =====================================================
-     CENTRAL SALES
-===================================================== -->
+<!-- SALES -->
 
-<section
-id="salesPage"
-class="page">
+<section id="salesPage" class="page">
 
 <div class="page-title">
 
@@ -1539,16 +1348,10 @@ CSV
 
 <div>
 
-<label>
-Worker
-</label>
+<label>Worker</label>
 
 <select id="salesWorkerFilter">
-
-<option value="">
-All Workers
-</option>
-
+<option value="">All Workers</option>
 </select>
 
 </div>
@@ -1556,9 +1359,7 @@ All Workers
 
 <div>
 
-<label>
-From Date
-</label>
+<label>From Date</label>
 
 <input
 id="salesFrom"
@@ -1569,9 +1370,7 @@ type="date">
 
 <div>
 
-<label>
-To Date
-</label>
+<label>To Date</label>
 
 <input
 id="salesTo"
@@ -1582,9 +1381,7 @@ type="date">
 
 <div>
 
-<label>
-Filter
-</label>
+<label>Filter</label>
 
 <button
 id="applySalesFilter"
@@ -1608,7 +1405,6 @@ Apply Filters
 <thead>
 
 <tr>
-
 <th>Date</th>
 <th>Worker</th>
 <th>Worker ID</th>
@@ -1618,7 +1414,6 @@ Apply Filters
 <th>Amount</th>
 <th>Payment</th>
 <th>Notes</th>
-
 </tr>
 
 </thead>
@@ -1643,13 +1438,9 @@ Loading sales...
 
 
 
-<!-- =====================================================
-     REPORTS
-===================================================== -->
+<!-- REPORTS -->
 
-<section
-id="reportsPage"
-class="page">
+<section id="reportsPage" class="page">
 
 <div class="page-title">
 
@@ -1685,19 +1476,12 @@ Choose a worker and date range, then generate a PDF.
 
 <div class="form-grid">
 
-
 <div>
 
-<label>
-Worker
-</label>
+<label>Worker</label>
 
 <select id="reportWorker">
-
-<option value="">
-All Workers
-</option>
-
+<option value="">All Workers</option>
 </select>
 
 </div>
@@ -1705,9 +1489,7 @@ All Workers
 
 <div>
 
-<label>
-From Date
-</label>
+<label>From Date</label>
 
 <input
 id="reportFrom"
@@ -1718,9 +1500,7 @@ type="date">
 
 <div>
 
-<label>
-To Date
-</label>
+<label>To Date</label>
 
 <input
 id="reportTo"
@@ -1731,9 +1511,7 @@ type="date">
 
 <div>
 
-<label>
-Action
-</label>
+<label>Action</label>
 
 <button
 id="generatePdf"
@@ -1744,7 +1522,6 @@ Generate PDF Report
 
 </div>
 
-
 </div>
 
 
@@ -1754,19 +1531,6 @@ Generate PDF Report
 
 
 <div class="card">
-
-<div class="card-header">
-
-<div>
-
-<h2>
-Report Summary
-</h2>
-
-</div>
-
-</div>
-
 
 <div class="stats"
 style="grid-template-columns:repeat(3,1fr)">
@@ -1817,13 +1581,9 @@ GH₵0.00
 
 
 
-<!-- =====================================================
-     COMMUNICATION
-===================================================== -->
+<!-- COMMUNICATION -->
 
-<section
-id="communicationPage"
-class="page">
+<section id="communicationPage" class="page">
 
 <div class="page-title">
 
@@ -1861,7 +1621,6 @@ Communicate directly with one worker or everyone.
 
 
 <form id="communicationForm">
-
 
 <label>
 Send To
@@ -1904,7 +1663,6 @@ Send Message
 
 </button>
 
-
 </form>
 
 </div>
@@ -1913,13 +1671,9 @@ Send Message
 
 
 
-<!-- =====================================================
-     SECURITY
-===================================================== -->
+<!-- SECURITY -->
 
-<section
-id="securityPage"
-class="page">
+<section id="securityPage" class="page">
 
 <div class="page-title">
 
@@ -1997,78 +1751,26 @@ Change Password
 
 <div class="card">
 
-<div class="card-header">
-
-<div>
-
-<h2>
-Administrator Access
-</h2>
-
-<p>
-Your administrator account has full EZELEX management access.
-</p>
-
-</div>
-
-<span class="status active">
-● Active
-</span>
-
-</div>
-
-
 <div class="info-grid">
 
 <div class="info">
-
-<small>
-Administrator ID
-</small>
-
-<strong>
-ADMIN001
-</strong>
-
+<small>Administrator ID</small>
+<strong>ADMIN001</strong>
 </div>
 
-
 <div class="info">
-
-<small>
-Role
-</small>
-
-<strong>
-Administrator
-</strong>
-
+<small>Role</small>
+<strong>Administrator</strong>
 </div>
 
-
 <div class="info">
-
-<small>
-Authentication
-</small>
-
-<strong>
-Supabase Secure Authentication
-</strong>
-
+<small>Authentication</small>
+<strong>Supabase Secure Authentication</strong>
 </div>
 
-
 <div class="info">
-
-<small>
-Protected Account
-</small>
-
-<strong>
-ADMIN001 cannot be deleted
-</strong>
-
+<small>Protected Account</small>
+<strong>ADMIN001 cannot be deleted</strong>
 </div>
 
 </div>
@@ -2087,34 +1789,27 @@ ADMIN001 cannot be deleted
 
 <nav class="mobile-nav">
 
-<button
-data-page="dashboardPage"
-class="active">
+<button data-page="dashboardPage" class="active">
 📊<br>Home
 </button>
 
-<button
-data-page="workersPage">
+<button data-page="workersPage">
 👥<br>Workers
 </button>
 
-<button
-data-page="salesPage">
+<button data-page="salesPage">
 💰<br>Sales
 </button>
 
-<button
-data-page="reportsPage">
+<button data-page="reportsPage">
 📄<br>Reports
 </button>
 
-<button
-data-page="profilePage">
+<button data-page="profilePage">
 👑<br>Profile
 </button>
 
 </nav>
-
 
 </section>
 
@@ -2123,24 +1818,25 @@ data-page="profilePage">
 <script>
 
 /* =====================================================
-   SUPABASE
+SUPABASE CONFIGURATION
+IMPORTANT — THESE VALUES ARE CORRECT
 ===================================================== */
 
 const SUPABASE_URL =
 "https://hweczhwoggmsrwhkktrx.supabase.co";
 
-const SUPABASE_ANON_KEY =
-"sb_publishable_D0o90HR1AfROf_DAj7ZAg_uaPDwqvV";
+const SUPABASE_PUBLISHABLE_KEY =
+"sb_publishable_D0o90HRJ1AfROf_DAj7ZAg_uaPDwqvV";
 
 const db =
 supabase.createClient(
 SUPABASE_URL,
-SUPABASE_ANON_KEY
+SUPABASE_PUBLISHABLE_KEY
 );
 
 
 /* =====================================================
-   EDGE FUNCTIONS
+EDGE FUNCTIONS
 ===================================================== */
 
 const CREATE_WORKER_URL =
@@ -2157,19 +1853,18 @@ SUPABASE_URL +
 
 
 /* =====================================================
-   STATE
+STATE
 ===================================================== */
 
 let currentAdmin = null;
 let adminProfile = null;
-
 let workers = [];
 let sales = [];
 let filteredSales = [];
 
 
 /* =====================================================
-   HELPERS
+HELPERS
 ===================================================== */
 
 const $ =
@@ -2250,7 +1945,7 @@ ${esc(text)}
 
 
 /* =====================================================
-   NAVIGATION
+NAVIGATION
 ===================================================== */
 
 function openPage(pageId){
@@ -2326,7 +2021,7 @@ button.dataset.page
 
 
 /* =====================================================
-   LOGIN SCREEN
+LOGIN / APP
 ===================================================== */
 
 function showLogin(){
@@ -2356,7 +2051,7 @@ $("app")
 
 
 /* =====================================================
-   ADMIN CHECK
+ADMIN VERIFICATION
 ===================================================== */
 
 async function checkAdmin(){
@@ -2384,6 +2079,12 @@ currentAdmin =
 session.user;
 
 
+/*
+IMPORTANT:
+Your current EZELEX worker system uses
+worker_profiles.user_id for authentication.
+*/
+
 const {
 data,
 error
@@ -2405,10 +2106,16 @@ session.user.id
 "role",
 "admin"
 )
+.eq(
+"active",
+true
+)
 .maybeSingle();
 
 
 if(error){
+
+console.error(error);
 
 await db.auth.signOut();
 
@@ -2426,11 +2133,7 @@ return;
 }
 
 
-if(
-!data ||
-data.role !== "admin" ||
-data.active !== true
-){
+if(!data){
 
 await db.auth.signOut();
 
@@ -2438,7 +2141,7 @@ showLogin();
 
 showMsg(
 "loginMsg",
-"This account does not have active administrator access.",
+"This account does not have active EZELEX administrator access.",
 "error"
 );
 
@@ -2452,7 +2155,6 @@ data;
 
 
 showApp();
-
 
 loadAdminProfile();
 
@@ -2478,7 +2180,7 @@ showMsg(
 
 
 /* =====================================================
-   LOGIN
+LOGIN
 ===================================================== */
 
 $("loginBtn")
@@ -2572,7 +2274,7 @@ button.textContent =
 
 
 /* =====================================================
-   LOGOUT
+LOGOUT
 ===================================================== */
 
 async function logout(){
@@ -2592,7 +2294,7 @@ logout
 
 
 /* =====================================================
-   ADMIN PROFILE
+ADMIN PROFILE
 ===================================================== */
 
 function loadAdminProfile(){
@@ -2614,31 +2316,25 @@ $("topAdminName")
 .textContent =
 name;
 
-
 $("dashboardName")
 .textContent =
 name;
-
 
 $("profileName")
 .textContent =
 name;
 
-
 $("profileEmail")
 .textContent =
 email;
-
 
 $("profileFullName")
 .textContent =
 name;
 
-
 $("profileEmail2")
 .textContent =
 email;
-
 
 $("profilePhone")
 .textContent =
@@ -2648,7 +2344,7 @@ phone;
 
 
 /* =====================================================
-   LOAD EVERYTHING
+LOAD EVERYTHING
 ===================================================== */
 
 async function loadEverything(){
@@ -2665,14 +2361,13 @@ populateReportWorkers();
 
 
 /* =====================================================
-   WORKERS
+WORKERS
 ===================================================== */
 
 async function loadWorkers(){
 
 const grid =
 $("workerGrid");
-
 
 grid.innerHTML =
 `
@@ -2704,7 +2399,8 @@ if(error){
 grid.innerHTML =
 `
 <div class="msg error">
-Could not load workers: ${esc(error.message)}
+Could not load workers:
+${esc(error.message)}
 </div>
 `;
 
@@ -2860,7 +2556,7 @@ worker.active
 `
 <button
 class="secondary"
-onclick="endContract('${esc(worker.worker_id)}')">
+onclick="endContract('${esc(worker.user_id)}')">
 End Contract
 </button>
 `
@@ -2868,12 +2564,11 @@ End Contract
 `
 <button
 class="success"
-onclick="reactivateWorker('${esc(worker.worker_id)}')">
+onclick="reactivateWorker('${esc(worker.user_id)}')">
 Reactivate
 </button>
 `
 }
-
 
 <button
 class="danger"
@@ -2898,20 +2593,17 @@ Delete
 
 
 /* =====================================================
-   END CONTRACT
+END CONTRACT
 ===================================================== */
 
 async function endContract(
-workerId
+userId
 ){
 
 const confirmed =
 confirm(
-"End the contract for " +
-workerId +
-"?\n\nThe worker will become inactive."
+"End this worker's contract?\n\nThe worker will become inactive."
 );
-
 
 if(!confirmed){
 return;
@@ -2927,8 +2619,8 @@ await db
 active:false
 })
 .eq(
-"worker_id",
-workerId
+"user_id",
+userId
 );
 
 
@@ -2959,20 +2651,17 @@ await loadCommunicationRecipients();
 
 
 /* =====================================================
-   REACTIVATE
+REACTIVATE
 ===================================================== */
 
 async function reactivateWorker(
-workerId
+userId
 ){
 
 const confirmed =
 confirm(
-"Reactivate Worker " +
-workerId +
-"? "
+"Reactivate this worker?"
 );
-
 
 if(!confirmed){
 return;
@@ -2988,8 +2677,8 @@ await db
 active:true
 })
 .eq(
-"worker_id",
-workerId
+"user_id",
+userId
 );
 
 
@@ -3020,7 +2709,7 @@ await loadCommunicationRecipients();
 
 
 /* =====================================================
-   DELETE WORKER
+DELETE WORKER
 ===================================================== */
 
 async function deleteWorker(
@@ -3103,7 +2792,7 @@ headers:{
 session.access_token,
 
 "apikey":
-SUPABASE_ANON_KEY
+SUPABASE_PUBLISHABLE_KEY
 },
 
 body:
@@ -3171,7 +2860,7 @@ error.message ||
 
 
 /* =====================================================
-   CREATE WORKER
+CREATE WORKER
 ===================================================== */
 
 $("createWorkerForm")
@@ -3180,6 +2869,55 @@ $("createWorkerForm")
 async function(event){
 
 event.preventDefault();
+
+
+const workerId =
+$("workerId")
+.value
+.trim();
+
+const fullName =
+$("workerName")
+.value
+.trim();
+
+const phone =
+$("workerPhone")
+.value
+.trim();
+
+const email =
+$("workerEmail")
+.value
+.trim()
+.toLowerCase();
+
+const contractStart =
+$("contractStart")
+.value ||
+null;
+
+const contractEnd =
+$("contractEnd")
+.value ||
+null;
+
+
+if(
+contractStart &&
+contractEnd &&
+contractEnd < contractStart
+){
+
+showMsg(
+"createMsg",
+"Contract end date cannot be before the start date.",
+"error"
+);
+
+return;
+
+}
 
 
 const button =
@@ -3211,7 +2949,7 @@ await db.auth.getSession();
 if(!session){
 
 throw new Error(
-"Admin session expired."
+"Admin session expired. Please log in again."
 );
 
 }
@@ -3220,34 +2958,22 @@ throw new Error(
 const payload = {
 
 worker_id:
-$("workerId")
-.value
-.trim(),
+workerId,
 
 full_name:
-$("workerName")
-.value
-.trim(),
+fullName,
 
 phone:
-$("workerPhone")
-.value
-.trim(),
+phone,
 
 email:
-$("workerEmail")
-.value
-.trim(),
+email,
 
 contract_start:
-$("contractStart")
-.value ||
-null,
+contractStart,
 
 contract_end:
-$("contractEnd")
-.value ||
-null
+contractEnd
 
 };
 
@@ -3268,7 +2994,7 @@ headers:{
 session.access_token,
 
 "apikey":
-SUPABASE_ANON_KEY
+SUPABASE_PUBLISHABLE_KEY
 },
 
 body:
@@ -3302,7 +3028,7 @@ result.message ||
 
 showMsg(
 "createMsg",
-"Worker created successfully and welcome email sent."
+"Worker created successfully. The welcome email has been sent."
 );
 
 
@@ -3344,7 +3070,7 @@ button.textContent =
 
 
 /* =====================================================
-   SALES
+SALES
 ===================================================== */
 
 async function loadSales(){
@@ -3430,8 +3156,7 @@ worker?.full_name ||
 
 worker_id_display:
 worker?.worker_id ||
-sale.worker_id ||
-""
+"Unknown"
 
 };
 
@@ -3454,7 +3179,7 @@ showMsg(
 
 
 /* =====================================================
-   TOTALS
+DASHBOARD TOTALS
 ===================================================== */
 
 function updateDashboardTotals(){
@@ -3470,8 +3195,7 @@ now.getFullYear() +
 "-" +
 String(
 now.getMonth()+1
-)
-.padStart(2,"0");
+).padStart(2,"0");
 
 
 const weekStart =
@@ -3560,7 +3284,7 @@ money(all);
 
 
 /* =====================================================
-   SALES WORKER FILTERS
+SALES FILTER
 ===================================================== */
 
 function populateSalesWorkers(){
@@ -3769,7 +3493,7 @@ sale.notes ||
 
 
 /* =====================================================
-   CSV
+CSV
 ===================================================== */
 
 $("downloadCsv")
@@ -3860,7 +3584,7 @@ document.createElement("a");
 
 link.href=url;
 
-link.download=
+link.download =
 "ezelex-sales.csv";
 
 link.click();
@@ -3872,7 +3596,7 @@ URL.revokeObjectURL(url);
 
 
 /* =====================================================
-   REPORT WORKERS
+REPORT WORKERS
 ===================================================== */
 
 function populateReportWorkers(){
@@ -3925,7 +3649,7 @@ option
 
 
 /* =====================================================
-   REPORT SUMMARY
+REPORT DATA
 ===================================================== */
 
 function getReportSales(){
@@ -3978,7 +3702,67 @@ d <= to)
 
 
 /* =====================================================
-   PDF REPORT
+REPORT SUMMARY
+===================================================== */
+
+function updateReportSummary(){
+
+const data =
+getReportSales();
+
+
+const total =
+data.reduce(
+(sum,sale) =>
+sum +
+Number(
+sale.sale_amount || 0
+),
+0
+);
+
+
+$("reportCount")
+.textContent =
+data.length;
+
+$("reportTotal")
+.textContent =
+money(total);
+
+$("reportAverage")
+.textContent =
+money(
+data.length
+?
+total/data.length
+:
+0
+);
+
+}
+
+
+[
+"reportWorker",
+"reportFrom",
+"reportTo"
+]
+.forEach(
+id => {
+
+$(id)
+.addEventListener(
+"change",
+updateReportSummary
+);
+
+}
+);
+
+
+/* =====================================================
+PDF
 ===================================================== */
 
 $("generatePdf")
@@ -4013,19 +3797,7 @@ total/count
 0;
 
 
-$("reportCount")
-.textContent =
-count;
-
-
-$("reportTotal")
-.textContent =
-money(total);
-
-
-$("reportAverage")
-.textContent =
-money(average);
+updateReportSummary();
 
 
 try{
@@ -4045,9 +3817,9 @@ doc.internal.pageSize.getWidth();
 
 
 doc.setFillColor(
-11,
-18,
-32
+8,
+17,
+31
 );
 
 doc.rect(
@@ -4105,7 +3877,7 @@ doc.setFontSize(10);
 let y=45;
 
 
-const selectedWorker =
+const selected =
 $("reportWorker")
 selectedOptions[0]
 .textContent;
@@ -4113,7 +3885,7 @@ selectedOptions[0]
 
 doc.text(
 "Worker: " +
-selectedWorker,
+selected,
 14,
 y
 );
@@ -4198,7 +3970,6 @@ y
 );
 
 y += 8;
-
 
 doc.setFont(
 "helvetica",
@@ -4314,66 +4085,7 @@ error.message,
 
 
 /* =====================================================
-   REPORT FILTER CHANGE
-===================================================== */
-
-[
-"reportWorker",
-"reportFrom",
-"reportTo"
-]
-.forEach(
-id => {
-
-$(id)
-.addEventListener(
-"change",
-function(){
-
-const data =
-getReportSales();
-
-
-const total =
-data.reduce(
-(sum,sale) =>
-sum +
-Number(
-sale.sale_amount || 0
-),
-0
-);
-
-
-$("reportCount")
-.textContent =
-data.length;
-
-
-$("reportTotal")
-.textContent =
-money(total);
-
-
-$("reportAverage")
-.textContent =
-money(
-data.length
-?
-total/data.length
-:
-0
-);
-
-}
-);
-
-}
-);
-
-
-/* =====================================================
-   COMMUNICATION
+COMMUNICATION RECIPIENTS
 ===================================================== */
 
 async function loadCommunicationRecipients(){
@@ -4385,7 +4097,7 @@ error
 await db
 .from("worker_profiles")
 .select(
-"worker_id,full_name,active,role"
+"user_id,worker_id,full_name,active,role"
 )
 .eq(
 "active",
@@ -4450,7 +4162,7 @@ option
 
 
 /* =====================================================
-   SEND MESSAGE
+COMMUNICATION
 ===================================================== */
 
 $("communicationForm")
@@ -4536,7 +4248,7 @@ headers:{
 session.access_token,
 
 "apikey":
-SUPABASE_ANON_KEY
+SUPABASE_PUBLISHABLE_KEY
 },
 
 body:
@@ -4609,7 +4321,7 @@ button.textContent =
 
 
 /* =====================================================
-   CHANGE PASSWORD
+CHANGE PASSWORD
 ===================================================== */
 
 $("passwordForm")
@@ -4666,9 +4378,7 @@ password:newPassword
 
 
 if(error){
-
 throw error;
-
 }
 
 
@@ -4699,7 +4409,7 @@ error.message ||
 
 
 /* =====================================================
-   REFRESH BUTTONS
+REFRESH
 ===================================================== */
 
 $("dashboardRefresh")
@@ -4756,7 +4466,7 @@ applySalesFilter
 
 
 /* =====================================================
-   AUTH STATE
+AUTH STATE
 ===================================================== */
 
 db.auth.onAuthStateChange(
@@ -4773,7 +4483,7 @@ showLogin();
 
 
 /* =====================================================
-   START
+START
 ===================================================== */
 
 checkAdmin();
