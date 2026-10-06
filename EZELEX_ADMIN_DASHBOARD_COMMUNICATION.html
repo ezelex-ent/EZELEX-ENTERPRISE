@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -32,7 +32,7 @@ table{width:100%;border-collapse:collapse;min-width:1050px}th,td{padding:11px;bo
 
 <main id="dashboard" class="wrap hidden"><div id="dashMsg"></div>
 <div class="nav">
-<button class="soft active" data-section="overview">Dashboard</button><button class="soft" data-section="sales">Sales</button><button class="soft" data-section="stock">Stock & Profit</button><button class="soft" data-section="workers">Workers</button><button class="soft" data-section="communication">Communication Centre</button><button class="soft" data-section="profile">Admin Profile</button><button class="soft" data-section="security">Security</button>
+<button class="soft active" data-section="overview">Dashboard</button><button class="soft" data-section="sales">Sales</button><button class="soft" data-section="stock">Stock & Profit</button><button class="soft" data-section="workers">Workers</button><button class="soft" data-section="profile">Admin Profile</button><button class="soft" data-section="security">Security</button>
 </div>
 
 <section id="overview" class="page">
@@ -72,16 +72,6 @@ table{width:100%;border-collapse:collapse;min-width:1050px}th,td{padding:11px;bo
 <div class="section"><h2>Worker Management</h2><button id="refreshWorkers" class="soft">Refresh Workers</button><div class="tablebox" style="margin-top:14px"><table><thead><tr><th>Worker ID</th><th>Name</th><th>Email</th><th>Phone</th><th>Contract</th><th>Status</th><th>Action</th></tr></thead><tbody id="workersBody"></tbody></table></div></div>
 </section>
 
-
-<section id="communication" class="page hidden">
-<div class="section"><h2>Worker Communication Centre</h2><p class="muted">Send an email message directly to one worker or all active workers.</p><div id="commMsg"></div>
-<div class="grid2"><div><label>Send To</label><select id="commRecipient"><option value="ALL">All Active Workers</option></select></div><div><label>Subject</label><input id="commSubject" maxlength="200" placeholder="EZELEX Update"></div></div>
-<label>Message</label><textarea id="commBody" maxlength="10000" style="min-height:160px" placeholder="Write your message to the worker..."></textarea>
-<button id="sendCommBtn" class="gold">Send Message</button>
-</div>
-<div class="section"><div style="display:flex;justify-content:space-between;align-items:center;gap:10px"><h2>Communication History</h2><button id="refreshComm" class="soft">Refresh</button></div><div class="tablebox"><table><thead><tr><th>Date</th><th>Recipient</th><th>Subject</th><th>Message</th><th>Status</th></tr></thead><tbody id="commBodyRows"></tbody></table></div></div>
-</section>
-
 <section id="profile" class="page hidden"><div class="section"><h2>Admin Profile</h2><div class="profile"><div class="avatar">AD</div><div><h2>EZELEX Administrator</h2><p><b>Admin ID:</b> ADMIN001</p><p><b>Email:</b> <span id="adminEmail">—</span></p><p><b>Status:</b> <span class="badge approved">ACTIVE</span></p><p class="muted">EZELEX ENTERPRISE • Administrator Account</p></div></div></div></section>
 <section id="security" class="page hidden"><div class="section"><h2>Security</h2><div id="securityMsg"></div><div class="grid2"><div><label>New Password</label><input id="newPass" type="password"></div><div><label>Confirm Password</label><input id="confirmPass" type="password"></div></div><button id="changePass" class="primary">Change Password</button></div></section>
 </main>
@@ -102,7 +92,7 @@ async function adminCheck(){
  const {data:{session:s}}=await db.auth.getSession();session=s;if(!s){showLogin();return false}
  let {data}=await db.from("worker_profiles").select("*").eq("user_id",s.user.id).maybeSingle();
  if(!data||data.role!=="admin"||!data.active){await db.auth.signOut();showLogin();msg("loginMsg","This account does not have active EZELEX admin access.","error");return false}
- $("loginSection").classList.add("hidden");$("dashboard").classList.remove("hidden");$("logoutBtn").classList.remove("hidden");$("adminEmail").textContent=s.user.email||"";await loadWorkers();await Promise.all([loadSales(),loadInventory()]);await loadCommunication();return true
+ $("loginSection").classList.add("hidden");$("dashboard").classList.remove("hidden");$("logoutBtn").classList.remove("hidden");$("adminEmail").textContent=s.user.email||"";await loadWorkers();await Promise.all([loadSales(),loadInventory()]);return true
 }
 function showLogin(){$("loginSection").classList.remove("hidden");$("dashboard").classList.add("hidden");$("logoutBtn").classList.add("hidden")}
 async function loadWorkers(){
@@ -137,20 +127,6 @@ function updateInventorySummary(){
 }
 function renderWorkers(){$("workersBody").innerHTML=workers.length?workers.map(w=>`<tr><td>${esc(w.worker_id||"")}</td><td>${esc(w.full_name||"")}</td><td>${esc(w.email||"")}</td><td>${esc(w.phone||"")}</td><td>${esc(w.contract_start||"")} → ${esc(w.contract_end||"")}</td><td><span class="badge ${w.active?"approved":"rejected"}">${w.active?"ACTIVE":"INACTIVE"}</span></td><td><button class="danger" onclick="deleteWorker('${esc(w.user_id||w.id)}','${esc(w.worker_id||"")}')">Delete</button></td></tr>`).join(""):'<tr><td colspan="7" class="empty">No workers found.</td></tr>'}
 window.deleteWorker=async(uid,wid)=>{if(wid==="ADMIN001"){alert("ADMIN001 cannot be deleted.");return}if(!confirm(`Delete worker ${wid}? This will remove the worker profile, sales and login account.`))return;const {data:{session:s}}=await db.auth.getSession();const r=await fetch("https://hweczhwoggmsrwhkktrx.supabase.co/functions/v1/delete-worker",{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+s.access_token},body:JSON.stringify({user_id:uid})});let j={};try{j=await r.json()}catch{}if(!r.ok){msg("workerMsg",j.error||"Could not delete worker.","error");return}msg("workerMsg","Worker deleted successfully.","ok");await loadWorkers();await Promise.all([loadSales(),loadInventory()])}
-async function loadCommunication(){
- const r=await db.from("communications").select("*").order("created_at",{ascending:false}).limit(100);
- if(r.error){$("commBodyRows").innerHTML='<tr><td colspan="5" class="empty">Communication history is not available yet.</td></tr>';return}
- const rows=r.data||[];$("commBodyRows").innerHTML=rows.length?rows.map(x=>`<tr><td>${esc(dateOnly(x.created_at))}</td><td>${esc(x.worker_id||"All active workers")}</td><td>${esc(x.subject||"")}</td><td>${esc(x.message||"")}</td><td>${esc(x.status||"sent")}</td></tr>`).join(""):'<tr><td colspan="5" class="empty">No messages sent yet.</td></tr>';
-}
-$("sendCommBtn").onclick=async()=>{
- const worker_id=$("commRecipient").value,subject=$("commSubject").value.trim(),message=$("commBody").value.trim();
- if(!subject||!message){msg("commMsg","Subject and message are required.","error");return}
- const {data:{session:s}}=await db.auth.getSession(); if(!s){msg("commMsg","Your admin session has expired. Please sign in again.","error");return}
- msg("commMsg","Sending message...");
- try{const response=await fetch(SUPABASE_URL+"/functions/v1/send-worker-message",{method:"POST",headers:{"Authorization":"Bearer "+s.access_token,"apikey":SUPABASE_PUBLISHABLE_KEY,"Content-Type":"application/json"},body:JSON.stringify({worker_id,subject,message})});const result=await response.json().catch(()=>({}));if(!response.ok||!result.success){msg("commMsg",result.error||"Could not send message.","error");return}msg("commMsg",result.message||"Message sent successfully.","ok");$("commSubject").value="";$("commBody").value="";await loadCommunication()}catch(e){msg("commMsg",e.message||"Could not reach messaging service.","error")}
-};
-$("refreshComm").onclick=loadCommunication;
-
 $("createWorkerBtn").onclick=async()=>{const p={worker_id:$("wId").value.trim(),full_name:$("wName").value.trim(),phone:$("wPhone").value.trim(),email:$("wEmail").value.trim(),contract_start:$("wStart").value,contract_end:$("wEnd").value};if(!p.worker_id||!p.full_name||!p.email){msg("workerMsg","Worker ID, full name and email are required.","error");return}const {data:{session:s}}=await db.auth.getSession();msg("workerMsg","Creating worker and sending welcome email...");const r=await fetch("https://hweczhwoggmsrwhkktrx.supabase.co/functions/v1/create-worker",{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+s.access_token},body:JSON.stringify(p)});let j={};try{j=await r.json()}catch{}if(!r.ok){msg("workerMsg",j.error||"Could not create worker.","error");return}msg("workerMsg","Worker created successfully. Welcome email sent.","ok");["wId","wName","wPhone","wEmail","wStart","wEnd"].forEach(id=>$(id).value="");await loadWorkers()}
 $("loginBtn").onclick=async()=>{msg("loginMsg","Signing in...");const r=await db.auth.signInWithPassword({email:$("email").value.trim(),password:$("password").value});if(r.error){msg("loginMsg",r.error.message,"error");return}await adminCheck()}
 $("forgotBtn").onclick=async()=>{const email=$("email").value.trim();if(!email){msg("loginMsg","Enter your admin email first.","error");return}const r=await db.auth.resetPasswordForEmail(email,{redirectTo:location.href});msg("loginMsg",r.error?r.error.message:"Password recovery email sent. Check your inbox.",r.error?"error":"ok")}
