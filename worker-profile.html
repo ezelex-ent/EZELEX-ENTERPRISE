@@ -5,47 +5,16 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Ezelex Enterprise - Worker Profile</title>
 <style>
-*{box-sizing:border-box}
-body{margin:0;font-family:Arial,sans-serif;background:#f4f7fb;color:#1f2937}
-header{background:#111827;color:#fff;padding:18px 20px;text-align:center}
-header h1{margin:0;font-size:24px}
-header p{margin:6px 0 0;color:#d1d5db}
-.container{max-width:700px;margin:35px auto;padding:0 18px}
-.card{background:#fff;border-radius:14px;padding:25px;box-shadow:0 5px 20px rgba(0,0,0,.08)}
-h2{margin-top:0}
-.status{padding:12px;border-radius:8px;background:#f3f4f6;margin-bottom:20px}
-.row{display:flex;justify-content:space-between;gap:20px;padding:14px 0;border-bottom:1px solid #e5e7eb}
-.label{font-weight:bold;color:#6b7280}
-.value{text-align:right;word-break:break-word}
-.buttons{display:flex;gap:10px;flex-wrap:wrap;margin-top:25px}
-button,a.button{border:none;padding:12px 18px;border-radius:8px;cursor:pointer;text-decoration:none;font-weight:bold;display:inline-block}
-.logout{background:#dc2626;color:white}
-.home{background:#111827;color:white}
-.portal{background:#2563eb;color:white}
-.error{color:#b91c1c;background:#fee2e2;padding:12px;border-radius:8px}
-.loading{color:#4b5563}
-@media(max-width:600px){
-.row{flex-direction:column;gap:5px}
-.value{text-align:left}
-.buttons{flex-direction:column}
-button,a.button{width:100%;text-align:center}
-}
+*{box-sizing:border-box}body{margin:0;font-family:Arial,sans-serif;background:#f4f7fb;color:#1f2937}header{background:#111827;color:#fff;padding:18px 20px;text-align:center}header h1{margin:0;font-size:24px}header p{margin:6px 0 0;color:#d1d5db}.container{max-width:760px;margin:28px auto;padding:0 18px}.card{background:#fff;border-radius:14px;padding:24px;box-shadow:0 5px 20px rgba(0,0,0,.08);margin-bottom:18px}h2{margin-top:0}.status{padding:12px;border-radius:8px;background:#f3f4f6;margin-bottom:20px}.row{display:flex;justify-content:space-between;gap:20px;padding:14px 0;border-bottom:1px solid #e5e7eb}.label{font-weight:bold;color:#6b7280}.value{text-align:right;word-break:break-word}.buttons{display:flex;gap:10px;flex-wrap:wrap;margin-top:25px}button,a.button{border:none;padding:12px 18px;border-radius:8px;cursor:pointer;text-decoration:none;font-weight:bold;display:inline-block}.home{background:#111827;color:#fff}.portal{background:#2563eb;color:#fff}.settings{background:#7c3aed;color:#fff}.back{background:#6b7280;color:#fff}.danger{background:#dc2626;color:#fff}.option{display:block;width:100%;text-align:left;background:#f8fafc;border:1px solid #e5e7eb;color:#111827;margin:10px 0;padding:17px;border-radius:10px;font-size:16px}.option strong{display:block;margin-bottom:4px}.option span{font-weight:normal;color:#6b7280;font-size:13px}.hidden{display:none}.error{color:#b91c1c;background:#fee2e2;padding:12px;border-radius:8px}.ok{color:#166534;background:#dcfce7;padding:12px;border-radius:8px}.loading{color:#4b5563}.message{border:1px solid #e5e7eb;border-radius:10px;padding:16px;margin:12px 0;background:#fafafa}.message h3{margin:0 0 7px;font-size:16px}.message .date{font-size:12px;color:#6b7280;margin-bottom:10px}.message .body{white-space:pre-wrap;line-height:1.55}.empty{text-align:center;color:#6b7280;padding:25px}.password-grid{display:grid;gap:10px}.password-grid input{width:100%;padding:12px;border:1px solid #d1d5db;border-radius:8px}.section-title{display:flex;justify-content:space-between;align-items:center;gap:10px}.small{font-size:13px;color:#6b7280}@media(max-width:600px){.row{flex-direction:column;gap:5px}.value{text-align:left}.buttons{flex-direction:column}button,a.button{width:100%;text-align:center}.section-title{align-items:flex-start;flex-direction:column}}
 </style>
 </head>
 <body>
-
-<header>
-<h1>Ezelex Enterprise</h1>
-<p>Worker Profile</p>
-</header>
-
+<header><h1>Ezelex Enterprise</h1><p>Worker Profile</p></header>
 <div class="container">
-<div class="card">
+<div class="card" id="mainCard">
 <h2>Welcome, Worker</h2>
-
 <div id="message" class="status loading">Loading your worker profile...</div>
-
-<div id="profile" style="display:none;">
+<div id="profile" class="hidden">
 <div class="row"><div class="label">Worker ID</div><div class="value" id="workerId"></div></div>
 <div class="row"><div class="label">Full Name</div><div class="value" id="fullName"></div></div>
 <div class="row"><div class="label">Phone</div><div class="value" id="phone"></div></div>
@@ -54,71 +23,48 @@ button,a.button{width:100%;text-align:center}
 <div class="row"><div class="label">Contract Start</div><div class="value" id="contractStart"></div></div>
 <div class="row"><div class="label">Contract End</div><div class="value" id="contractEnd"></div></div>
 <div class="row"><div class="label">Login Email</div><div class="value" id="email"></div></div>
-
 <div class="buttons">
 <a class="button portal" href="https://ezelexenterprise.com/EZELEX_WORKER_PORTAL.html">Worker Portal</a>
 <a class="button home" href="https://ezelexenterprise.com">Home</a>
-<button class="logout" id="logoutBtn">Logout</button>
+<button class="settings" id="settingsBtn">Settings</button>
+</div></div></div>
+
+<div class="card hidden" id="settingsCard">
+<div id="settingsHome">
+<h2>Settings</h2><p class="small">Your worker settings and account options are kept together here.</p>
+<button class="option" onclick="openSection('myProfile')"><strong>👤 My Profile</strong><span>View your worker details and change your password.</span></button>
+<button class="option" onclick="openSection('myContract')"><strong>📄 My Contract</strong><span>View your contract dates and worker information.</span></button>
+<button class="option" onclick="openSection('communication')"><strong>💬 Communication</strong><span>Read messages sent to you by Ezelex Enterprise.</span></button>
+<button class="option" onclick="logout()"><strong>🚪 Log out</strong><span>Securely sign out of your worker account.</span></button>
+<div class="buttons"><button class="back" onclick="closeSettings()">Back to Dashboard</button></div>
 </div>
-</div>
-</div>
-</div>
+
+<div id="myProfile" class="hidden"><div class="section-title"><h2>My Profile</h2><button class="back" onclick="showSettingsHome()">Back to Settings</button></div><div id="profileDetails"></div><hr style="border:0;border-top:1px solid #e5e7eb;margin:24px 0"><h3>Change Password</h3><p class="small">Use at least 8 characters.</p><div class="password-grid"><input id="newPass" type="password" placeholder="New password"><input id="confirmPass" type="password" placeholder="Confirm new password"><button class="settings" onclick="changePassword()">Change Password</button></div><div id="passMsg" style="margin-top:12px"></div></div>
+
+<div id="myContract" class="hidden"><div class="section-title"><h2>My Contract</h2><button class="back" onclick="showSettingsHome()">Back to Settings</button></div><div id="contractDetails"></div></div>
+
+<div id="communication" class="hidden"><div class="section-title"><h2>Communication</h2><button class="back" onclick="showSettingsHome()">Back to Settings</button></div><p class="small">Messages sent by Ezelex Enterprise to your registered email are also shown here. They are delivered to your email inbox and stored here for easy access.</p><div id="commMsg" class="status loading">Loading messages...</div><div id="messagesList"></div></div>
+</div></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
 const SUPABASE_URL="https://hweczhwoggmsrwhkktrx.supabase.co";
 const SUPABASE_KEY="sb_publishable_D0o90HRJ1AfROf_DAj7ZAg_uaPDwqvV";
 const supabaseClient=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
-
-async function loadWorkerProfile(){
-const message=document.getElementById("message");
-const profile=document.getElementById("profile");
-try{
-const {data:{user},error:authError}=await supabaseClient.auth.getUser();
-if(authError)throw authError;
-if(!user){
-window.location.href="https://ezelexenterprise.com/EZELEX_WORKER_PORTAL.html";
-return;
-}
-
-const {data,error}=await supabaseClient
-.from("worker_profiles")
-.select("user_id,worker_id,full_name,phone,role,active,contract_start,contract_end")
-.eq("user_id",user.id)
-.maybeSingle();
-
-if(error)throw error;
-
-if(!data){
-message.className="error";
-message.textContent="Your login is successful, but your worker profile has not been linked to this account yet.";
-return;
-}
-
-document.getElementById("workerId").textContent=data.worker_id||"-";
-document.getElementById("fullName").textContent=data.full_name||"-";
-document.getElementById("phone").textContent=data.phone||"-";
-document.getElementById("role").textContent=data.role||"-";
-document.getElementById("active").textContent=data.active?"Active":"Inactive";
-document.getElementById("contractStart").textContent=data.contract_start||"-";
-document.getElementById("contractEnd").textContent=data.contract_end||"-";
-document.getElementById("email").textContent=user.email||"-";
-
-message.style.display="none";
-profile.style.display="block";
-}catch(error){
-console.error(error);
-message.className="error";
-message.textContent="Unable to load your worker profile. Please try again.";
-}
-}
-
-document.getElementById("logoutBtn").addEventListener("click",async()=>{
-await supabaseClient.auth.signOut();
-window.location.href="https://ezelexenterprise.com/EZELEX_WORKER_PORTAL.html";
-});
-
+let currentUser=null, workerData=null;
+const $=id=>document.getElementById(id);
+function esc(v){return String(v??'').replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#039;','"':'&quot;'}[c]));}
+async function loadWorkerProfile(){try{const {data:{user},error:ae}=await supabaseClient.auth.getUser();if(ae)throw ae;if(!user){location.href='https://ezelexenterprise.com/EZELEX_WORKER_PORTAL.html';return}currentUser=user;const {data,error}=await supabaseClient.from('worker_profiles').select('user_id,worker_id,full_name,phone,role,active,contract_start,contract_end').eq('user_id',user.id).maybeSingle();if(error)throw error;if(!data){$('message').className='error';$('message').textContent='Your login is successful, but your worker profile has not been linked to this account yet.';return}workerData=data;$('workerId').textContent=data.worker_id||'-';$('fullName').textContent=data.full_name||'-';$('phone').textContent=data.phone||'-';$('role').textContent=data.role||'-';$('active').textContent=data.active?'Active':'Inactive';$('contractStart').textContent=data.contract_start||'-';$('contractEnd').textContent=data.contract_end||'-';$('email').textContent=user.email||'-';renderProfile();renderContract();$('message').style.display='none';$('profile').classList.remove('hidden');}catch(e){console.error(e);$('message').className='error';$('message').textContent='Unable to load your worker profile. Please try again.';}}
+function renderProfile(){$('profileDetails').innerHTML=`<div class="row"><div class="label">Worker ID</div><div class="value">${esc(workerData.worker_id||'-')}</div></div><div class="row"><div class="label">Full Name</div><div class="value">${esc(workerData.full_name||'-')}</div></div><div class="row"><div class="label">Phone</div><div class="value">${esc(workerData.phone||'-')}</div></div><div class="row"><div class="label">Role</div><div class="value">${esc(workerData.role||'-')}</div></div><div class="row"><div class="label">Status</div><div class="value">${workerData.active?'Active':'Inactive'}</div></div><div class="row"><div class="label">Login Email</div><div class="value">${esc(currentUser?.email||'-')}</div></div>`;}
+function renderContract(){$('contractDetails').innerHTML=`<div class="row"><div class="label">Worker ID</div><div class="value">${esc(workerData.worker_id||'-')}</div></div><div class="row"><div class="label">Full Name</div><div class="value">${esc(workerData.full_name||'-')}</div></div><div class="row"><div class="label">Role</div><div class="value">${esc(workerData.role||'-')}</div></div><div class="row"><div class="label">Contract Start</div><div class="value">${esc(workerData.contract_start||'-')}</div></div><div class="row"><div class="label">Contract End</div><div class="value">${esc(workerData.contract_end||'-')}</div></div>`;}
+function hideSections(){['myProfile','myContract','communication'].forEach(id=>$(id).classList.add('hidden'));$('settingsHome').classList.remove('hidden');}
+function openSection(id){$('settingsHome').classList.add('hidden');['myProfile','myContract','communication'].forEach(x=>$(x).classList.add('hidden'));$(id).classList.remove('hidden');if(id==='communication')loadMessages();}
+function showSettingsHome(){hideSections();}
+function closeSettings(){$('settingsCard').classList.add('hidden');$('mainCard').classList.remove('hidden');hideSections();}
+$('settingsBtn').onclick=()=>{$('mainCard').classList.add('hidden');$('settingsCard').classList.remove('hidden');hideSections();};
+async function changePassword(){const a=$('newPass').value,b=$('confirmPass').value;if(a.length<8){$('passMsg').className='error';$('passMsg').textContent='Password must be at least 8 characters.';return}if(a!==b){$('passMsg').className='error';$('passMsg').textContent='Passwords do not match.';return}const {error}=await supabaseClient.auth.updateUser({password:a});$('passMsg').className=error?'error':'ok';$('passMsg').textContent=error?error.message:'Password changed successfully.';if(!error){$('newPass').value='';$('confirmPass').value='';}}
+async function loadMessages(){const box=$('messagesList');$('commMsg').className='status loading';$('commMsg').textContent='Loading messages...';box.innerHTML='';const {data,error}=await supabaseClient.from('worker_messages').select('id,subject,message,sent_at,created_at').eq('worker_id',currentUser.id).order('sent_at',{ascending:false});if(error){$('commMsg').className='error';$('commMsg').textContent='Communication is not available yet. Please contact Ezelex Enterprise if this continues.';return}if(!data?.length){$('commMsg').className='status';$('commMsg').textContent='No messages yet.';return}$('commMsg').className='ok';$('commMsg').textContent=`${data.length} message${data.length===1?'':'s'} available.`;box.innerHTML=data.map(m=>`<div class="message"><h3>${esc(m.subject||'Ezelex Enterprise')}</h3><div class="date">${esc(new Date(m.sent_at||m.created_at).toLocaleString())}</div><div class="body">${esc(m.message||'')}</div></div>`).join('');}
+async function logout(){await supabaseClient.auth.signOut();location.href='https://ezelexenterprise.com/EZELEX_WORKER_PORTAL.html';}
 loadWorkerProfile();
 </script>
-</body>
-</html>
+</body></html>
