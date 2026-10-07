@@ -291,16 +291,22 @@ async function start(){
 async function loadProfile(user){
   currentUser=user;
   const {data,error}=await db.from("worker_profiles")
-    .select("user_id,worker_id,full_name,phone,role,active,contract_start,contract_end")
+    .select("user_id,worker_id,full_name,phone,role,active,activated_at,contract_start,contract_end")
     .eq("user_id",user.id).maybeSingle();
 
-  if(error||!data||!data.active||String(data.role||"").toLowerCase()==="admin"){
+  if(error||!data||String(data.role||"").toLowerCase()==="admin"){
     await db.auth.signOut();
     showLogin();
-    msg("loginMsg","This account is not an active worker account.","error");
+    msg("loginMsg","This account is not a worker account.","error");
     return;
   }
-
+  if(!data.activated_at){
+    const activation=await db.from("worker_profiles").update({active:true,activated_at:new Date().toISOString()}).eq("user_id",user.id).is("activated_at",null).select("user_id,active,activated_at").maybeSingle();
+    if(activation.error||!activation.data){await db.auth.signOut();showLogin();msg("loginMsg","Your worker account could not be activated. Please contact Ezelex Enterprise admin.","error");return;}
+    data.active=true; data.activated_at=activation.data.activated_at;
+  }else if(!data.active){
+    await db.auth.signOut(); showLogin(); msg("loginMsg","Your worker account is inactive. Please contact Ezelex Enterprise admin.","error"); return;
+  }
   profile=data;
   showPortal();
 
