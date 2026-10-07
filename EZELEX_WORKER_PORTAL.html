@@ -70,6 +70,27 @@ th,td{padding:11px;border-bottom:1px solid #eee;text-align:left;font-size:14px}t
   <label>Password</label>
   <input id="password" type="password" placeholder="Password">
   <button id="loginBtn" class="primary" style="width:100%">Sign in</button>
+  <button id="forgotBtn" class="secondary" type="button" style="width:100%;margin-top:10px">Forgot password?</button>
+  <div id="forgotBox" class="hidden" style="margin-top:18px">
+    <hr>
+    <h3>Reset your password</h3>
+    <p>Enter your worker email and Ezelex Enterprise will send you a password reset link.</p>
+    <input id="resetEmail" type="email" placeholder="Worker email">
+    <button id="sendResetBtn" class="primary" type="button" style="width:100%">Send Reset Link</button>
+    <button id="backLoginBtn" class="secondary" type="button" style="width:100%;margin-top:8px">Back to Sign In</button>
+    <div id="resetMsg"></div>
+  </div>
+</section>
+
+<section id="passwordRecovery" class="login hidden">
+  <h2>Set New Password</h2>
+  <p>Choose a new password for your Ezelex Enterprise worker account.</p>
+  <div id="recoveryMsg"></div>
+  <label>New Password</label>
+  <input id="newPassword" type="password" placeholder="New password" minlength="6">
+  <label>Confirm Password</label>
+  <input id="confirmPassword" type="password" placeholder="Confirm password" minlength="6">
+  <button id="updatePasswordBtn" class="primary" type="button" style="width:100%">Update Password</button>
 </section>
 
 <main id="portal" class="wrap hidden">
@@ -436,10 +457,57 @@ $("saleForm").onsubmit=async(e)=>{
 
 $("loginBtn").onclick=async()=>{
   msg("loginMsg","Signing in...");
-  const {data,error}=await db.auth.signInWithPassword({email:$("email").value.trim(),password:$("password").value});
-  if(error){msg("loginMsg",error.message,"error");return;}
+  const email=$("email").value.trim();
+  const password=$("password").value;
+  if(!email||!password){msg("loginMsg","Enter your email and password.","error");return;}
+  const {data,error}=await db.auth.signInWithPassword({email,password});
+  if(error){
+    const detail=(error.message||"").toLowerCase();
+    if(detail.includes("invalid api key")){
+      msg("loginMsg","The Supabase API key used by this website is no longer valid. The login code is correct, but the project key needs to be updated in this file.","error");
+    }else{
+      msg("loginMsg",error.message,"error");
+    }
+    return;
+  }
   await loadProfile(data.user);
 };
+
+$("forgotBtn").onclick=()=>{
+  $("forgotBox").classList.remove("hidden");
+  $("resetEmail").value=$("email").value.trim();
+  $("resetEmail").focus();
+};
+$("backLoginBtn").onclick=()=>{$("forgotBox").classList.add("hidden");$("resetMsg").innerHTML="";};
+$("sendResetBtn").onclick=async()=>{
+  const email=$("resetEmail").value.trim();
+  if(!email){msg("resetMsg","Enter your worker email.","error");return;}
+  msg("resetMsg","Sending reset link...");
+  const {error}=await db.auth.resetPasswordForEmail(email,{redirectTo:"https://ezelexenterprise.com/EZELEX_WORKER_PORTAL.html"});
+  if(error){msg("resetMsg",error.message,"error");return;}
+  msg("resetMsg","Password reset link sent. Check your email and follow the link.","success");
+};
+
+$("updatePasswordBtn").onclick=async()=>{
+  const p=$("newPassword").value;
+  const c=$("confirmPassword").value;
+  if(p.length<6){msg("recoveryMsg","Password must be at least 6 characters.","error");return;}
+  if(p!==c){msg("recoveryMsg","The passwords do not match.","error");return;}
+  msg("recoveryMsg","Updating password...");
+  const {error}=await db.auth.updateUser({password:p});
+  if(error){msg("recoveryMsg",error.message,"error");return;}
+  msg("recoveryMsg","Password updated successfully. You can now sign in.","success");
+  setTimeout(async()=>{await db.auth.signOut();$("passwordRecovery").classList.add("hidden");showLogin();$("loginMsg").innerHTML='<div class="msg success">Password updated. Please sign in with your new password.</div>';},900);
+};
+
+db.auth.onAuthStateChange((event,session)=>{
+  if(event==="PASSWORD_RECOVERY"){
+    $("loginSection").classList.add("hidden");
+    $("portal").classList.add("hidden");
+    $("logoutBtn").classList.add("hidden");
+    $("passwordRecovery").classList.remove("hidden");
+  }
+});
 
 $("logoutBtn").onclick=async()=>{await db.auth.signOut();profile=null;currentUser=null;showLogin();};
 
