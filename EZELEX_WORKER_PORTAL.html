@@ -3,185 +3,456 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Ezelex Enterprise - Worker Portal</title>
+<title>Ezelex Enterprise — Worker Dashboard</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
 *{box-sizing:border-box}
-body{
-  margin:0;
-  font-family:Arial,sans-serif;
-  background:#f4f7fb;
-  color:#1f2937;
-  min-height:100vh;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-}
-.container{width:100%;max-width:430px;padding:20px}
-.card{
-  background:#fff;
-  border-radius:16px;
-  padding:30px;
-  box-shadow:0 8px 30px rgba(0,0,0,.10);
-}
-.logo{text-align:center;margin-bottom:25px}
-.logo h1{margin:0;color:#111827;font-size:28px}
-.logo p{margin:7px 0 0;color:#6b7280}
-h2{text-align:center;margin:0 0 22px}
-label{display:block;font-weight:bold;margin:14px 0 7px}
-input{
-  width:100%;
-  padding:13px;
-  border:1px solid #d1d5db;
-  border-radius:8px;
-  font-size:16px;
-}
-input:focus{outline:none;border-color:#2563eb}
-button{
-  width:100%;
-  margin-top:22px;
-  padding:14px;
-  border:0;
-  border-radius:8px;
-  background:#2563eb;
-  color:#fff;
-  font-size:16px;
-  font-weight:bold;
-  cursor:pointer;
-}
-button:disabled{opacity:.6;cursor:not-allowed}
-.message{
-  display:none;
-  margin-top:15px;
-  padding:12px;
-  border-radius:8px;
-  font-size:14px;
-}
-.error{display:block;background:#fee2e2;color:#b91c1c}
-.success{display:block;background:#dcfce7;color:#166534}
-.home{
-  display:block;
-  text-align:center;
-  margin-top:20px;
-  color:#2563eb;
-  text-decoration:none;
-  font-weight:bold;
-}
-.small{text-align:center;color:#6b7280;font-size:13px;margin-top:18px}
+body{margin:0;font-family:Arial,sans-serif;background:#f4f6f8;color:#17202a}
+header{background:#111827;color:#fff;padding:18px 5%;display:flex;justify-content:space-between;align-items:center;gap:15px;position:sticky;top:0;z-index:10}
+header h1{margin:0;font-size:22px}
+header small{display:block;color:#cbd5e1;margin-top:4px}
+button{border:0;border-radius:8px;padding:11px 16px;cursor:pointer;font-weight:700}
+.primary{background:#111827;color:#fff}.danger{background:#b42318;color:#fff}.secondary{background:#e5e7eb;color:#111827}
+.wrap{max-width:1150px;margin:25px auto;padding:0 16px}
+.login{max-width:430px;margin:60px auto;background:#fff;padding:30px;border-radius:14px;box-shadow:0 8px 30px #0001}
+.panel{background:#fff;padding:21px;border-radius:12px;margin-bottom:18px;box-shadow:0 3px 15px #0000000d}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:15px}
+label{font-weight:700;font-size:14px;display:block}
+input,select,textarea{width:100%;padding:12px;margin:7px 0 14px;border:1px solid #d5dbe1;border-radius:8px;font-size:15px}
+textarea{min-height:90px;resize:vertical}
+.full{grid-column:1/-1}
+.msg{padding:10px;border-radius:8px;margin:10px 0;background:#fef3c7}
+.error{background:#fee4e2;color:#912018}.success{background:#dcfae6;color:#067647}
+.hidden{display:none!important}
+.workerInfo{font-size:14px;line-height:1.7}
+.tabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:18px}
+.tab{background:#e5e7eb;color:#111827}.tab.active{background:#111827;color:#fff}
+.section{display:none}.section.active{display:block}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:18px}
+.stat{background:#f8fafc;border:1px solid #e5e7eb;border-radius:12px;padding:15px}
+.stat small{display:block;color:#64748b;font-weight:700;margin-bottom:6px}.stat strong{font-size:21px}
+.stockGrid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:15px 0}
+.stockCard{background:#f8fafc;border:1px solid #e5e7eb;border-radius:12px;padding:15px}
+.stockCard small{display:block;color:#64748b;font-weight:700;margin-bottom:6px}.stockCard strong{font-size:20px}
+.resultGrid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:15px}
+.resultCard{border-radius:12px;padding:16px;border:1px solid #e5e7eb;background:#fff}
+.resultCard h3{margin:0 0 7px;font-size:14px;color:#475569}.resultCard strong{font-size:21px}
+.profit{background:#ecfdf3;border-color:#a7f3d0}.loss{background:#fff1f2;border-color:#fecdd3}
+.live{font-size:13px;color:#475569;margin-top:8px}
+.stockNote{background:#fffbeb;border:1px solid #fde68a;padding:12px;border-radius:10px;font-size:13px;line-height:1.5}
+.tablebox{overflow:auto}table{width:100%;border-collapse:collapse;min-width:700px}
+th,td{padding:11px;border-bottom:1px solid #eee;text-align:left;font-size:14px}th{background:#f8fafc}
+.badge{display:inline-block;padding:5px 9px;border-radius:99px;background:#dcfae6;color:#067647;font-size:12px;font-weight:700}
+.cardrow{display:grid;grid-template-columns:repeat(2,1fr);gap:15px}
+.infoBox{background:#f8fafc;border-radius:10px;padding:14px;line-height:1.7}
+.message{padding:13px;border:1px solid #e5e7eb;border-radius:10px;margin-bottom:10px}
+.message h4{margin:0 0 5px}.message small{color:#64748b}
+@media(max-width:900px){.stats,.stockGrid{grid-template-columns:1fr 1fr}.resultGrid{grid-template-columns:1fr 1fr}}
+@media(max-width:700px){.grid,.cardrow{grid-template-columns:1fr}.full{grid-column:auto}.login{margin:30px 15px}.wrap{padding:0 12px}.stats,.stockGrid,.resultGrid{grid-template-columns:1fr}}
 </style>
 </head>
-
 <body>
-<div class="container">
-  <div class="card">
 
-    <div class="logo">
-      <h1>Ezelex Enterprise</h1>
-      <p>Worker Portal</p>
-    </div>
-
-    <h2>Worker Login</h2>
-
-    <form id="loginForm">
-      <label for="email">Email Address</label>
-      <input
-        type="email"
-        id="email"
-        placeholder="Enter your email"
-        autocomplete="email"
-        required
-      >
-
-      <label for="password">Password</label>
-      <input
-        type="password"
-        id="password"
-        placeholder="Enter your password"
-        autocomplete="current-password"
-        required
-      >
-
-      <button type="submit" id="loginBtn">Login</button>
-
-      <div id="message" class="message"></div>
-    </form>
-
-    <a class="home" href="https://ezelexenterprise.com">
-      Back to Ezelex Enterprise
-    </a>
-
-    <div class="small">
-      Ezelex Enterprise Worker Access
-    </div>
-
+<header>
+  <div>
+    <h1>Ezelex Enterprise</h1>
+    <small>Worker Dashboard</small>
   </div>
-</div>
+  <button id="logoutBtn" class="danger hidden">Log out</button>
+</header>
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<section id="loginSection" class="login">
+  <h2>Worker Login</h2>
+  <p>Sign in with your Ezelex Enterprise worker account.</p>
+  <div id="loginMsg"></div>
+  <label>Email</label>
+  <input id="email" type="email" placeholder="Worker email">
+  <label>Password</label>
+  <input id="password" type="password" placeholder="Password">
+  <button id="loginBtn" class="primary" style="width:100%">Sign in</button>
+</section>
+
+<main id="portal" class="wrap hidden">
+  <div class="panel">
+    <h2>Welcome, <span id="workerName">Worker</span> 👋</h2>
+    <div class="workerInfo">
+      <strong>Worker ID:</strong> <span id="workerId">—</span> &nbsp; | &nbsp;
+      <strong>Role:</strong> <span id="workerRole">—</span> &nbsp; | &nbsp;
+      <strong>Status:</strong> <span id="workerStatus" class="badge">—</span>
+    </div>
+    <div class="stats">
+      <div class="stat"><small>Today Sale</small><strong id="todaySales">GH₵0.00</strong></div>
+      <div class="stat"><small>This Week</small><strong id="weekSales">GH₵0.00</strong></div>
+      <div class="stat"><small>This Month</small><strong id="monthSales">GH₵0.00</strong></div>
+      <div class="stat"><small>All Time</small><strong id="allSales">GH₵0.00</strong></div>
+    </div>
+  </div>
+
+  <div class="tabs">
+    <button class="tab active" data-tab="dashboard">Dashboard</button>
+    <button class="tab" data-tab="sales">Record Sale</button>
+    <button class="tab" data-tab="stock">Live Stock</button>
+    <button class="tab" data-tab="profile">My Profile</button>
+    <button class="tab" data-tab="communication">Communication</button>
+    <button class="tab" data-tab="contract">My Contract</button>
+  </div>
+
+  <section id="dashboard" class="section active">
+    <div class="panel">
+      <h2>Worker Overview</h2>
+      <p>Your sales are sent to the central Ezelex Enterprise admin dashboard. Stock records are also saved centrally.</p>
+      <div class="cardrow">
+        <div class="infoBox"><strong>Worker account</strong><br><span id="dashEmail">—</span><br><span id="dashPhone">—</span></div>
+        <div class="infoBox"><strong>Last activity</strong><br><span id="lastActivity">Loading...</span></div>
+      </div>
+  </div>
+    <div class="panel">
+      <h2>Recent Sales</h2>
+      <div class="tablebox">
+        <table><thead><tr><th>Date</th><th>Customer</th><th>Product/Service</th><th>Qty</th><th>Amount</th><th>Payment</th></tr></thead>
+        <tbody id="recentSalesBody"><tr><td colspan="6">Loading...</td></tr></tbody></table>
+      </div>
+    </div>
+  </section>
+
+  <section id="sales" class="section">
+    <div class="panel">
+      <h2>Record a Sale</h2>
+      <div id="saleMsg"></div>
+      <form id="saleForm" class="grid">
+        <div><label>Sale Date</label><input id="saleDate" type="date" required></div>
+        <div><label>Customer / Reference</label><input id="customer" type="text" placeholder="Customer name or reference"></div>
+        <div><label>Product / Service</label><input id="product" type="text" placeholder="What was sold?" required></div>
+        <div><label>Quantity</label><input id="quantity" type="number" min="1" step="1" value="1" required></div>
+        <div><label>Sale Amount (GHS)</label><input id="amount" type="number" min="0" step="0.01" placeholder="0.00" required></div>
+        <div><label>Payment Method</label><select id="payment" required><option value="">Select payment method</option><option>Cash</option><option>Mobile Money</option><option>Bank Transfer</option><option>Card</option><option>Other</option></select></div>
+        <div class="full"><label>Notes</label><textarea id="notes" placeholder="Optional notes"></textarea></div>
+        <div class="full"><button class="primary" type="submit">Record Sale</button></div>
+      </form>
+    </div>
+    <div class="panel">
+      <h2>My Sales History</h2>
+      <div class="tablebox"><table><thead><tr><th>Date</th><th>Customer</th><th>Product/Service</th><th>Qty</th><th>Amount (GHS)</th><th>Payment</th><th>Notes</th></tr></thead>
+      <tbody id="salesBody"><tr><td colspan="7">Loading...</td></tr></tbody></table></div>
+    </div>
+  </section>
+
+  <section id="stock" class="section">
+    <div class="panel">
+      <h2>📦 Live Stock & Profit</h2>
+      <div class="stockNote"><strong>Live central stock:</strong> saved stock batches are loaded from Ezelex records. The summary below is calculated from the stock records belonging to your worker account.</div>
+      <div id="stockLiveMsg"></div>
+      <div class="stockGrid">
+        <div class="stockCard"><small>Current Units</small><strong id="liveUnits">0</strong><div id="liveUnitsLabel">remaining</div></div>
+        <div class="stockCard"><small>Stock Value</small><strong id="liveValue">GH₵0.00</strong><div>remaining value</div></div>
+        <div class="stockCard"><small>Sales Revenue</small><strong id="liveRevenue">GH₵0.00</strong><div>from stock records</div></div>
+        <div class="stockCard"><small>Profit / Loss</small><strong id="liveProfit">GH₵0.00</strong><div id="liveProfitLabel">current total</div></div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2>Add Stock Record</h2>
+      <div id="stockMsg"></div>
+      <form id="stockForm" class="grid">
+        <div><label>Stock Date</label><input id="stockDate" type="date" required></div>
+        <div><label>Product / Stock Item</label><input id="stockProduct" type="text" placeholder="e.g. Eggs - 30 crate" required></div>
+        <div><label>Total Quantity Bought</label><input id="stockTotal" type="number" min="0" step="1" placeholder="100" required></div>
+        <div><label>Total Purchase Cost (GHS)</label><input id="purchaseTotal" type="number" min="0" step="0.01" placeholder="4500" required></div>
+        <div><label>Selling Price Per Unit (GHS)</label><input id="sellPrice" type="number" min="0" step="0.01" placeholder="50" required></div>
+        <div><label>Sold Quantity</label><input id="stockSold" type="number" min="0" step="1" value="0"></div>
+        <div><label>Damage Quantity</label><input id="stockDamage" type="number" min="0" step="1" value="0"></div>
+        <div><label>Other Lost Quantity</label><input id="stockLoss" type="number" min="0" step="1" value="0"></div>
+        <div class="full"><label>Stock Notes</label><textarea id="stockNotes" placeholder="Optional notes about this stock batch"></textarea></div>
+      </form>
+      <div class="stockGrid">
+        <div class="stockCard"><small>Total</small><strong id="calcTotal">0 units</strong><div id="calcTotalValue">GH₵0.00</div></div>
+        <div class="stockCard"><small>Sold</small><strong id="calcSold">0 units</strong><div id="calcRevenue">GH₵0.00 revenue</div></div>
+        <div class="stockCard"><small>Remaining</small><strong id="calcRemaining">0 units</strong><div id="calcRemainingValue">GH₵0.00 stock value</div></div>
+        <div class="stockCard"><small>Unit Cost</small><strong id="calcUnitCost">GH₵0.00</strong><div>Cost per unit</div></div>
+      </div>
+      <div class="resultGrid">
+        <div class="resultCard"><h3>Cost of Sold Stock</h3><strong id="calcSoldCost">GH₵0.00</strong></div>
+        <div class="resultCard"><h3>Damage Value</h3><strong id="calcDamageValue">GH₵0.00</strong></div>
+        <div class="resultCard"><h3>Other Loss Value</h3><strong id="calcLossValue">GH₵0.00</strong></div>
+        <div class="resultCard"><h3>Sales Revenue</h3><strong id="calcSalesRevenue">GH₵0.00</strong></div>
+        <div class="resultCard" id="profitCard"><h3>Current Profit / Loss</h3><strong id="calcProfit">GH₵0.00</strong><div id="profitLabel" class="live">No sales/loss yet</div></div>
+        <div class="resultCard"><h3>Total Stock Accounted For</h3><strong id="calcAccounted">0 units</strong><div id="calcAccountedNote" class="live">Sold + damage + other loss</div></div>
+      </div>
+      <div style="margin-top:15px"><button id="saveStockBtn" class="primary" type="button">Save Stock Record</button></div>
+    </div>
+
+    <div class="panel">
+      <h2>My Stock Records</h2>
+      <div class="tablebox"><table><thead><tr><th>Date</th><th>Product</th><th>Total</th><th>Sold</th><th>Damage</th><th>Other Loss</th><th>Remaining</th><th>Profit/Loss</th></tr></thead>
+      <tbody id="stockBody"><tr><td colspan="8">Loading...</td></tr></tbody></table></div>
+    </div>
+  </section>
+
+  <section id="profile" class="section">
+    <div class="panel">
+      <h2>My Profile</h2>
+      <div class="infoBox">
+        <strong>Worker ID:</strong> <span id="profileWorkerId">—</span><br>
+        <strong>Full Name:</strong> <span id="profileFullName">—</span><br>
+        <strong>Phone:</strong> <span id="profilePhone">—</span><br>
+        <strong>Role:</strong> <span id="profileRole">—</span><br>
+        <strong>Status:</strong> <span id="profileActive">—</span><br>
+        <strong>Contract Start:</strong> <span id="profileStart">—</span><br>
+        <strong>Contract End:</strong> <span id="profileEnd">—</span><br>
+        <strong>Login Email:</strong> <span id="profileEmail">—</span>
+      </div>
+    </div>
+  </section>
+
+  <section id="communication" class="section">
+    <div class="panel">
+      <h2>📩 Communication</h2>
+      <p>Messages and announcements from Ezelex Enterprise will appear here when the communication records are available.</p>
+      <div id="messagesBody"><div class="message">No messages yet.</div></div>
+    </div>
+  </section>
+
+  <section id="contract" class="section">
+    <div class="panel">
+      <h2>📄 My Contract</h2>
+      <div class="infoBox">
+        <strong>Contract Start:</strong> <span id="contractStart">—</span><br>
+        <strong>Contract End:</strong> <span id="contractEnd">—</span>
+      </div>
+      <p style="margin-top:16px">Your contract details are linked to your worker profile. If Ezelex Enterprise has provided a contract document or link, it can be added here later without changing your worker login.</p>
+    </div>
+  </section>
+</main>
 
 <script>
-const SUPABASE_URL = "https://hweczhwoggmsrwhkktrx.supabase.co";
-const SUPABASE_KEY = "sb_publishable_D0o90HRJ1AfROf_DAj7ZAg_uaPDwqvV";
+const SUPABASE_URL="https://hweczhwoggmsrwhkktrx.supabase.co";
+const SUPABASE_PUBLISHABLE_KEY="sb_publishable_D0o90HR1AfROf_DAj7ZAg_uaPDwqvV";
+const {createClient}=supabase;
+const db=createClient(SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY);
+let profile=null;
+let currentUser=null;
 
-const supabaseClient = window.supabase.createClient(
-  SUPABASE_URL,
-  SUPABASE_KEY
-);
+const $=id=>document.getElementById(id);
+function msg(id,text,type=""){ $(id).innerHTML=text?`<div class="msg ${type}">${text}</div>`:""; }
+function today(){const d=new Date();return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");}
+function esc(v){return String(v??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[m]));}
+function money(v){return "GH₵"+Number(v||0).toLocaleString("en-GH",{minimumFractionDigits:2,maximumFractionDigits:2});}
+function num(id){const n=Number($(id).value);return Number.isFinite(n)&&n>=0?n:0;}
+function dateOnly(v){return v?String(v).slice(0,10):"—";}
 
-const form = document.getElementById("loginForm");
-const loginBtn = document.getElementById("loginBtn");
-const message = document.getElementById("message");
+function showLogin(){
+  $("loginSection").classList.remove("hidden");
+  $("portal").classList.add("hidden");
+  $("logoutBtn").classList.add("hidden");
+}
+function showPortal(){
+  $("loginSection").classList.add("hidden");
+  $("portal").classList.remove("hidden");
+  $("logoutBtn").classList.remove("hidden");
+}
 
-form.addEventListener("submit", async function(event) {
-  event.preventDefault();
+async function start(){
+  const {data:{session}}=await db.auth.getSession();
+  if(!session){showLogin();return;}
+  await loadProfile(session.user);
+}
 
-  const email = document.getElementById("email").value.trim();
-  const password = document.getElementById("password").value;
+async function loadProfile(user){
+  currentUser=user;
+  const {data,error}=await db.from("worker_profiles")
+    .select("user_id,worker_id,full_name,phone,role,active,contract_start,contract_end")
+    .eq("user_id",user.id).maybeSingle();
 
-  message.className = "message";
-  message.textContent = "";
-  loginBtn.disabled = true;
-  loginBtn.textContent = "Logging in...";
-
-  try {
-    const { data, error } =
-      await supabaseClient.auth.signInWithPassword({
-        email: email,
-        password: password
-      });
-
-    if (error) {
-      throw error;
-    }
-
-    if (!data.user) {
-      throw new Error("Login was not completed.");
-    }
-
-    message.className = "message success";
-    message.textContent = "Login successful. Opening your worker profile...";
-
-    setTimeout(() => {
-      window.location.href =
-        "https://ezelexenterprise.com/worker-profile.html";
-    }, 500);
-
-  } catch (error) {
-    console.error(error);
-
-    message.className = "message error";
-
-    if (error.message) {
-      message.textContent = error.message;
-    } else {
-      message.textContent =
-        "Login failed. Please check your email and password.";
-    }
-
-    loginBtn.disabled = false;
-    loginBtn.textContent = "Login";
+  if(error||!data||!data.active||String(data.role||"").toLowerCase()==="admin"){
+    await db.auth.signOut();
+    showLogin();
+    msg("loginMsg","This account is not an active worker account.","error");
+    return;
   }
-});
-</script>
 
+  profile=data;
+  showPortal();
+
+  $("workerName").textContent=data.full_name||"Worker";
+  $("workerId").textContent=data.worker_id||"—";
+  $("workerRole").textContent=data.role||"worker";
+  $("workerStatus").textContent=data.active?"Active":"Inactive";
+  $("saleDate").value=today();
+  $("stockDate").value=today();
+
+  $("dashEmail").textContent=user.email||"—";
+  $("dashPhone").textContent=data.phone||"—";
+  $("profileWorkerId").textContent=data.worker_id||"—";
+  $("profileFullName").textContent=data.full_name||"—";
+  $("profilePhone").textContent=data.phone||"—";
+  $("profileRole").textContent=data.role||"—";
+  $("profileActive").textContent=data.active?"Active":"Inactive";
+  $("profileStart").textContent=dateOnly(data.contract_start);
+  $("profileEnd").textContent=dateOnly(data.contract_end);
+  $("profileEmail").textContent=user.email||"—";
+  $("contractStart").textContent=dateOnly(data.contract_start);
+  $("contractEnd").textContent=dateOnly(data.contract_end);
+
+  await Promise.all([loadSales(),loadStock()]);
+  await loadMessages();
+}
+
+function salesForWorker(){
+  return db.from("sales").select("*").eq("worker_id",profile.worker_id).order("sale_date",{ascending:false});
+}
+async function loadSales(){
+  const {data,error}=await salesForWorker();
+  if(error){
+    msg("saleMsg","Could not load your sales: "+error.message,"error");
+    $("salesBody").innerHTML='<tr><td colspan="7">Could not load sales.</td></tr>';
+    return;
+  }
+  const rows=data||[];
+  const now=new Date();
+  const startDay=new Date(now.getFullYear(),now.getMonth(),now.getDate());
+  const weekStart=new Date(startDay); weekStart.setDate(startDay.getDate()-startDay.getDay());
+  const monthStart=new Date(now.getFullYear(),now.getMonth(),1);
+  let todayTotal=0,weekTotal=0,monthTotal=0,allTotal=0;
+  rows.forEach(s=>{
+    const amount=Number(s.sale_amount||0); allTotal+=amount;
+    const d=new Date(String(s.sale_date||"").slice(0,10)+"T00:00:00");
+    if(d>=startDay)todayTotal+=amount;
+    if(d>=weekStart)weekTotal+=amount;
+    if(d>=monthStart)monthTotal+=amount;
+  });
+  $("todaySales").textContent=money(todayTotal);
+  $("weekSales").textContent=money(weekTotal);
+  $("monthSales").textContent=money(monthTotal);
+  $("allSales").textContent=money(allTotal);
+  $("lastActivity").textContent=rows.length?dateOnly(rows[0].sale_date):"No sales recorded yet.";
+
+  if(!rows.length){
+    $("salesBody").innerHTML='<tr><td colspan="7">No sales recorded yet.</td></tr>';
+    $("recentSalesBody").innerHTML='<tr><td colspan="6">No sales recorded yet.</td></tr>';
+    return;
+  }
+  $("salesBody").innerHTML=rows.map(s=>`<tr>
+    <td>${esc(dateOnly(s.sale_date))}</td><td>${esc(s.customer_reference||"")}</td><td>${esc(s.product_service||"")}</td>
+    <td>${esc(s.quantity??"")}</td><td>${money(s.sale_amount)}</td><td>${esc(s.payment_method||"")}</td><td>${esc(s.notes||"")}</td>
+  </tr>`).join("");
+  $("recentSalesBody").innerHTML=rows.slice(0,5).map(s=>`<tr>
+    <td>${esc(dateOnly(s.sale_date))}</td><td>${esc(s.customer_reference||"")}</td><td>${esc(s.product_service||"")}</td>
+    <td>${esc(s.quantity??"")}</td><td>${money(s.sale_amount)}</td><td>${esc(s.payment_method||"")}</td>
+  </tr>`).join("");
+}
+
+function calculateStock(){
+  const total=num("stockTotal"),purchase=num("purchaseTotal"),price=num("sellPrice"),sold=num("stockSold"),damage=num("stockDamage"),loss=num("stockLoss");
+  const unitCost=total>0?purchase/total:0,remaining=Math.max(0,total-sold-damage-loss),revenue=sold*price,soldCost=sold*unitCost,damageValue=damage*unitCost,lossValue=loss*unitCost,remainingValue=remaining*unitCost,profit=revenue-soldCost-damageValue-lossValue,accounted=sold+damage+loss;
+  $("calcTotal").textContent=total+" units";$("calcTotalValue").textContent=money(purchase);
+  $("calcSold").textContent=sold+" units";$("calcRevenue").textContent=money(revenue)+" revenue";
+  $("calcRemaining").textContent=remaining+" units";$("calcRemainingValue").textContent=money(remainingValue)+" stock value";
+  $("calcUnitCost").textContent=money(unitCost);$("calcSoldCost").textContent=money(soldCost);
+  $("calcDamageValue").textContent=money(damageValue);$("calcLossValue").textContent=money(lossValue);$("calcSalesRevenue").textContent=money(revenue);
+  $("calcProfit").textContent=money(profit);$("calcAccounted").textContent=accounted+" units";
+  const card=$("profitCard");card.classList.toggle("profit",profit>=0);card.classList.toggle("loss",profit<0);
+  $("profitLabel").textContent=profit>0?"You are making a profit":profit<0?"You are currently making a loss":"Break-even";
+  const over=accounted>total;
+  $("calcAccountedNote").textContent=over?"Too many units accounted for — check your numbers.":"Sold + damage + other loss";
+  $("saveStockBtn").disabled=total<=0||accounted>total;
+}
+
+async function loadStock(){
+  const {data,error}=await db.from("worker_stock_batches").select("*").eq("worker_id",profile.worker_id).order("stock_date",{ascending:false});
+  if(error){
+    $("stockBody").innerHTML='<tr><td colspan="8">Stock records could not be loaded.</td></tr>';
+    msg("stockLiveMsg","Could not load live stock: "+error.message,"error");
+    return;
+  }
+  const rows=data||[];
+  let units=0,value=0,revenue=0,profit=0;
+  rows.forEach(r=>{
+    units+=Number(r.remaining_quantity||0);
+    value+=Number(r.remaining_value||0);
+    revenue+=Number(r.sales_revenue||0);
+    profit+=Number(r.profit_loss||0);
+  });
+  $("liveUnits").textContent=units.toLocaleString();
+  $("liveValue").textContent=money(value);
+  $("liveRevenue").textContent=money(revenue);
+  $("liveProfit").textContent=money(profit);
+  $("liveProfitLabel").textContent=profit>=0?"current total profit":"current total loss";
+
+  if(!rows.length){$("stockBody").innerHTML='<tr><td colspan="8">No stock records yet.</td></tr>';return;}
+  $("stockBody").innerHTML=rows.map(r=>`<tr>
+    <td>${esc(dateOnly(r.stock_date))}</td><td>${esc(r.product_service||"")}</td><td>${esc(r.total_quantity??0)}</td>
+    <td>${esc(r.sold_quantity??0)}</td><td>${esc(r.damage_quantity??0)}</td><td>${esc(r.loss_quantity??0)}</td>
+    <td>${esc(r.remaining_quantity??0)}</td><td>${money(r.profit_loss)}</td>
+  </tr>`).join("");
+}
+
+async function loadMessages(){
+  /* Communication is intentionally read-only here.
+     If a communication table exists, this section can be connected without changing worker login/profile. */
+  $("messagesBody").innerHTML='<div class="message"><strong>Ezelex Enterprise</strong><br>Your worker communication area is ready.</div>';
+}
+
+["stockTotal","purchaseTotal","sellPrice","stockSold","stockDamage","stockLoss"].forEach(id=>$(id).addEventListener("input",calculateStock));
+
+$("saveStockBtn").onclick=async()=>{
+  const total=num("stockTotal"),purchase=num("purchaseTotal"),price=num("sellPrice"),sold=num("stockSold"),damage=num("stockDamage"),loss=num("stockLoss");
+  if(!$("stockDate").value||!$("stockProduct").value.trim()||total<=0||purchase<0||price<0||sold+damage+loss>total){
+    msg("stockMsg","Please check the stock quantities and costs. Sold + damage + other loss cannot be greater than total stock.","error");return;
+  }
+  const unitCost=purchase/total,revenue=sold*price,soldCost=sold*unitCost,damageValue=damage*unitCost,lossValue=loss*unitCost,remaining=total-sold-damage-loss,remainingValue=remaining*unitCost,profit=revenue-soldCost-damageValue-lossValue;
+  msg("stockMsg","Saving stock record...");
+  const record={
+    worker_id:profile.worker_id,stock_date:$("stockDate").value,product_service:$("stockProduct").value.trim(),
+    total_quantity:total,purchase_total:purchase,cost_per_unit:unitCost,selling_price_per_unit:price,
+    sold_quantity:sold,damage_quantity:damage,loss_quantity:loss,sales_revenue:revenue,sold_cost:soldCost,
+    damage_value:damageValue,loss_value:lossValue,remaining_quantity:remaining,remaining_value:remainingValue,
+    profit_loss:profit,notes:$("stockNotes").value.trim()||null
+  };
+  const {error}=await db.from("worker_stock_batches").insert(record);
+  if(error){msg("stockMsg","Stock record could not be saved: "+error.message,"error");return;}
+  msg("stockMsg","Stock record saved successfully and sent to Ezelex admin.","success");
+  $("stockForm").reset();$("stockDate").value=today();$("stockSold").value=0;$("stockDamage").value=0;$("stockLoss").value=0;calculateStock();
+  await loadStock();
+};
+
+$("saleForm").onsubmit=async(e)=>{
+  e.preventDefault();
+  msg("saleMsg","Saving sale...");
+  const sale={
+    worker_id:profile.worker_id,sale_date:$("saleDate").value,
+    customer_reference:$("customer").value.trim()||null,product_service:$("product").value.trim(),
+    quantity:Number($("quantity").value),sale_amount:Number($("amount").value),
+    payment_method:$("payment").value,notes:$("notes").value.trim()||null
+  };
+  if(!sale.sale_date||!sale.product_service||sale.quantity<1||sale.sale_amount<0||!sale.payment_method){
+    msg("saleMsg","Please complete the required fields.","error");return;
+  }
+  const {error}=await db.from("sales").insert(sale);
+  if(error){msg("saleMsg","Sale could not be saved: "+error.message,"error");return;}
+  msg("saleMsg","Sale recorded successfully.","success");
+  $("saleForm").reset();$("saleDate").value=today();$("quantity").value=1;
+  await loadSales();
+};
+
+$("loginBtn").onclick=async()=>{
+  msg("loginMsg","Signing in...");
+  const {data,error}=await db.auth.signInWithPassword({email:$("email").value.trim(),password:$("password").value});
+  if(error){msg("loginMsg",error.message,"error");return;}
+  await loadProfile(data.user);
+};
+
+$("logoutBtn").onclick=async()=>{await db.auth.signOut();profile=null;currentUser=null;showLogin();};
+
+document.querySelectorAll(".tab").forEach(btn=>{
+  btn.addEventListener("click",()=>{
+    document.querySelectorAll(".tab").forEach(b=>b.classList.remove("active"));
+    document.querySelectorAll(".section").forEach(s=>s.classList.remove("active"));
+    btn.classList.add("active");$(btn.dataset.tab).classList.add("active");
+  });
+});
+
+calculateStock();
+start();
+</script>
 </body>
 </html>
