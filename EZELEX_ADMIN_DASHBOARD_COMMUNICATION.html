@@ -91,7 +91,7 @@ table{width:100%;border-collapse:collapse;min-width:1050px}th,td{padding:11px;bo
 </main>
 
 <script>
-const SUPABASE_URL="https://hweczhwoggmsrwhkktrx.supabase.co",SUPABASE_PUBLISHABLE_KEY="sb_publishable_q52vf7tvpI4ho9FkGfZhvw_xdUv_bni";
+const SUPABASE_URL="https://hweczhwoggmsrwhkktrx.supabase.co",SUPABASE_PUBLISHABLE_KEY="sb_publishable_D0o90HRJ1AfROf_DAj7ZAg_uaPDwqvV";
 const db=supabase.createClient(SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY),$=id=>document.getElementById(id);
 let session=null,allSales=[],filteredSales=[],workers=[],allInventory=[],filteredInventory=[];
 const money=n=>"GH₵"+Number(n||0).toLocaleString("en-GH",{minimumFractionDigits:2,maximumFractionDigits:2});
@@ -101,7 +101,7 @@ const amount=s=>Number(s.sale_amount??0);
 const status=s=>String(s.status||"pending").toLowerCase();
 function msg(id,t,type=""){ $(id).innerHTML=t?`<div class="msg ${type}">${esc(t)}</div>`:"" }
 function workerInfo(id){return workers.find(x=>x.user_id===id)||workers.find(x=>x.id===id)||{}}
-function invCalc(r){const total=Number(r.total_quantity||0),purchase=Number(r.purchase_total||0),price=Number(r.selling_price_per_unit||0),sold=Number(r.sold_quantity||0),damage=Number(r.damage_quantity||0),loss=Number(r.loss_quantity||0),unit=total?purchase/total:0,remaining=Math.max(0,total-sold-damage-loss),revenue=sold*price,damageValue=damage*unit,lossValue=loss*unit,profit=revenue-sold*unit-damageValue-lossValue;return{total,purchase,price,sold,damage,loss,unit,remaining,revenue,damageValue,lossValue,profit,remainingValue:remaining*unit}}
+function invCalc(r){const total=Number(r.total_quantity||0),purchase=Number(r.purchase_total||0),price=Number(r.selling_price||0),sold=Number(r.sold_quantity||0),damage=Number(r.damaged_quantity||0),unit=total?purchase/total:0,remaining=Math.max(0,total-sold-damage),revenue=sold*price,damageValue=damage*unit,profit=revenue-sold*unit-damageValue;return{total,purchase,price,sold,damage,unit,remaining,revenue,damageValue,profit,remainingValue:remaining*unit}}
 async function adminCheck(){
  const {data:{session:s}}=await db.auth.getSession();session=s;if(!s){showLogin();return false}
  let {data}=await db.from("worker_profiles").select("*").eq("user_id",s.user.id).maybeSingle();
@@ -134,18 +134,69 @@ function populateCommRecipients(){const s=$("commRecipient");s.innerHTML='<optio
 const commHistory=[];
 function renderCommHistory(){const b=$("commHistoryBody");b.innerHTML=commHistory.length?commHistory.map(x=>`<tr><td>${esc(x.date)}</td><td>${esc(x.recipient)}</td><td>${esc(x.subject)}</td><td>${esc(x.message)}</td><td><span class="badge approved">${esc(x.status)}</span></td></tr>`).join(""): '<tr><td colspan="5" class="empty">No messages sent yet.</td></tr>'}
 async function sendCommunication(){const workerId=$("commRecipient").value,subject=$("commSubject").value.trim(),message=$("commMessage").value.trim();if(!subject||!message){msg("commMsg","Please enter a subject and message.","error");return}const btn=$("sendCommBtn");btn.disabled=true;btn.textContent="Sending...";try{const r=await fetch(SUPABASE_URL+"/functions/v1/send-worker-message",{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+session.access_token,"apikey":SUPABASE_PUBLISHABLE_KEY},body:JSON.stringify({worker_id:workerId||null,subject,message})});const j=await r.json().catch(()=>({}));if(!r.ok||j.success===false){msg("commMsg",j.error||"Could not send email.","error");return}const count=Number(j.sent_count||0);commHistory.unshift({date:new Date().toLocaleString(),recipient:workerId?($("commRecipient").selectedOptions[0]?.textContent||"Worker"):"All Active Workers",subject,message,status:`Sent to ${count} worker${count===1?"":"s"}`});renderCommHistory();msg("commMsg",`Email sent successfully to ${count} worker${count===1?"":"s"}.`,"ok");$("commSubject").value="";$("commMessage").value=""}catch(e){msg("commMsg","Connection error: "+e.message,"error")}finally{btn.disabled=false;btn.textContent="Send Email"}}
-async function loadInventory(){const r=await db.from("worker_stock_batches").select("*").order("stock_date",{ascending:false}).order("created_at",{ascending:false});if(r.error){msg("dashMsg","Stock tracker: "+r.error.message,"error");return}allInventory=r.data||[];applyInvFilters();updateInventorySummary()}
+async function loadInventory(){const r=await db.from("worker_inventory").select("*").order("stock_date",{ascending:false}).order("created_at",{ascending:false});if(r.error){msg("dashMsg","Stock tracker: "+r.error.message,"error");return}allInventory=r.data||[];applyInvFilters();updateInventorySummary()}
 function applyInvFilters(){const wid=$("invWorkerFilter").value,from=$("invFromDate").value,to=$("invToDate").value;filteredInventory=allInventory.filter(r=>{let d=dateOnly(r.stock_date||r.created_at);return(!wid||r.worker_id===wid)&&(!from||d>=from)&&(!to||d<=to)});renderInventory();updateInventorySummary()}
 function renderInventory(){
- $("inventoryBody").innerHTML=filteredInventory.length?filteredInventory.map(r=>{const c=invCalc(r),w=workerInfo(r.worker_id),pc=c.profit<0?"loss":"profit";return `<tr><td>${esc(dateOnly(r.stock_date||r.created_at))}</td><td>${esc(w.full_name||"")}</td><td>${esc(w.worker_id||r.worker_id||"")}</td><td>${esc(r.product_service||"")}</td><td>${c.total}</td><td>${c.sold}</td><td>${c.damage}</td><td><b>${c.remaining}</b></td><td>${money(c.purchase)}</td><td>${money(c.revenue)}</td><td>${money(c.damageValue)}</td><td class="${pc}">${money(c.profit)}</td></tr>`}).join(""):'<tr><td colspan="12" class="empty">No stock records found.</td></tr>'
+ $("inventoryBody").innerHTML=filteredInventory.length?filteredInventory.map(r=>{const c=invCalc(r),w=workerInfo(r.worker_id),pc=c.profit<0?"loss":"profit";return `<tr><td>${esc(dateOnly(r.stock_date||r.created_at))}</td><td>${esc(w.full_name||"")}</td><td>${esc(w.worker_id||r.worker_id||"")}</td><td>${esc(r.product||"")}</td><td>${c.total}</td><td>${c.sold}</td><td>${c.damage}</td><td><b>${c.remaining}</b></td><td>${money(c.purchase)}</td><td>${money(c.revenue)}</td><td>${money(c.damageValue)}</td><td class="${pc}">${money(c.profit)}</td></tr>`}).join(""):'<tr><td colspan="12" class="empty">No stock records found.</td></tr>'
 }
 function updateInventorySummary(){
  const a=filteredInventory.reduce((x,r)=>{const c=invCalc(r);x.total+=c.total;x.rem+=c.remaining;x.damage+=c.damageValue;x.profit+=c.profit;return x},{total:0,rem:0,damage:0,profit:0});
  $("invTotal").textContent=Number(a.total.toFixed(2));$("invRemain").textContent=Number(a.rem.toFixed(2));$("invDamage").textContent=money(a.damage);$("invProfit").textContent=money(a.profit);
  $("stockRemaining").textContent=Number(a.rem.toFixed(2));$("damageValue").textContent=money(a.damage);$("profitValue").textContent=money(a.profit);$("profitValue").className=a.profit<0?"value loss":"value profit"
 }
-function renderWorkers(){$("workersBody").innerHTML=workers.length?workers.map(w=>`<tr><td>${esc(w.worker_id||"")}</td><td>${esc(w.full_name||"")}</td><td>${esc(w.email||"")}</td><td>${esc(w.phone||"")}</td><td>${esc(w.contract_start||"")} → ${esc(w.contract_end||"")}</td><td><span class="badge ${w.active?"approved":"rejected"}">${w.active?"ACTIVE":"INACTIVE"}</span></td><td><button class="danger" onclick="deleteWorker('${esc(w.user_id||w.id)}','${esc(w.worker_id||"")}')">Delete</button></td></tr>`).join(""):'<tr><td colspan="7" class="empty">No workers found.</td></tr>'}
-window.deleteWorker=async(uid,wid)=>{if(wid==="ADMIN001"){alert("ADMIN001 cannot be deleted.");return}if(!confirm(`Delete worker ${wid}? This will remove the worker profile, sales and login account.`))return;const {data:{session:s}}=await db.auth.getSession();const r=await fetch("https://hweczhwoggmsrwhkktrx.supabase.co/functions/v1/delete-worker",{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+s.access_token},body:JSON.stringify({user_id:uid})});let j={};try{j=await r.json()}catch{}if(!r.ok){msg("workerMsg",j.error||"Could not delete worker.","error");return}msg("workerMsg","Worker deleted successfully.","ok");await loadWorkers();await Promise.all([loadSales(),loadInventory()])}
+function renderWorkers(){$("workersBody").innerHTML=workers.length?workers.map(w=>`<tr><td>${esc(w.worker_id||"")}</td><td>${esc(w.full_name||"")}</td><td>${esc(w.email||"")}</td><td>${esc(w.phone||"")}</td><td>${esc(w.contract_start||"")} → ${esc(w.contract_end||"")}</td><td><span class="badge ${w.active?"approved":"rejected"}">${w.active?"ACTIVE":"INACTIVE"}</span></td><td style="white-space:nowrap">
+<button class="soft" onclick="toggleWorker('${esc(w.user_id||w.id)}','${esc(w.worker_id||"")} ',${w.active?'true':'false'})">${w.active?'Deactivate':'Reactivate'}</button>
+<button class="danger" onclick="deleteWorker('${esc(w.user_id||w.id)}','${esc(w.worker_id||"")}')">Permanent Delete</button>
+</td></tr>`).join(""):'<tr><td colspan="7" class="empty">No workers found.</td></tr>'}
+
+window.toggleWorker=async(uid,wid,currentlyActive)=>{
+  wid=String(wid||"").trim();
+  if(wid==="ADMIN001"){alert("ADMIN001 cannot be changed.");return}
+  const action=currentlyActive?"deactivate":"reactivate";
+  if(!confirm(`${action[0].toUpperCase()+action.slice(1)} worker ${wid}? ${currentlyActive?"They will no longer be able to log in, but all sales and stock history will be kept.":"Their worker account will become active again."}`)) return;
+  const r=await db.from("worker_profiles").update({active:!currentlyActive}).eq("user_id",uid);
+  if(r.error){msg("workerMsg","Could not "+action+" worker: "+r.error.message,"error");return}
+  msg("workerMsg",`Worker ${wid} ${currentlyActive?"deactivated":"reactivated"} successfully. ${currentlyActive?"Sales and stock history were kept.":""}`,"ok");
+  await loadWorkers();
+};
+
+window.deleteWorker=async(uid,wid)=>{
+  wid=String(wid||"").trim();
+  if(wid==="ADMIN001"){alert("ADMIN001 cannot be deleted.");return}
+  const warning=`PERMANENT DELETE worker ${wid}?\n\nThis cannot be undone.\n\nIt will permanently remove:\n• Worker login/account\n• Worker profile\n• Sales history\n• Stock records\n\nUse Deactivate instead if you only want to stop the worker from logging in while keeping business history.`;
+  if(!confirm(warning))return;
+  const second=prompt(`Type DELETE ${wid} to confirm permanent deletion:`);
+  if(second!==`DELETE ${wid}`){msg("workerMsg","Permanent deletion cancelled. Nothing was removed.","error");return}
+
+  const {data:{session:s}}=await db.auth.getSession();
+  if(!s){msg("workerMsg","Admin session expired. Please sign in again.","error");return}
+
+  // Remove this worker's stock first. The admin stock-delete policy supplied with this update permits this safely.
+  const stockDelete=await db.from("worker_stock_batches").delete().eq("worker_id",uid);
+  if(stockDelete.error){
+    msg("workerMsg","Could not remove the worker's stock records: "+stockDelete.error.message,"error");
+    return;
+  }
+
+  const r=await fetch("https://hweczhwoggmsrwhkktrx.supabase.co/functions/v1/delete-worker",{
+    method:"POST",
+    headers:{
+      "Content-Type":"application/json",
+      "Authorization":"Bearer "+s.access_token,
+      "apikey":SUPABASE_PUBLISHABLE_KEY
+    },
+    body:JSON.stringify({user_id:uid})
+  });
+  let j={};try{j=await r.json()}catch{}
+  if(!r.ok){
+    msg("workerMsg",j.error||"Could not permanently delete worker.","error");
+    return;
+  }
+  msg("workerMsg",`Worker ${wid} and all associated business records were permanently deleted.`,"ok");
+  await loadWorkers();
+  await Promise.all([loadSales(),loadInventory()]);
+};
+
 $("createWorkerBtn").onclick=async()=>{const p={worker_id:$("wId").value.trim(),full_name:$("wName").value.trim(),phone:$("wPhone").value.trim(),email:$("wEmail").value.trim(),contract_start:$("wStart").value,contract_end:$("wEnd").value};if(!p.worker_id||!p.full_name||!p.email){msg("workerMsg","Worker ID, full name and email are required.","error");return}const {data:{session:s}}=await db.auth.getSession();msg("workerMsg","Creating worker and sending welcome email...");const r=await fetch("https://hweczhwoggmsrwhkktrx.supabase.co/functions/v1/create-worker",{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+s.access_token},body:JSON.stringify(p)});let j={};try{j=await r.json()}catch{}if(!r.ok){msg("workerMsg",j.error||"Could not create worker.","error");return}msg("workerMsg","Worker created successfully. Welcome email sent.","ok");["wId","wName","wPhone","wEmail","wStart","wEnd"].forEach(id=>$(id).value="");await loadWorkers()}
 $("loginBtn").onclick=async()=>{msg("loginMsg","Signing in...");const r=await db.auth.signInWithPassword({email:$("email").value.trim(),password:$("password").value});if(r.error){msg("loginMsg",r.error.message,"error");return}await adminCheck()}
 $("forgotBtn").onclick=async()=>{const email=$("email").value.trim();if(!email){msg("loginMsg","Enter your admin email first.","error");return}const r=await db.auth.resetPasswordForEmail(email,{redirectTo:location.href});msg("loginMsg",r.error?r.error.message:"Password recovery email sent. Check your inbox.",r.error?"error":"ok")}
