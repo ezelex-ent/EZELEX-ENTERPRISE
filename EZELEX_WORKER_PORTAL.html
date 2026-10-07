@@ -139,9 +139,10 @@ th,td{padding:11px;border-bottom:1px solid #eee;text-align:left;font-size:14px}t
 
   <section id="sales" class="section">
     <div class="panel">
-      <h2>Record a Sale</h2>
+      <h2 id="saleFormTitle">Record a Sale</h2>
       <div id="saleMsg"></div>
       <form id="saleForm" class="grid">
+        <input id="editingSaleId" type="hidden" value="">
         <div><label>Sale Date</label><input id="saleDate" type="date" required></div>
         <div><label>Customer / Reference</label><input id="customer" type="text" placeholder="Customer name or reference"></div>
         <div><label>Product / Service</label><input id="product" type="text" placeholder="What was sold?" required></div>
@@ -149,7 +150,7 @@ th,td{padding:11px;border-bottom:1px solid #eee;text-align:left;font-size:14px}t
         <div><label>Sale Amount (GHS)</label><input id="amount" type="number" min="0" step="0.01" placeholder="0.00" required></div>
         <div><label>Payment Method</label><select id="payment" required><option value="">Select payment method</option><option>Cash</option><option>Mobile Money</option><option>Bank Transfer</option><option>Card</option><option>Other</option></select></div>
         <div class="full"><label>Notes</label><textarea id="notes" placeholder="Optional notes"></textarea></div>
-        <div class="full"><button class="primary" type="submit">Record Sale</button></div>
+        <div class="full" style="display:flex;gap:10px;flex-wrap:wrap"><button id="saveSaleBtn" class="primary" type="submit">Record Sale</button><button id="cancelSaleEditBtn" type="button" style="display:none">Cancel Edit</button></div>
       </form>
     </div>
     <div class="panel">
@@ -159,8 +160,8 @@ th,td{padding:11px;border-bottom:1px solid #eee;text-align:left;font-size:14px}t
         <button id="shareReportBtn" type="button">📤 Share Report</button>
       </div>
       <div id="reportMsg"></div>
-      <div class="tablebox"><table><thead><tr><th>Date</th><th>Customer</th><th>Product/Service</th><th>Qty</th><th>Amount (GHS)</th><th>Payment</th><th>Notes</th></tr></thead>
-      <tbody id="salesBody"><tr><td colspan="7">Loading...</td></tr></tbody></table></div>
+      <div class="tablebox"><table><thead><tr><th>Date</th><th>Customer</th><th>Product/Service</th><th>Qty</th><th>Amount (GHS)</th><th>Payment</th><th>Notes</th><th>Status / Action</th></tr></thead>
+      <tbody id="salesBody"><tr><td colspan="8">Loading...</td></tr></tbody></table></div>
     </div>
   </section>
 
@@ -334,7 +335,7 @@ async function loadSales(){
   const {data,error}=await salesForWorker();
   if(error){
     msg("saleMsg","Could not load your sales: "+error.message,"error");
-    $("salesBody").innerHTML='<tr><td colspan="7">Could not load sales.</td></tr>';
+    $("salesBody").innerHTML='<tr><td colspan="8">Could not load sales.</td></tr>';
     return;
   }
   const rows=data||[];
@@ -359,14 +360,21 @@ async function loadSales(){
   $("lastActivity").textContent=rows.length?dateOnly(rows[0].sale_date):"No sales recorded yet.";
 
   if(!rows.length){
-    $("salesBody").innerHTML='<tr><td colspan="7">No sales recorded yet.</td></tr>';
+    $("salesBody").innerHTML='<tr><td colspan="8">No sales recorded yet.</td></tr>';
     $("recentSalesBody").innerHTML='<tr><td colspan="6">No sales recorded yet.</td></tr>';
     return;
   }
-  $("salesBody").innerHTML=rows.map(s=>`<tr>
-    <td>${esc(dateOnly(s.sale_date))}</td><td>${esc(s.customer_reference||"")}</td><td>${esc(s.product_service||"")}</td>
-    <td>${esc(s.quantity??"")}</td><td>${money(s.sale_amount)}</td><td>${esc(s.payment_method||"")}</td><td>${esc(s.notes||"")}</td>
-  </tr>`).join("");
+  $("salesBody").innerHTML=rows.map(s=>{
+    const st=String(s.status||"pending").toLowerCase();
+    const pending=(st==="pending"||!s.status);
+    const action=pending
+      ? `<span style="display:inline-flex;gap:6px;flex-wrap:wrap;align-items:center"><span class="badge" style="background:#fff3cd;color:#8a5b00">PENDING</span><button type="button" onclick="editSale('${esc(s.id)}')" style="padding:7px 10px">Edit</button><button type="button" onclick="deleteSale('${esc(s.id)}')" style="padding:7px 10px;background:#b42318;color:#fff">Delete</button></span>`
+      : `<span class="badge" style="background:${st==='approved'?'#dcfae6':'#fee4e2'};color:${st==='approved'?'#067647':'#b42318'}">${esc(st.toUpperCase())}</span>`;
+    return `<tr>
+      <td>${esc(dateOnly(s.sale_date))}</td><td>${esc(s.customer_reference||"")}</td><td>${esc(s.product_service||"")}</td>
+      <td>${esc(s.quantity??"")}</td><td>${money(s.sale_amount)}</td><td>${esc(s.payment_method||"")}</td><td>${esc(s.notes||"")}</td><td>${action}</td>
+    </tr>`;
+  }).join("");
   $("recentSalesBody").innerHTML=rows.slice(0,5).map(s=>`<tr>
     <td>${esc(dateOnly(s.sale_date))}</td><td>${esc(s.customer_reference||"")}</td><td>${esc(s.product_service||"")}</td>
     <td>${esc(s.quantity??"")}</td><td>${money(s.sale_amount)}</td><td>${esc(s.payment_method||"")}</td>
@@ -739,6 +747,50 @@ async function shareSalesReport(){
 $("pdfReportBtn").onclick=downloadSalesPDF;
 $("shareReportBtn").onclick=shareSalesReport;
 
+window.editSale=async function(id){
+  const {data,error}=await db.from("sales").select("*").eq("id",id).eq("worker_id",currentUser.id).maybeSingle();
+  if(error||!data){msg("saleMsg",error?.message||"Sale not found.","error");return;}
+  const st=String(data.status||"pending").toLowerCase();
+  if(st!=="pending"){msg("saleMsg","Only sales waiting for admin approval can be edited.","error");return;}
+  $("editingSaleId").value=data.id;
+  $("saleDate").value=dateOnly(data.sale_date);
+  $("customer").value=data.customer_reference||"";
+  $("product").value=data.product_service||"";
+  $("quantity").value=data.quantity??1;
+  $("amount").value=data.sale_amount??0;
+  $("payment").value=data.payment_method||"";
+  $("notes").value=data.notes||"";
+  $("saleFormTitle").textContent="Edit Sale";
+  $("saveSaleBtn").textContent="Update Sale";
+  $("cancelSaleEditBtn").style.display="inline-block";
+  window.scrollTo({top:$("sales").offsetTop||0,behavior:"smooth"});
+};
+
+window.deleteSale=async function(id){
+  const {data,error}=await db.from("sales").select("id,status").eq("id",id).eq("worker_id",currentUser.id).maybeSingle();
+  if(error||!data){msg("saleMsg",error?.message||"Sale not found.","error");return;}
+  const st=String(data.status||"pending").toLowerCase();
+  if(st!=="pending"){msg("saleMsg","Only sales waiting for admin approval can be deleted.","error");return;}
+  if(!confirm("Delete this sale? This cannot be undone."))return;
+  const r=await db.from("sales").delete().eq("id",id).eq("worker_id",currentUser.id).eq("status","pending");
+  if(r.error){msg("saleMsg","Sale could not be deleted: "+r.error.message,"error");return;}
+  msg("saleMsg","Sale deleted successfully.","success");
+  await loadSales();
+};
+
+function cancelSaleEdit(){
+  $("editingSaleId").value="";
+  $("saleForm").reset();
+  $("saleDate").value=today();
+  $("quantity").value=1;
+  $("saleFormTitle").textContent="Record a Sale";
+  $("saveSaleBtn").textContent="Record Sale";
+  $("cancelSaleEditBtn").style.display="none";
+  msg("saleMsg","");
+}
+
+$("cancelSaleEditBtn").onclick=cancelSaleEdit;
+
 $("saleForm").onsubmit=async(e)=>{
   e.preventDefault();
   msg("saleMsg","Saving sale...");
@@ -751,10 +803,22 @@ $("saleForm").onsubmit=async(e)=>{
   if(!sale.sale_date||!sale.product_service||sale.quantity<1||sale.sale_amount<0||!sale.payment_method){
     msg("saleMsg","Please complete the required fields.","error");return;
   }
-  const {error}=await db.from("sales").insert(sale);
+  const editingId=$("editingSaleId").value.trim();
+  let error;
+  if(editingId){
+    const r=await db.from("sales").update({
+      sale_date:sale.sale_date,customer_reference:sale.customer_reference,product_service:sale.product_service,
+      quantity:sale.quantity,sale_amount:sale.sale_amount,payment_method:sale.payment_method,notes:sale.notes
+    }).eq("id",editingId).eq("worker_id",currentUser.id).eq("status","pending");
+    error=r.error;
+    if(!error && !r.data && r.count===0){}
+  }else{
+    const r=await db.from("sales").insert(sale);
+    error=r.error;
+  }
   if(error){msg("saleMsg","Sale could not be saved: "+error.message,"error");return;}
-  msg("saleMsg","Sale recorded successfully.","success");
-  $("saleForm").reset();$("saleDate").value=today();$("quantity").value=1;
+  msg("saleMsg",editingId?"Sale updated successfully and remains pending admin approval.":"Sale recorded successfully.","success");
+  cancelSaleEdit();
   await loadSales();
 };
 
