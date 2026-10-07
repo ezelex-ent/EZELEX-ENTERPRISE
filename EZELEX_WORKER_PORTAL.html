@@ -319,7 +319,7 @@ async function loadProfile(user){
 }
 
 function salesForWorker(){
-  return db.from("sales").select("*").eq("worker_id",profile.worker_id).order("sale_date",{ascending:false});
+  return db.from("sales").select("*").eq("worker_id",currentUser.id).order("sale_date",{ascending:false});
 }
 async function loadSales(){
   const {data,error}=await salesForWorker();
@@ -379,7 +379,7 @@ function calculateStock(){
 }
 
 async function loadStock(){
-  const {data,error}=await db.from("worker_stock_batches").select("*").eq("worker_id",profile.worker_id).order("stock_date",{ascending:false});
+  const {data,error}=await db.from("worker_stock_batches").select("*").eq("worker_id",currentUser.id).order("stock_date",{ascending:false});
   if(error){
     $("stockBody").innerHTML='<tr><td colspan="8">Stock records could not be loaded.</td></tr>';
     msg("stockLiveMsg","Could not load live stock: "+error.message,"error");
@@ -423,7 +423,7 @@ $("saveStockBtn").onclick=async()=>{
   const unitCost=purchase/total,revenue=sold*price,soldCost=sold*unitCost,damageValue=damage*unitCost,lossValue=loss*unitCost,remaining=total-sold-damage-loss,remainingValue=remaining*unitCost,profit=revenue-soldCost-damageValue-lossValue;
   msg("stockMsg","Saving stock record...");
   const record={
-    worker_id:profile.worker_id,stock_date:$("stockDate").value,product_service:$("stockProduct").value.trim(),
+    worker_id:currentUser.id,stock_date:$("stockDate").value,product_service:$("stockProduct").value.trim(),
     total_quantity:total,purchase_total:purchase,cost_per_unit:unitCost,selling_price_per_unit:price,
     sold_quantity:sold,damage_quantity:damage,loss_quantity:loss,sales_revenue:revenue,sold_cost:soldCost,
     damage_value:damageValue,loss_value:lossValue,remaining_quantity:remaining,remaining_value:remainingValue,
@@ -440,7 +440,7 @@ $("saleForm").onsubmit=async(e)=>{
   e.preventDefault();
   msg("saleMsg","Saving sale...");
   const sale={
-    worker_id:profile.worker_id,sale_date:$("saleDate").value,
+    worker_id:currentUser.id,sale_date:$("saleDate").value,
     customer_reference:$("customer").value.trim()||null,product_service:$("product").value.trim(),
     quantity:Number($("quantity").value),sale_amount:Number($("amount").value),
     payment_method:$("payment").value,notes:$("notes").value.trim()||null
