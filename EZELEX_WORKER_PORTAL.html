@@ -59,7 +59,7 @@ th,td{padding:11px;border-bottom:1px solid #eee;text-align:left;font-size:14px}t
     <h1>Ezelex Enterprise</h1>
     <small>Worker Dashboard</small>
   </div>
-  <button id="logoutBtn" class="danger hidden">Log out</button>
+  <a id="settingsBtn" class="secondary hidden" href="https://ezelexenterprise.com/worker-profile.html" style="text-decoration:none">Settings</a>
 </header>
 
 <section id="loginSection" class="login">
@@ -114,9 +114,7 @@ th,td{padding:11px;border-bottom:1px solid #eee;text-align:left;font-size:14px}t
     <button class="tab active" data-tab="dashboard">Dashboard</button>
     <button class="tab" data-tab="sales">Record Sale</button>
     <button class="tab" data-tab="stock">Live Stock</button>
-    <button class="tab" data-tab="profile">My Profile</button>
-    <button class="tab" data-tab="communication">Communication</button>
-    <button class="tab" data-tab="contract">My Contract</button>
+    <a class="tab" href="https://ezelexenterprise.com/worker-profile.html" style="text-decoration:none">Settings</a>
   </div>
 
   <section id="dashboard" class="section active">
@@ -274,12 +272,12 @@ function dateOnly(v){return v?String(v).slice(0,10):"—";}
 function showLogin(){
   $("loginSection").classList.remove("hidden");
   $("portal").classList.add("hidden");
-  $("logoutBtn").classList.add("hidden");
+  $("settingsBtn").classList.add("hidden");
 }
 function showPortal(){
   $("loginSection").classList.add("hidden");
   $("portal").classList.remove("hidden");
-  $("logoutBtn").classList.remove("hidden");
+  $("settingsBtn").classList.remove("hidden");
 }
 
 async function start(){
@@ -877,12 +875,12 @@ db.auth.onAuthStateChange((event,session)=>{
   if(event==="PASSWORD_RECOVERY"){
     $("loginSection").classList.add("hidden");
     $("portal").classList.add("hidden");
-    $("logoutBtn").classList.add("hidden");
+    $("settingsBtn").classList.add("hidden");
     $("passwordRecovery").classList.remove("hidden");
   }
 });
 
-$("logoutBtn").onclick=async()=>{await db.auth.signOut();profile=null;currentUser=null;showLogin();};
+
 
 document.querySelectorAll(".tab").forEach(btn=>{
   btn.addEventListener("click",()=>{
