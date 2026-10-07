@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ezelex Enterprise - Worker Profile</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;font-family:Arial,sans-serif;background:#f4f7fb;color:#1f2937}
+header{background:#111827;color:#fff;padding:18px 20px;text-align:center}
+header h1{margin:0;font-size:24px}
+header p{margin:6px 0 0;color:#d1d5db}
+.container{max-width:700px;margin:35px auto;padding:0 18px}
+.card{background:#fff;border-radius:14px;padding:25px;box-shadow:0 5px 20px rgba(0,0,0,.08)}
+h2{margin-top:0}
+.status{padding:12px;border-radius:8px;background:#f3f4f6;margin-bottom:20px}
+.row{display:flex;justify-content:space-between;gap:20px;padding:14px 0;border-bottom:1px solid #e5e7eb}
+.label{font-weight:bold;color:#6b7280}
+.value{text-align:right;word-break:break-word}
+.buttons{display:flex;gap:10px;flex-wrap:wrap;margin-top:25px}
+button,a.button{border:none;padding:12px 18px;border-radius:8px;cursor:pointer;text-decoration:none;font-weight:bold;display:inline-block}
+.logout{background:#dc2626;color:white}
+.home{background:#111827;color:white}
+.portal{background:#2563eb;color:white}
+.error{color:#b91c1c;background:#fee2e2;padding:12px;border-radius:8px}
+.loading{color:#4b5563}
+@media(max-width:600px){
+.row{flex-direction:column;gap:5px}
+.value{text-align:left}
+.buttons{flex-direction:column}
+button,a.button{width:100%;text-align:center}
+}
+</style>
+</head>
+<body>
+
+<header>
+<h1>Ezelex Enterprise</h1>
+<p>Worker Profile</p>
+</header>
+
+<div class="container">
+<div class="card">
+<h2>Welcome, Worker</h2>
+
+<div id="message" class="status loading">Loading your worker profile...</div>
+
+<div id="profile" style="display:none;">
+<div class="row"><div class="label">Worker ID</div><div class="value" id="workerId"></div></div>
+<div class="row"><div class="label">Full Name</div><div class="value" id="fullName"></div></div>
+<div class="row"><div class="label">Phone</div><div class="value" id="phone"></div></div>
+<div class="row"><div class="label">Role</div><div class="value" id="role"></div></div>
+<div class="row"><div class="label">Status</div><div class="value" id="active"></div></div>
+<div class="row"><div class="label">Contract Start</div><div class="value" id="contractStart"></div></div>
+<div class="row"><div class="label">Contract End</div><div class="value" id="contractEnd"></div></div>
+<div class="row"><div class="label">Login Email</div><div class="value" id="email"></div></div>
+
+<div class="buttons">
+<a class="button portal" href="https://ezelexenterprise.com/EZELEX_WORKER_PORTAL.html">Worker Portal</a>
+<a class="button home" href="https://ezelexenterprise.com">Home</a>
+<button class="logout" id="logoutBtn">Logout</button>
+</div>
+</div>
+</div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+const SUPABASE_URL="https://hweczhwoggmsrwhkktrx.supabase.co";
+const SUPABASE_KEY="sb_publishable_D0o90HRJ1AfROf_DAj7ZAg_uaPDwqvV";
+const supabaseClient=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
+
+async function loadWorkerProfile(){
+const message=document.getElementById("message");
+const profile=document.getElementById("profile");
+try{
+const {data:{user},error:authError}=await supabaseClient.auth.getUser();
+if(authError)throw authError;
+if(!user){
+window.location.href="https://ezelexenterprise.com/EZELEX_WORKER_PORTAL.html";
+return;
+}
+
+const {data,error}=await supabaseClient
+.from("worker_profiles")
+.select("user_id,worker_id,full_name,phone,role,active,contract_start,contract_end")
+.eq("user_id",user.id)
+.maybeSingle();
+
+if(error)throw error;
+
+if(!data){
+message.className="error";
+message.textContent="Your login is successful, but your worker profile has not been linked to this account yet.";
+return;
+}
+
+document.getElementById("workerId").textContent=data.worker_id||"-";
+document.getElementById("fullName").textContent=data.full_name||"-";
+document.getElementById("phone").textContent=data.phone||"-";
+document.getElementById("role").textContent=data.role||"-";
+document.getElementById("active").textContent=data.active?"Active":"Inactive";
+document.getElementById("contractStart").textContent=data.contract_start||"-";
+document.getElementById("contractEnd").textContent=data.contract_end||"-";
+document.getElementById("email").textContent=user.email||"-";
+
+message.style.display="none";
+profile.style.display="block";
+}catch(error){
+console.error(error);
+message.className="error";
+message.textContent="Unable to load your worker profile. Please try again.";
+}
+}
+
+document.getElementById("logoutBtn").addEventListener("click",async()=>{
+await supabaseClient.auth.signOut();
+window.location.href="https://ezelexenterprise.com/EZELEX_WORKER_PORTAL.html";
+});
+
+loadWorkerProfile();
+</script>
+</body>
+</html>
