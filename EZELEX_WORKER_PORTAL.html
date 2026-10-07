@@ -853,7 +853,7 @@ $("sendResetBtn").onclick=async()=>{
   const email=$("resetEmail").value.trim();
   if(!email){msg("resetMsg","Enter your worker email.","error");return;}
   msg("resetMsg","Sending reset link...");
-  const {error}=await db.auth.resetPasswordForEmail(email,{redirectTo:"https://ezelexenterprise.com/EZELEX_WORKER_PORTAL.html"});
+  const {error}=await db.auth.resetPasswordForEmail(email,{redirectTo:"https://ezelexenterprise.com/EZELEX_SET_PASSWORD.html"});
   if(error){msg("resetMsg",error.message,"error");return;}
   msg("resetMsg","Password reset link sent. Check your email and follow the link.","success");
 };
