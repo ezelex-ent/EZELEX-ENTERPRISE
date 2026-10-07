@@ -174,6 +174,7 @@ th,td{padding:11px;border-bottom:1px solid #eee;text-align:left;font-size:14px}t
     <div class="panel">
       <h2>Add Stock Record</h2>
       <div id="stockMsg"></div>
+      <input type="hidden" id="editingStockId" value="">
       <form id="stockForm" class="grid">
         <div><label>Stock Date</label><input id="stockDate" type="date" required></div>
         <div><label>Product / Stock Item</label><input id="stockProduct" type="text" placeholder="e.g. Eggs - 30 crate" required></div>
@@ -199,12 +200,12 @@ th,td{padding:11px;border-bottom:1px solid #eee;text-align:left;font-size:14px}t
         <div class="resultCard" id="profitCard"><h3>Current Profit / Loss</h3><strong id="calcProfit">GH₵0.00</strong><div id="profitLabel" class="live">No sales/loss yet</div></div>
         <div class="resultCard"><h3>Total Stock Accounted For</h3><strong id="calcAccounted">0 units</strong><div id="calcAccountedNote" class="live">Sold + damage + other loss</div></div>
       </div>
-      <div style="margin-top:15px"><button id="saveStockBtn" class="primary" type="button">Save Stock Record</button></div>
+      <div style="margin-top:15px"><button id="saveStockBtn" class="primary" type="button">Save Stock Record</button> <button id="cancelEditStockBtn" type="button" style="display:none">Cancel Edit</button></div>
     </div>
 
     <div class="panel">
-      <h2>My Stock Records</h2>
-      <div class="tablebox"><table><thead><tr><th>Date</th><th>Product</th><th>Total</th><th>Sold</th><th>Damage</th><th>Other Loss</th><th>Remaining</th><th>Profit/Loss</th></tr></thead>
+      <h2>My Stock Records</h2><div class="stockNote">Use <strong>Edit</strong> on any stock batch when stock is sold or damaged. The remaining stock, damage value, revenue and profit/loss will recalculate automatically.</div>
+      <div class="tablebox"><table><thead><tr><th>Date</th><th>Product</th><th>Total</th><th>Sold</th><th>Damage</th><th>Other Loss</th><th>Remaining</th><th>Profit/Loss</th><th>Actions</th></tr></thead>
       <tbody id="stockBody"><tr><td colspan="8">Loading...</td></tr></tbody></table></div>
     </div>
   </section>
@@ -381,7 +382,7 @@ function calculateStock(){
 async function loadStock(){
   const {data,error}=await db.from("worker_stock_batches").select("*").eq("worker_id",currentUser.id).order("stock_date",{ascending:false});
   if(error){
-    $("stockBody").innerHTML='<tr><td colspan="8">Stock records could not be loaded.</td></tr>';
+    $("stockBody").innerHTML='<tr><td colspan="9">Stock records could not be loaded.</td></tr>';
     msg("stockLiveMsg","Could not load live stock: "+error.message,"error");
     return;
   }
@@ -399,11 +400,11 @@ async function loadStock(){
   $("liveProfit").textContent=money(profit);
   $("liveProfitLabel").textContent=profit>=0?"current total profit":"current total loss";
 
-  if(!rows.length){$("stockBody").innerHTML='<tr><td colspan="8">No stock records yet.</td></tr>';return;}
+  if(!rows.length){$("stockBody").innerHTML='<tr><td colspan="9">No stock records yet.</td></tr>';return;}
   $("stockBody").innerHTML=rows.map(r=>`<tr>
     <td>${esc(dateOnly(r.stock_date))}</td><td>${esc(r.product_service||"")}</td><td>${esc(r.total_quantity??0)}</td>
     <td>${esc(r.sold_quantity??0)}</td><td>${esc(r.damage_quantity??0)}</td><td>${esc(r.loss_quantity??0)}</td>
-    <td>${esc(r.remaining_quantity??0)}</td><td>${money(r.profit_loss)}</td>
+    <td>${esc(r.remaining_quantity??0)}</td><td>${money(r.profit_loss)}</td><td><button type="button" class="primary" onclick="editStock('${esc(r.id)}')">Edit</button></td>
   </tr>`).join("");
 }
 
@@ -414,6 +415,30 @@ async function loadMessages(){
 }
 
 ["stockTotal","purchaseTotal","sellPrice","stockSold","stockDamage","stockLoss"].forEach(id=>$(id).addEventListener("input",calculateStock));
+
+let editingStockId="";
+
+function startStockEdit(r){
+  editingStockId=r.id||""; $("editingStockId").value=editingStockId;
+  $("stockDate").value=dateOnly(r.stock_date)||today(); $("stockProduct").value=r.product_service||"";
+  $("stockTotal").value=Number(r.total_quantity||0); $("purchaseTotal").value=Number(r.purchase_total||0);
+  $("sellPrice").value=Number(r.selling_price_per_unit||0); $("stockSold").value=Number(r.sold_quantity||0);
+  $("stockDamage").value=Number(r.damage_quantity||0); $("stockLoss").value=Number(r.loss_quantity||0); $("stockNotes").value=r.notes||"";
+  $("saveStockBtn").textContent="Update Stock Record"; $("cancelEditStockBtn").style.display="inline-block";
+  calculateStock(); document.getElementById("stockForm").scrollIntoView({behavior:"smooth",block:"center"});
+  msg("stockMsg","Editing stock batch. Update sold, damage or other loss, then save.","success");
+}
+window.editStock=async function(id){
+  const {data,error}=await db.from("worker_stock_batches").select("*").eq("id",id).eq("worker_id",currentUser.id).maybeSingle();
+  if(error||!data){msg("stockMsg","Could not open that stock record for editing.","error");return;}
+  startStockEdit(data);
+};
+function cancelStockEdit(){
+  editingStockId=""; $("editingStockId").value=""; $("stockForm").reset(); $("stockDate").value=today();
+  $("stockSold").value=0; $("stockDamage").value=0; $("stockLoss").value=0; $("saveStockBtn").textContent="Save Stock Record";
+  $("cancelEditStockBtn").style.display="none"; calculateStock(); msg("stockMsg","Edit cancelled.","");
+}
+$("cancelEditStockBtn").onclick=cancelStockEdit;
 
 $("saveStockBtn").onclick=async()=>{
   const total=num("stockTotal"),purchase=num("purchaseTotal"),price=num("sellPrice"),sold=num("stockSold"),damage=num("stockDamage"),loss=num("stockLoss");
@@ -429,11 +454,13 @@ $("saveStockBtn").onclick=async()=>{
     damage_value:damageValue,loss_value:lossValue,remaining_quantity:remaining,remaining_value:remainingValue,
     profit_loss:profit,notes:$("stockNotes").value.trim()||null
   };
-  const {error}=await db.from("worker_stock_batches").insert(record);
-  if(error){msg("stockMsg","Stock record could not be saved: "+error.message,"error");return;}
-  msg("stockMsg","Stock record saved successfully and sent to Ezelex admin.","success");
-  $("stockForm").reset();$("stockDate").value=today();$("stockSold").value=0;$("stockDamage").value=0;$("stockLoss").value=0;calculateStock();
-  await loadStock();
+  let result;
+  if(editingStockId){ result=await db.from("worker_stock_batches").update(record).eq("id",editingStockId).eq("worker_id",currentUser.id); }
+  else { result=await db.from("worker_stock_batches").insert(record); }
+  if(result.error){msg("stockMsg",(editingStockId?"Stock record could not be updated: ":"Stock record could not be saved: ")+result.error.message,"error");return;}
+  msg("stockMsg",editingStockId?"Stock record updated successfully.":"Stock record saved successfully and sent to Ezelex admin.","success");
+  editingStockId=""; $("editingStockId").value=""; $("stockForm").reset(); $("stockDate").value=today(); $("stockSold").value=0; $("stockDamage").value=0; $("stockLoss").value=0;
+  $("saveStockBtn").textContent="Save Stock Record"; $("cancelEditStockBtn").style.display="none"; calculateStock(); await loadStock();
 };
 
 $("saleForm").onsubmit=async(e)=>{
