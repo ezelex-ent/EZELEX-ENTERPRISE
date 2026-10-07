@@ -1,336 +1,186 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-  <title>Ezelex Enterprise - Worker Login</title>
-
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-
-  <style>
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-      font-family: Arial, sans-serif;
-    }
-
-    body {
-      min-height: 100vh;
-      background: #f4f6f8;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 20px;
-    }
-
-    .login-card {
-      width: 100%;
-      max-width: 430px;
-      background: white;
-      padding: 35px 28px;
-      border-radius: 16px;
-      box-shadow: 0 5px 20px rgba(0,0,0,0.10);
-    }
-
-    .brand {
-      text-align: center;
-      font-size: 26px;
-      font-weight: bold;
-      color: #111827;
-      margin-bottom: 8px;
-    }
-
-    .subtitle {
-      text-align: center;
-      color: #6b7280;
-      margin-bottom: 28px;
-    }
-
-    label {
-      display: block;
-      font-weight: bold;
-      margin-bottom: 7px;
-      color: #374151;
-    }
-
-    input {
-      width: 100%;
-      padding: 13px;
-      border: 1px solid #d1d5db;
-      border-radius: 9px;
-      font-size: 16px;
-      margin-bottom: 17px;
-      outline: none;
-    }
-
-    input:focus {
-      border-color: #2563eb;
-    }
-
-    .login-btn {
-      width: 100%;
-      border: none;
-      padding: 14px;
-      border-radius: 9px;
-      background: #111827;
-      color: white;
-      font-size: 16px;
-      font-weight: bold;
-      cursor: pointer;
-    }
-
-    .login-btn:disabled {
-      opacity: 0.6;
-      cursor: not-allowed;
-    }
-
-    .message {
-      display: none;
-      margin-top: 18px;
-      padding: 13px;
-      border-radius: 9px;
-      line-height: 1.4;
-      font-size: 14px;
-    }
-
-    .error {
-      background: #fee2e2;
-      color: #991b1b;
-    }
-
-    .success {
-      background: #dcfce7;
-      color: #166534;
-    }
-
-    .home {
-      display: block;
-      text-align: center;
-      margin-top: 22px;
-      color: #2563eb;
-      text-decoration: none;
-      font-size: 14px;
-      font-weight: bold;
-    }
-
-    .footer {
-      text-align: center;
-      color: #777;
-      font-size: 12px;
-      margin-top: 25px;
-    }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ezelex Enterprise - Worker Portal</title>
+<style>
+*{box-sizing:border-box}
+body{
+  margin:0;
+  font-family:Arial,sans-serif;
+  background:#f4f7fb;
+  color:#1f2937;
+  min-height:100vh;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+}
+.container{width:100%;max-width:430px;padding:20px}
+.card{
+  background:#fff;
+  border-radius:16px;
+  padding:30px;
+  box-shadow:0 8px 30px rgba(0,0,0,.10);
+}
+.logo{text-align:center;margin-bottom:25px}
+.logo h1{margin:0;color:#111827;font-size:28px}
+.logo p{margin:7px 0 0;color:#6b7280}
+h2{text-align:center;margin:0 0 22px}
+label{display:block;font-weight:bold;margin:14px 0 7px}
+input{
+  width:100%;
+  padding:13px;
+  border:1px solid #d1d5db;
+  border-radius:8px;
+  font-size:16px;
+}
+input:focus{outline:none;border-color:#2563eb}
+button{
+  width:100%;
+  margin-top:22px;
+  padding:14px;
+  border:0;
+  border-radius:8px;
+  background:#2563eb;
+  color:#fff;
+  font-size:16px;
+  font-weight:bold;
+  cursor:pointer;
+}
+button:disabled{opacity:.6;cursor:not-allowed}
+.message{
+  display:none;
+  margin-top:15px;
+  padding:12px;
+  border-radius:8px;
+  font-size:14px;
+}
+.error{display:block;background:#fee2e2;color:#b91c1c}
+.success{display:block;background:#dcfce7;color:#166534}
+.home{
+  display:block;
+  text-align:center;
+  margin-top:20px;
+  color:#2563eb;
+  text-decoration:none;
+  font-weight:bold;
+}
+.small{text-align:center;color:#6b7280;font-size:13px;margin-top:18px}
+</style>
 </head>
 
 <body>
+<div class="container">
+  <div class="card">
 
-<div class="login-card">
+    <div class="logo">
+      <h1>Ezelex Enterprise</h1>
+      <p>Worker Portal</p>
+    </div>
 
-  <div class="brand">
-    Ezelex Enterprise
+    <h2>Worker Login</h2>
+
+    <form id="loginForm">
+      <label for="email">Email Address</label>
+      <input
+        type="email"
+        id="email"
+        placeholder="Enter your email"
+        autocomplete="email"
+        required
+      >
+
+      <label for="password">Password</label>
+      <input
+        type="password"
+        id="password"
+        placeholder="Enter your password"
+        autocomplete="current-password"
+        required
+      >
+
+      <button type="submit" id="loginBtn">Login</button>
+
+      <div id="message" class="message"></div>
+    </form>
+
+    <a class="home" href="https://ezelexenterprise.com">
+      Back to Ezelex Enterprise
+    </a>
+
+    <div class="small">
+      Ezelex Enterprise Worker Access
+    </div>
+
   </div>
-
-  <div class="subtitle">
-    Worker Portal
-  </div>
-
-  <form id="loginForm">
-
-    <label for="email">
-      Email
-    </label>
-
-    <input
-      type="email"
-      id="email"
-      placeholder="Enter your email"
-      required
-    >
-
-    <label for="password">
-      Password
-    </label>
-
-    <input
-      type="password"
-      id="password"
-      placeholder="Enter your password"
-      required
-    >
-
-    <button
-      type="submit"
-      class="login-btn"
-      id="loginButton"
-    >
-      Worker Login
-    </button>
-
-  </form>
-
-  <div
-    id="message"
-    class="message"
-  ></div>
-
-  <a
-    class="home"
-    href="https://ezelexenterprise.com"
-  >
-    Back to Ezelex Enterprise
-  </a>
-
-  <div class="footer">
-    © 2026 Ezelex Enterprise
-  </div>
-
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
 <script>
+const SUPABASE_URL = "https://hweczhwoggmsrwhkktrx.supabase.co";
+const SUPABASE_KEY = "sb_publishable_D0o90HRJ1AfROf_DAj7ZAg_uaPDwqvV";
 
-  const SUPABASE_URL =
-    "https://hweczhwoggmsrwhkktrx.supabase.co";
+const supabaseClient = window.supabase.createClient(
+  SUPABASE_URL,
+  SUPABASE_KEY
+);
 
-  const SUPABASE_KEY =
-    "sb_publishable_D0o90HRJ1AfROf_DAj7ZAg_uaPDwqvV";
+const form = document.getElementById("loginForm");
+const loginBtn = document.getElementById("loginBtn");
+const message = document.getElementById("message");
 
-  const supabaseClient =
-    window.supabase.createClient(
-      SUPABASE_URL,
-      SUPABASE_KEY
-    );
+form.addEventListener("submit", async function(event) {
+  event.preventDefault();
 
+  const email = document.getElementById("email").value.trim();
+  const password = document.getElementById("password").value;
 
-  const form =
-    document.getElementById("loginForm");
+  message.className = "message";
+  message.textContent = "";
+  loginBtn.disabled = true;
+  loginBtn.textContent = "Logging in...";
 
-  const button =
-    document.getElementById("loginButton");
+  try {
+    const { data, error } =
+      await supabaseClient.auth.signInWithPassword({
+        email: email,
+        password: password
+      });
 
-  const message =
-    document.getElementById("message");
-
-
-  function showMessage(text, type) {
-
-    message.textContent = text;
-
-    message.className =
-      "message " + type;
-
-    message.style.display =
-      "block";
-  }
-
-
-  form.addEventListener(
-    "submit",
-    async function(event) {
-
-      event.preventDefault();
-
-      const email =
-        document
-          .getElementById("email")
-          .value
-          .trim();
-
-      const password =
-        document
-          .getElementById("password")
-          .value;
-
-      button.disabled = true;
-
-      button.textContent =
-        "Signing in...";
-
-      message.style.display =
-        "none";
-
-
-      try {
-
-        const {
-          data,
-          error
-        } =
-          await supabaseClient.auth.signInWithPassword({
-            email: email,
-            password: password
-          });
-
-
-        if (error) {
-
-          showMessage(
-            error.message,
-            "error"
-          );
-
-          button.disabled = false;
-
-          button.textContent =
-            "Worker Login";
-
-          return;
-        }
-
-
-        if (!data.user) {
-
-          showMessage(
-            "Login could not be completed. Please try again.",
-            "error"
-          );
-
-          button.disabled = false;
-
-          button.textContent =
-            "Worker Login";
-
-          return;
-        }
-
-
-        showMessage(
-          "Login successful. Opening your worker profile...",
-          "success"
-        );
-
-
-        setTimeout(
-          function() {
-
-            window.location.href =
-              "https://ezelexenterprise.com/worker-profile.html";
-
-          },
-          700
-        );
-
-      }
-
-      catch (error) {
-
-        console.error(error);
-
-        showMessage(
-          "Unable to connect. Please try again.",
-          "error"
-        );
-
-        button.disabled = false;
-
-        button.textContent =
-          "Worker Login";
-      }
-
+    if (error) {
+      throw error;
     }
-  );
 
+    if (!data.user) {
+      throw new Error("Login was not completed.");
+    }
+
+    message.className = "message success";
+    message.textContent = "Login successful. Opening your worker profile...";
+
+    setTimeout(() => {
+      window.location.href =
+        "https://ezelexenterprise.com/worker-profile.html";
+    }, 500);
+
+  } catch (error) {
+    console.error(error);
+
+    message.className = "message error";
+
+    if (error.message) {
+      message.textContent = error.message;
+    } else {
+      message.textContent =
+        "Login failed. Please check your email and password.";
+    }
+
+    loginBtn.disabled = false;
+    loginBtn.textContent = "Login";
+  }
+});
 </script>
 
 </body>
