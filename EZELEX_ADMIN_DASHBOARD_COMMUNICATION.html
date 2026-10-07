@@ -72,18 +72,14 @@ table{width:100%;border-collapse:collapse;min-width:1050px}th,td{padding:11px;bo
 <div class="section"><h2>Worker Management</h2><button id="refreshWorkers" class="soft">Refresh Workers</button><div class="tablebox" style="margin-top:14px"><table><thead><tr><th>Worker ID</th><th>Name</th><th>Email</th><th>Phone</th><th>Contract</th><th>Status</th><th>Action</th></tr></thead><tbody id="workersBody"></tbody></table></div></div>
 </section>
 
+
 <section id="communication" class="page hidden">
-<div class="section"><h2>Worker Communication Centre</h2>
-<p class="muted">Send email messages directly to a worker's registered EZELEX email address, or broadcast one message to all active workers.</p>
-<div id="commMsg"></div>
-<div class="grid2">
-<div><label>Recipient</label><select id="commRecipient"><option value="">All Active Workers</option></select></div>
-<div><label>Subject</label><input id="commSubject" maxlength="160" placeholder="EZELEX ENTERPRISE message"></div>
-<div class="full"><label>Message</label><textarea id="commMessage" rows="8" maxlength="5000" placeholder="Write your message to the worker(s)..."></textarea></div>
-<div class="full"><button id="sendCommBtn" class="gold">Send Email</button><button id="refreshCommWorkers" class="soft" style="margin-left:8px">Refresh Workers</button></div>
-</div></div>
-<div class="section"><h2>Communication History</h2><p class="muted">Email history shown here is local to this dashboard session.</p>
-<div class="tablebox"><table><thead><tr><th>Date</th><th>Recipient</th><th>Subject</th><th>Message</th><th>Status</th></tr></thead><tbody id="commHistoryBody"><tr><td colspan="5" class="empty">No messages sent yet.</td></tr></tbody></table></div></div>
+<div class="section"><h2>Worker Communication Centre</h2><p class="muted">Send an email message directly to one worker or all active workers.</p><div id="commMsg"></div>
+<div class="grid2"><div><label>Send To</label><select id="commRecipient"><option value="ALL">All Active Workers</option></select></div><div><label>Subject</label><input id="commSubject" maxlength="200" placeholder="EZELEX Update"></div></div>
+<label>Message</label><textarea id="commBody" maxlength="10000" style="min-height:160px" placeholder="Write your message to the worker..."></textarea>
+<button id="sendCommBtn" class="gold">Send Message</button>
+</div>
+<div class="section"><div style="display:flex;justify-content:space-between;align-items:center;gap:10px"><h2>Communication History</h2><button id="refreshComm" class="soft">Refresh</button></div><div class="tablebox"><table><thead><tr><th>Date</th><th>Recipient</th><th>Subject</th><th>Message</th><th>Status</th></tr></thead><tbody id="commBodyRows"></tbody></table></div></div>
 </section>
 
 <section id="profile" class="page hidden"><div class="section"><h2>Admin Profile</h2><div class="profile"><div class="avatar">AD</div><div><h2>EZELEX Administrator</h2><p><b>Admin ID:</b> ADMIN001</p><p><b>Email:</b> <span id="adminEmail">—</span></p><p><b>Status:</b> <span class="badge approved">ACTIVE</span></p><p class="muted">EZELEX ENTERPRISE • Administrator Account</p></div></div></div></section>
@@ -101,18 +97,18 @@ const amount=s=>Number(s.sale_amount??0);
 const status=s=>String(s.status||"pending").toLowerCase();
 function msg(id,t,type=""){ $(id).innerHTML=t?`<div class="msg ${type}">${esc(t)}</div>`:"" }
 function workerInfo(id){return workers.find(x=>x.user_id===id)||workers.find(x=>x.id===id)||{}}
-function invCalc(r){const total=Number(r.total_quantity||0),purchase=Number(r.purchase_total||0),price=Number(r.selling_price||0),sold=Number(r.sold_quantity||0),damage=Number(r.damaged_quantity||0),unit=total?purchase/total:0,remaining=Math.max(0,total-sold-damage),revenue=sold*price,damageValue=damage*unit,profit=revenue-sold*unit-damageValue;return{total,purchase,price,sold,damage,unit,remaining,revenue,damageValue,profit,remainingValue:remaining*unit}}
+function invCalc(r){const total=Number(r.total_quantity||0),purchase=Number(r.purchase_total||0),price=Number(r.selling_price_per_unit||0),sold=Number(r.sold_quantity||0),damage=Number(r.damage_quantity||0),loss=Number(r.loss_quantity||0),unit=Number(r.cost_per_unit||0),remaining=Number(r.remaining_quantity??Math.max(0,total-sold-damage-loss)),revenue=Number(r.sales_revenue??(sold*price)),damageValue=Number(r.damage_value??(damage*unit)),lossValue=Number(r.loss_value??(loss*unit)),profit=Number(r.profit_loss??(revenue-sold*unit-damageValue-lossValue));return{total,purchase,price,sold,damage,loss,unit,remaining,revenue,damageValue,lossValue,profit,remainingValue:Number(r.remaining_value??(remaining*unit))}}
 async function adminCheck(){
  const {data:{session:s}}=await db.auth.getSession();session=s;if(!s){showLogin();return false}
  let {data}=await db.from("worker_profiles").select("*").eq("user_id",s.user.id).maybeSingle();
  if(!data||data.role!=="admin"||!data.active){await db.auth.signOut();showLogin();msg("loginMsg","This account does not have active EZELEX admin access.","error");return false}
- $("loginSection").classList.add("hidden");$("dashboard").classList.remove("hidden");$("logoutBtn").classList.remove("hidden");$("adminEmail").textContent=s.user.email||"";await loadWorkers();await Promise.all([loadSales(),loadInventory()]);return true
+ $("loginSection").classList.add("hidden");$("dashboard").classList.remove("hidden");$("logoutBtn").classList.remove("hidden");$("adminEmail").textContent=s.user.email||"";await loadWorkers();await Promise.all([loadSales(),loadInventory()]);await loadCommunication();return true
 }
 function showLogin(){$("loginSection").classList.remove("hidden");$("dashboard").classList.add("hidden");$("logoutBtn").classList.add("hidden")}
 async function loadWorkers(){
  const r=await db.from("worker_profiles").select("*").order("full_name",{ascending:true});if(r.error){msg("dashMsg",r.error.message,"error");return}
  workers=(r.data||[]).filter(w=>w.role!=="admin");$("activeWorkers").textContent=workers.filter(w=>w.active).length;
- ["workerFilter","invWorkerFilter"].forEach(id=>{const s=$(id);s.innerHTML='<option value="">All workers</option>';workers.forEach(w=>{const o=document.createElement("option");o.value=w.user_id||w.id;o.textContent=`${w.full_name||"Worker"} (${w.worker_id||""})`;s.appendChild(o)})});renderWorkers();if($("commRecipient"))populateCommRecipients()
+ ["workerFilter","invWorkerFilter"].forEach(id=>{const s=$(id);s.innerHTML='<option value="">All workers</option>';workers.forEach(w=>{const o=document.createElement("option");o.value=w.user_id||w.id;o.textContent=`${w.full_name||"Worker"} (${w.worker_id||""})`;s.appendChild(o)})});renderWorkers()
 }
 async function loadSales(){const r=await db.from("sales").select("*").order("sale_date",{ascending:false}).order("created_at",{ascending:false});if(r.error){msg("dashMsg","Could not load sales: "+r.error.message,"error");return}allSales=r.data||[];updateSummary();applyFilters()}
 function approvedSales(){return allSales.filter(s=>status(s)==="approved")}
@@ -127,86 +123,44 @@ function applyFilters(){const st=$("statusFilter").value,wid=$("workerFilter").v
 function renderSales(){
  $("salesBody").innerHTML=filteredSales.length?filteredSales.map(s=>{const w=workerInfo(s.worker_id),st=status(s),actions=st==="pending"?`<button class="success" onclick="approveSale('${esc(s.id)}')">✓ Approve</button> <button class="reject" onclick="rejectSale('${esc(s.id)}')">✕ Disapprove</button>`:`<span class="muted">${st==="approved"?"Approved":"Disapproved"}</span>`;return `<tr><td>${esc(dateOnly(s.sale_date||s.created_at))}</td><td>${esc(w.full_name||"")}</td><td>${esc(w.worker_id||s.worker_id||"")}</td><td>${esc(s.product_service||"")}</td><td>${esc(s.quantity??"")}</td><td>${money(amount(s))}</td><td>${esc(s.payment_method||"")}</td><td><span class="badge ${st}">${st.toUpperCase()}</span>${st==="rejected"&&s.rejection_reason?`<br><small>${esc(s.rejection_reason)}</small>`:""}</td><td>${actions}</td></tr>`}).join(""):'<tr><td colspan="9" class="empty">No sales found.</td></tr>'
 }
-window.approveSale=async id=>{if(!confirm("Approve this worker sale?"))return;const sale=allSales.find(x=>x.id===id);if(!sale){msg("dashMsg","Sale not found.","error");return}const r=await db.from("sales").update({status:"approved",rejection_reason:null,approved_at:new Date().toISOString()}).eq("id",id);if(r.error){msg("dashMsg",r.error.message,"error");return}await notifySaleStatus(sale,"approved","");await loadSales()}
-window.rejectSale=async id=>{const reason=prompt("Reason for disapproving this sale:");if(reason===null)return;const clean=reason.trim()||"No reason provided";const sale=allSales.find(x=>x.id===id);if(!sale){msg("dashMsg","Sale not found.","error");return}const r=await db.from("sales").update({status:"rejected",rejection_reason:clean,approved_at:null}).eq("id",id);if(r.error){msg("dashMsg",r.error.message,"error");return}await notifySaleStatus(sale,"rejected",clean);await loadSales()}
-async function notifySaleStatus(sale,statusValue,reason){try{const r=await fetch(SUPABASE_URL+"/functions/v1/notify-sale-status",{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+session.access_token,"apikey":SUPABASE_PUBLISHABLE_KEY},body:JSON.stringify({sale_id:sale.id,status:statusValue,rejection_reason:reason||""})});if(!r.ok){const j=await r.json().catch(()=>({}));msg("dashMsg","Sale updated, but worker email could not be sent: "+(j.error||"email service error"),"error");return false}return true}catch(e){msg("dashMsg","Sale updated, but worker email could not be sent: "+e.message,"error");return false}}
-function populateCommRecipients(){const s=$("commRecipient");s.innerHTML='<option value="">All Active Workers</option>';workers.filter(w=>w.active).forEach(w=>{const o=document.createElement("option");o.value=w.user_id;o.textContent=`${w.full_name||"Worker"} (${w.worker_id||""})`;s.appendChild(o)})}
-const commHistory=[];
-function renderCommHistory(){const b=$("commHistoryBody");b.innerHTML=commHistory.length?commHistory.map(x=>`<tr><td>${esc(x.date)}</td><td>${esc(x.recipient)}</td><td>${esc(x.subject)}</td><td>${esc(x.message)}</td><td><span class="badge approved">${esc(x.status)}</span></td></tr>`).join(""): '<tr><td colspan="5" class="empty">No messages sent yet.</td></tr>'}
-async function sendCommunication(){const workerId=$("commRecipient").value,subject=$("commSubject").value.trim(),message=$("commMessage").value.trim();if(!subject||!message){msg("commMsg","Please enter a subject and message.","error");return}const btn=$("sendCommBtn");btn.disabled=true;btn.textContent="Sending...";try{const r=await fetch(SUPABASE_URL+"/functions/v1/send-worker-message",{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+session.access_token,"apikey":SUPABASE_PUBLISHABLE_KEY},body:JSON.stringify({worker_id:workerId||null,subject,message})});const j=await r.json().catch(()=>({}));if(!r.ok||j.success===false){msg("commMsg",j.error||"Could not send email.","error");return}const count=Number(j.sent_count||0);commHistory.unshift({date:new Date().toLocaleString(),recipient:workerId?($("commRecipient").selectedOptions[0]?.textContent||"Worker"):"All Active Workers",subject,message,status:`Sent to ${count} worker${count===1?"":"s"}`});renderCommHistory();msg("commMsg",`Email sent successfully to ${count} worker${count===1?"":"s"}.`,"ok");$("commSubject").value="";$("commMessage").value=""}catch(e){msg("commMsg","Connection error: "+e.message,"error")}finally{btn.disabled=false;btn.textContent="Send Email"}}
-async function loadInventory(){const r=await db.from("worker_inventory").select("*").order("stock_date",{ascending:false}).order("created_at",{ascending:false});if(r.error){msg("dashMsg","Stock tracker: "+r.error.message,"error");return}allInventory=r.data||[];applyInvFilters();updateInventorySummary()}
+window.approveSale=async id=>{if(!confirm("Approve this worker sale?"))return;const r=await db.from("sales").update({status:"approved",rejection_reason:null,approved_at:new Date().toISOString()}).eq("id",id);if(r.error){msg("dashMsg",r.error.message,"error");return}await loadSales()}
+window.rejectSale=async id=>{const reason=prompt("Reason for disapproving this sale:");if(reason===null)return;const r=await db.from("sales").update({status:"rejected",rejection_reason:reason.trim()||"No reason provided",approved_at:null}).eq("id",id);if(r.error){msg("dashMsg",r.error.message,"error");return}await loadSales()}
+async function loadInventory(){const r=await db.from("worker_stock_batches").select("*").order("stock_date",{ascending:false}).order("created_at",{ascending:false});if(r.error){msg("dashMsg","Stock tracker: "+r.error.message,"error");return}allInventory=r.data||[];applyInvFilters();updateInventorySummary()}
 function applyInvFilters(){const wid=$("invWorkerFilter").value,from=$("invFromDate").value,to=$("invToDate").value;filteredInventory=allInventory.filter(r=>{let d=dateOnly(r.stock_date||r.created_at);return(!wid||r.worker_id===wid)&&(!from||d>=from)&&(!to||d<=to)});renderInventory();updateInventorySummary()}
 function renderInventory(){
- $("inventoryBody").innerHTML=filteredInventory.length?filteredInventory.map(r=>{const c=invCalc(r),w=workerInfo(r.worker_id),pc=c.profit<0?"loss":"profit";return `<tr><td>${esc(dateOnly(r.stock_date||r.created_at))}</td><td>${esc(w.full_name||"")}</td><td>${esc(w.worker_id||r.worker_id||"")}</td><td>${esc(r.product||"")}</td><td>${c.total}</td><td>${c.sold}</td><td>${c.damage}</td><td><b>${c.remaining}</b></td><td>${money(c.purchase)}</td><td>${money(c.revenue)}</td><td>${money(c.damageValue)}</td><td class="${pc}">${money(c.profit)}</td></tr>`}).join(""):'<tr><td colspan="12" class="empty">No stock records found.</td></tr>'
+ $("inventoryBody").innerHTML=filteredInventory.length?filteredInventory.map(r=>{const c=invCalc(r),w=workerInfo(r.worker_id),pc=c.profit<0?"loss":"profit";return `<tr><td>${esc(dateOnly(r.stock_date||r.created_at))}</td><td>${esc(w.full_name||"")}</td><td>${esc(w.worker_id||r.worker_id||"")}</td><td>${esc(r.product_service||"")}</td><td>${c.total}</td><td>${c.sold}</td><td>${c.damage}</td><td><b>${c.remaining}</b></td><td>${money(c.purchase)}</td><td>${money(c.revenue)}</td><td>${money(c.damageValue)}</td><td class="${pc}">${money(c.profit)}</td></tr>`}).join(""):'<tr><td colspan="12" class="empty">No stock records found.</td></tr>'
 }
 function updateInventorySummary(){
  const a=filteredInventory.reduce((x,r)=>{const c=invCalc(r);x.total+=c.total;x.rem+=c.remaining;x.damage+=c.damageValue;x.profit+=c.profit;return x},{total:0,rem:0,damage:0,profit:0});
  $("invTotal").textContent=Number(a.total.toFixed(2));$("invRemain").textContent=Number(a.rem.toFixed(2));$("invDamage").textContent=money(a.damage);$("invProfit").textContent=money(a.profit);
  $("stockRemaining").textContent=Number(a.rem.toFixed(2));$("damageValue").textContent=money(a.damage);$("profitValue").textContent=money(a.profit);$("profitValue").className=a.profit<0?"value loss":"value profit"
 }
-function renderWorkers(){$("workersBody").innerHTML=workers.length?workers.map(w=>`<tr><td>${esc(w.worker_id||"")}</td><td>${esc(w.full_name||"")}</td><td>${esc(w.email||"")}</td><td>${esc(w.phone||"")}</td><td>${esc(w.contract_start||"")} → ${esc(w.contract_end||"")}</td><td><span class="badge ${w.active?"approved":"rejected"}">${w.active?"ACTIVE":"INACTIVE"}</span></td><td style="white-space:nowrap">
-<button class="soft" onclick="toggleWorker('${esc(w.user_id||w.id)}','${esc(w.worker_id||"")} ',${w.active?'true':'false'})">${w.active?'Deactivate':'Reactivate'}</button>
-<button class="danger" onclick="deleteWorker('${esc(w.user_id||w.id)}','${esc(w.worker_id||"")}')">Permanent Delete</button>
-</td></tr>`).join(""):'<tr><td colspan="7" class="empty">No workers found.</td></tr>'}
-
-window.toggleWorker=async(uid,wid,currentlyActive)=>{
-  wid=String(wid||"").trim();
-  if(wid==="ADMIN001"){alert("ADMIN001 cannot be changed.");return}
-  const action=currentlyActive?"deactivate":"reactivate";
-  if(!confirm(`${action[0].toUpperCase()+action.slice(1)} worker ${wid}? ${currentlyActive?"They will no longer be able to log in, but all sales and stock history will be kept.":"Their worker account will become active again."}`)) return;
-  const r=await db.from("worker_profiles").update({active:!currentlyActive}).eq("user_id",uid);
-  if(r.error){msg("workerMsg","Could not "+action+" worker: "+r.error.message,"error");return}
-  msg("workerMsg",`Worker ${wid} ${currentlyActive?"deactivated":"reactivated"} successfully. ${currentlyActive?"Sales and stock history were kept.":""}`,"ok");
-  await loadWorkers();
+function renderWorkers(){$("workersBody").innerHTML=workers.length?workers.map(w=>`<tr><td>${esc(w.worker_id||"")}</td><td>${esc(w.full_name||"")}</td><td>${esc(w.email||"")}</td><td>${esc(w.phone||"")}</td><td>${esc(w.contract_start||"")} → ${esc(w.contract_end||"")}</td><td><span class="badge ${w.active?"approved":"rejected"}">${w.active?"ACTIVE":"INACTIVE"}</span></td><td><button class="danger" onclick="deleteWorker('${esc(w.user_id||w.id)}','${esc(w.worker_id||"")}')">Delete</button></td></tr>`).join(""):'<tr><td colspan="7" class="empty">No workers found.</td></tr>'}
+window.deleteWorker=async(uid,wid)=>{if(wid==="ADMIN001"){alert("ADMIN001 cannot be deleted.");return}if(!confirm(`Delete worker ${wid}? This will remove the worker profile, sales and login account.`))return;const {data:{session:s}}=await db.auth.getSession();const r=await fetch("https://hweczhwoggmsrwhkktrx.supabase.co/functions/v1/delete-worker",{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+s.access_token},body:JSON.stringify({user_id:uid})});let j={};try{j=await r.json()}catch{}if(!r.ok){msg("workerMsg",j.error||"Could not delete worker.","error");return}msg("workerMsg","Worker deleted successfully.","ok");await loadWorkers();await Promise.all([loadSales(),loadInventory()])}
+async function loadCommunication(){
+ const r=await db.from("communications").select("*").order("created_at",{ascending:false}).limit(100);
+ if(r.error){$("commBodyRows").innerHTML='<tr><td colspan="5" class="empty">Communication history is not available yet.</td></tr>';return}
+ const rows=r.data||[];$("commBodyRows").innerHTML=rows.length?rows.map(x=>`<tr><td>${esc(dateOnly(x.created_at))}</td><td>${esc(x.worker_id||"All active workers")}</td><td>${esc(x.subject||"")}</td><td>${esc(x.message||"")}</td><td>${esc(x.status||"sent")}</td></tr>`).join(""):'<tr><td colspan="5" class="empty">No messages sent yet.</td></tr>';
+}
+$("sendCommBtn").onclick=async()=>{
+ const worker_id=$("commRecipient").value,subject=$("commSubject").value.trim(),message=$("commBody").value.trim();
+ if(!subject||!message){msg("commMsg","Subject and message are required.","error");return}
+ const {data:{session:s}}=await db.auth.getSession(); if(!s){msg("commMsg","Your admin session has expired. Please sign in again.","error");return}
+ msg("commMsg","Sending message...");
+ try{const response=await fetch(SUPABASE_URL+"/functions/v1/send-worker-message",{method:"POST",headers:{"Authorization":"Bearer "+s.access_token,"apikey":SUPABASE_PUBLISHABLE_KEY,"Content-Type":"application/json"},body:JSON.stringify({worker_id,subject,message})});const result=await response.json().catch(()=>({}));if(!response.ok||!result.success){msg("commMsg",result.error||"Could not send message.","error");return}msg("commMsg",result.message||"Message sent successfully.","ok");$("commSubject").value="";$("commBody").value="";await loadCommunication()}catch(e){msg("commMsg",e.message||"Could not reach messaging service.","error")}
 };
-
-window.deleteWorker=async(uid,wid)=>{
-  wid=String(wid||"").trim();
-  if(wid==="ADMIN001"){alert("ADMIN001 cannot be deleted.");return}
-  const warning=`PERMANENT DELETE worker ${wid}?\n\nThis cannot be undone.\n\nIt will permanently remove:\n• Worker login/account\n• Worker profile\n• Sales history\n• Stock records\n\nUse Deactivate instead if you only want to stop the worker from logging in while keeping business history.`;
-  if(!confirm(warning))return;
-  const second=prompt(`Type DELETE ${wid} to confirm permanent deletion:`);
-  if(second!==`DELETE ${wid}`){msg("workerMsg","Permanent deletion cancelled. Nothing was removed.","error");return}
-
-  const {data:{session:s}}=await db.auth.getSession();
-  if(!s){msg("workerMsg","Admin session expired. Please sign in again.","error");return}
-
-  // Remove this worker's stock first. The admin stock-delete policy supplied with this update permits this safely.
-  const stockDelete=await db.from("worker_stock_batches").delete().eq("worker_id",uid);
-  if(stockDelete.error){
-    msg("workerMsg","Could not remove the worker's stock records: "+stockDelete.error.message,"error");
-    return;
-  }
-
-  const r=await fetch("https://hweczhwoggmsrwhkktrx.supabase.co/functions/v1/delete-worker",{
-    method:"POST",
-    headers:{
-      "Content-Type":"application/json",
-      "Authorization":"Bearer "+s.access_token,
-      "apikey":SUPABASE_PUBLISHABLE_KEY
-    },
-    body:JSON.stringify({user_id:uid})
-  });
-  let j={};try{j=await r.json()}catch{}
-  if(!r.ok){
-    msg("workerMsg",j.error||"Could not permanently delete worker.","error");
-    return;
-  }
-  msg("workerMsg",`Worker ${wid} and all associated business records were permanently deleted.`,"ok");
-  await loadWorkers();
-  await Promise.all([loadSales(),loadInventory()]);
-};
+$("refreshComm").onclick=loadCommunication;
 
 $("createWorkerBtn").onclick=async()=>{const p={worker_id:$("wId").value.trim(),full_name:$("wName").value.trim(),phone:$("wPhone").value.trim(),email:$("wEmail").value.trim(),contract_start:$("wStart").value,contract_end:$("wEnd").value};if(!p.worker_id||!p.full_name||!p.email){msg("workerMsg","Worker ID, full name and email are required.","error");return}const {data:{session:s}}=await db.auth.getSession();msg("workerMsg","Creating worker and sending welcome email...");const r=await fetch("https://hweczhwoggmsrwhkktrx.supabase.co/functions/v1/create-worker",{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+s.access_token},body:JSON.stringify(p)});let j={};try{j=await r.json()}catch{}if(!r.ok){msg("workerMsg",j.error||"Could not create worker.","error");return}msg("workerMsg","Worker created successfully. Welcome email sent.","ok");["wId","wName","wPhone","wEmail","wStart","wEnd"].forEach(id=>$(id).value="");await loadWorkers()}
 $("loginBtn").onclick=async()=>{msg("loginMsg","Signing in...");const r=await db.auth.signInWithPassword({email:$("email").value.trim(),password:$("password").value});if(r.error){msg("loginMsg",r.error.message,"error");return}await adminCheck()}
 $("forgotBtn").onclick=async()=>{const email=$("email").value.trim();if(!email){msg("loginMsg","Enter your admin email first.","error");return}const r=await db.auth.resetPasswordForEmail(email,{redirectTo:location.href});msg("loginMsg",r.error?r.error.message:"Password recovery email sent. Check your inbox.",r.error?"error":"ok")}
 $("logoutBtn").onclick=async()=>{await db.auth.signOut();showLogin()}
 $("refreshBtn").onclick=async()=>{await loadWorkers();await Promise.all([loadSales(),loadInventory()])}
-$("refreshWorkers").onclick=loadWorkers;$("sendCommBtn").onclick=sendCommunication;$("refreshCommWorkers").onclick=async()=>{await loadWorkers();populateCommRecipients()};$("applyFilters").onclick=applyFilters;$("statusFilter").onchange=applyFilters;$("workerFilter").onchange=applyFilters;$("refreshInventory").onclick=loadInventory;$("applyInvFilters").onclick=applyInvFilters;$("invWorkerFilter").onchange=applyInvFilters
+$("refreshWorkers").onclick=loadWorkers;$("applyFilters").onclick=applyFilters;$("statusFilter").onchange=applyFilters;$("workerFilter").onchange=applyFilters;$("refreshInventory").onclick=loadInventory;$("applyInvFilters").onclick=applyInvFilters;$("invWorkerFilter").onchange=applyInvFilters
 document.querySelectorAll(".nav button").forEach(b=>b.onclick=()=>{document.querySelectorAll(".nav button").forEach(x=>x.classList.remove("active"));b.classList.add("active");document.querySelectorAll(".page").forEach(p=>p.classList.add("hidden"));$(b.dataset.section).classList.remove("hidden")})
 $("changePass").onclick=async()=>{const a=$("newPass").value,b=$("confirmPass").value;if(a.length<8){msg("securityMsg","Password must be at least 8 characters.","error");return}if(a!==b){msg("securityMsg","Passwords do not match.","error");return}const r=await db.auth.updateUser({password:a});msg("securityMsg",r.error?r.error.message:"Password changed successfully.",r.error?"error":"ok");if(!r.error){$("newPass").value="";$("confirmPass").value=""}}
 $("csvBtn").onclick=()=>{const rows=[["Date","Worker","Worker ID","Product/Service","Quantity","Amount","Payment","Status","Reason"],...filteredSales.map(s=>{const w=workerInfo(s.worker_id);return[dateOnly(s.sale_date||s.created_at),w.full_name||"",w.worker_id||"",s.product_service||"",s.quantity??"",amount(s).toFixed(2),s.payment_method||"",status(s),s.rejection_reason||""]})];const csv=rows.map(r=>r.map(x=>`"${String(x).replace(/"/g,'""')}"`).join(",")).join("\n");const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([csv],{type:"text/csv"}));a.download="EZELEX-sales.csv";a.click()}
-$("invCsvBtn").onclick=()=>{const rows=[["Date","Worker","Worker ID","Product","Total","Sold","Damaged","Remaining","Purchase","Revenue","Damage Value","Profit/Loss"],...filteredInventory.map(r=>{const c=invCalc(r),w=workerInfo(r.worker_id);return[dateOnly(r.stock_date||r.created_at),w.full_name||"",w.worker_id||"",r.product||"",c.total,c.sold,c.damage,c.remaining,c.purchase.toFixed(2),c.revenue.toFixed(2),c.damageValue.toFixed(2),c.profit.toFixed(2)]})];const csv=rows.map(r=>r.map(x=>`"${String(x).replace(/"/g,'""')}"`).join(",")).join("\n");const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([csv],{type:"text/csv"}));a.download="EZELEX-stock-profit-report.csv";a.click()}
+$("invCsvBtn").onclick=()=>{const rows=[["Date","Worker","Worker ID","Product","Total","Sold","Damaged","Remaining","Purchase","Revenue","Damage Value","Profit/Loss"],...filteredInventory.map(r=>{const c=invCalc(r),w=workerInfo(r.worker_id);return[dateOnly(r.stock_date||r.created_at),w.full_name||"",w.worker_id||"",r.product_service||"",c.total,c.sold,c.damage,c.remaining,c.purchase.toFixed(2),c.revenue.toFixed(2),c.damageValue.toFixed(2),c.profit.toFixed(2)]})];const csv=rows.map(r=>r.map(x=>`"${String(x).replace(/"/g,'""')}"`).join(",")).join("\n");const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([csv],{type:"text/csv"}));a.download="EZELEX-stock-profit-report.csv";a.click()}
 adminCheck();
 </script>
 </body>
