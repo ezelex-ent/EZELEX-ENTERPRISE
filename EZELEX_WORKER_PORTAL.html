@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-  <title>Ezelex Enterprise - Worker Profile</title>
+  <title>Ezelex Enterprise - Worker Login</title>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
@@ -17,277 +17,178 @@
     }
 
     body {
-      background: #f4f6f8;
-      color: #222;
       min-height: 100vh;
+      background: #f4f6f8;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
     }
 
-    header {
-      background: #111827;
-      color: white;
-      padding: 18px 22px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      gap: 15px;
+    .login-card {
+      width: 100%;
+      max-width: 430px;
+      background: white;
+      padding: 35px 28px;
+      border-radius: 16px;
+      box-shadow: 0 5px 20px rgba(0,0,0,0.10);
     }
 
     .brand {
-      font-size: 21px;
+      text-align: center;
+      font-size: 26px;
       font-weight: bold;
-    }
-
-    .logout-btn {
-      background: #dc2626;
-      color: white;
-      border: none;
-      padding: 10px 16px;
-      border-radius: 8px;
-      cursor: pointer;
-      font-weight: bold;
-    }
-
-    .container {
-      max-width: 900px;
-      margin: 30px auto;
-      padding: 0 18px;
-    }
-
-    .welcome {
-      background: white;
-      border-radius: 14px;
-      padding: 25px;
-      box-shadow: 0 3px 12px rgba(0,0,0,0.08);
-      margin-bottom: 20px;
-    }
-
-    .welcome h1 {
-      font-size: 27px;
+      color: #111827;
       margin-bottom: 8px;
     }
 
-    .welcome p {
-      color: #666;
-    }
-
-    .profile-card {
-      background: white;
-      border-radius: 14px;
-      padding: 25px;
-      box-shadow: 0 3px 12px rgba(0,0,0,0.08);
-    }
-
-    .profile-card h2 {
-      margin-bottom: 20px;
-      font-size: 22px;
-    }
-
-    .profile-grid {
-      display: grid;
-      grid-template-columns: repeat(2, 1fr);
-      gap: 16px;
-    }
-
-    .field {
-      background: #f8fafc;
-      border: 1px solid #e5e7eb;
-      border-radius: 10px;
-      padding: 15px;
-    }
-
-    .field-label {
-      font-size: 12px;
+    .subtitle {
+      text-align: center;
       color: #6b7280;
-      margin-bottom: 6px;
-      text-transform: uppercase;
-      font-weight: bold;
+      margin-bottom: 28px;
     }
 
-    .field-value {
+    label {
+      display: block;
+      font-weight: bold;
+      margin-bottom: 7px;
+      color: #374151;
+    }
+
+    input {
+      width: 100%;
+      padding: 13px;
+      border: 1px solid #d1d5db;
+      border-radius: 9px;
       font-size: 16px;
-      font-weight: 600;
-      word-break: break-word;
+      margin-bottom: 17px;
+      outline: none;
     }
 
-    .status-active {
-      color: #15803d;
+    input:focus {
+      border-color: #2563eb;
     }
 
-    .status-inactive {
-      color: #dc2626;
-    }
-
-    .buttons {
-      margin-top: 25px;
-      display: flex;
-      gap: 12px;
-      flex-wrap: wrap;
-    }
-
-    .action-btn {
-      display: inline-block;
-      text-decoration: none;
+    .login-btn {
+      width: 100%;
       border: none;
-      padding: 12px 18px;
-      border-radius: 8px;
-      cursor: pointer;
-      font-weight: bold;
+      padding: 14px;
+      border-radius: 9px;
       background: #111827;
       color: white;
+      font-size: 16px;
+      font-weight: bold;
+      cursor: pointer;
     }
 
-    .home-btn {
-      background: #2563eb;
+    .login-btn:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
     }
 
-    .loading {
-      text-align: center;
-      padding: 50px 20px;
-      color: #666;
+    .message {
+      display: none;
+      margin-top: 18px;
+      padding: 13px;
+      border-radius: 9px;
+      line-height: 1.4;
+      font-size: 14px;
     }
 
     .error {
       background: #fee2e2;
       color: #991b1b;
-      padding: 18px;
-      border-radius: 10px;
-      margin-top: 20px;
-      display: none;
-      line-height: 1.5;
     }
 
-    footer {
+    .success {
+      background: #dcfce7;
+      color: #166534;
+    }
+
+    .home {
+      display: block;
       text-align: center;
-      padding: 30px 15px;
-      color: #777;
-      font-size: 13px;
+      margin-top: 22px;
+      color: #2563eb;
+      text-decoration: none;
+      font-size: 14px;
+      font-weight: bold;
     }
 
-    @media (max-width: 650px) {
-      .profile-grid {
-        grid-template-columns: 1fr;
-      }
-
-      header {
-        align-items: flex-start;
-      }
-
-      .welcome h1 {
-        font-size: 23px;
-      }
+    .footer {
+      text-align: center;
+      color: #777;
+      font-size: 12px;
+      margin-top: 25px;
     }
   </style>
 </head>
 
 <body>
 
-<header>
-  <div class="brand">Ezelex Enterprise</div>
+<div class="login-card">
 
-  <button class="logout-btn" onclick="logout()">
-    Logout
-  </button>
-</header>
-
-<div class="container">
-
-  <div id="loading" class="loading">
-    Loading your worker profile...
+  <div class="brand">
+    Ezelex Enterprise
   </div>
 
-  <div id="content" style="display:none;">
-
-    <div class="welcome">
-      <h1 id="welcomeName">Welcome!</h1>
-
-      <p>
-        Welcome to your Ezelex Enterprise worker profile.
-      </p>
-    </div>
-
-    <div class="profile-card">
-
-      <h2>My Worker Profile</h2>
-
-      <div class="profile-grid">
-
-        <div class="field">
-          <div class="field-label">Worker ID</div>
-          <div class="field-value" id="workerId">-</div>
-        </div>
-
-        <div class="field">
-          <div class="field-label">Full Name</div>
-          <div class="field-value" id="fullName">-</div>
-        </div>
-
-        <div class="field">
-          <div class="field-label">Phone</div>
-          <div class="field-value" id="phone">-</div>
-        </div>
-
-        <div class="field">
-          <div class="field-label">Role</div>
-          <div class="field-value" id="role">-</div>
-        </div>
-
-        <div class="field">
-          <div class="field-label">Account Status</div>
-          <div class="field-value" id="active">-</div>
-        </div>
-
-        <div class="field">
-          <div class="field-label">Contract Start</div>
-          <div class="field-value" id="contractStart">-</div>
-        </div>
-
-        <div class="field">
-          <div class="field-label">Contract End</div>
-          <div class="field-value" id="contractEnd">-</div>
-        </div>
-
-        <div class="field">
-          <div class="field-label">Email</div>
-          <div class="field-value" id="email">-</div>
-        </div>
-
-      </div>
-
-      <div class="buttons">
-
-        <a
-          class="action-btn home-btn"
-          href="https://ezelexenterprise.com"
-        >
-          Ezelex Enterprise Home
-        </a>
-
-        <a
-          class="action-btn"
-          href="https://ezelexenterprise.com/EZELEX_WORKER_PORTAL.html"
-        >
-          Worker Portal
-        </a>
-
-      </div>
-
-    </div>
-
+  <div class="subtitle">
+    Worker Portal
   </div>
 
-  <div id="errorBox" class="error"></div>
+  <form id="loginForm">
+
+    <label for="email">
+      Email
+    </label>
+
+    <input
+      type="email"
+      id="email"
+      placeholder="Enter your email"
+      required
+    >
+
+    <label for="password">
+      Password
+    </label>
+
+    <input
+      type="password"
+      id="password"
+      placeholder="Enter your password"
+      required
+    >
+
+    <button
+      type="submit"
+      class="login-btn"
+      id="loginButton"
+    >
+      Worker Login
+    </button>
+
+  </form>
+
+  <div
+    id="message"
+    class="message"
+  ></div>
+
+  <a
+    class="home"
+    href="https://ezelexenterprise.com"
+  >
+    Back to Ezelex Enterprise
+  </a>
+
+  <div class="footer">
+    © 2026 Ezelex Enterprise
+  </div>
 
 </div>
 
-<footer>
-  © 2026 Ezelex Enterprise. All rights reserved.
-</footer>
-
 <script>
-
-  /* ================================
-     SUPABASE CONNECTION
-  ================================= */
 
   const SUPABASE_URL =
     "https://hweczhwoggmsrwhkktrx.supabase.co";
@@ -302,291 +203,133 @@
     );
 
 
-  /* ================================
-     LOAD WORKER PROFILE
-  ================================= */
+  const form =
+    document.getElementById("loginForm");
 
-  async function loadWorkerProfile() {
+  const button =
+    document.getElementById("loginButton");
 
-    try {
+  const message =
+    document.getElementById("message");
 
-      const {
-        data: { user },
-        error: authError
-      } = await supabaseClient.auth.getUser();
 
+  function showMessage(text, type) {
 
-      /* No logged-in worker */
+    message.textContent = text;
 
-      if (authError || !user) {
+    message.className =
+      "message " + type;
 
-        window.location.href =
-          "https://ezelexenterprise.com/EZELEX_WORKER_PORTAL.html";
-
-        return;
-      }
-
-
-      /* ================================
-         FIND WORKER PROFILE
-
-         IMPORTANT:
-         The table uses user_id,
-         NOT id.
-      ================================= */
-
-      const {
-        data: profile,
-        error: profileError
-      } = await supabaseClient
-        .from("worker_profiles")
-        .select(`
-          user_id,
-          worker_id,
-          full_name,
-          phone,
-          role,
-          active,
-          contract_start,
-          contract_end
-        `)
-        .eq("user_id", user.id)
-        .maybeSingle();
-
-
-      /* Profile lookup failed */
-
-      if (profileError) {
-
-        console.error(
-          "Worker profile error:",
-          profileError
-        );
-
-        showError(
-          "We could not load your worker profile. " +
-          "Please contact Ezelex Enterprise."
-        );
-
-        return;
-      }
-
-
-      /* No matching worker profile */
-
-      if (!profile) {
-
-        showError(
-          "Your worker account is logged in, " +
-          "but no worker profile is linked to this account. " +
-          "Please contact Ezelex Enterprise."
-        );
-
-        return;
-      }
-
-
-      /* ================================
-         DISPLAY PROFILE
-      ================================= */
-
-      document.getElementById(
-        "welcomeName"
-      ).textContent =
-        "Welcome, " +
-        (profile.full_name || "Worker") +
-        "!";
-
-
-      document.getElementById(
-        "workerId"
-      ).textContent =
-        profile.worker_id || "-";
-
-
-      document.getElementById(
-        "fullName"
-      ).textContent =
-        profile.full_name || "-";
-
-
-      document.getElementById(
-        "phone"
-      ).textContent =
-        profile.phone || "-";
-
-
-      document.getElementById(
-        "role"
-      ).textContent =
-        profile.role || "-";
-
-
-      /* Account status */
-
-      const activeElement =
-        document.getElementById("active");
-
-
-      if (profile.active === true) {
-
-        activeElement.textContent =
-          "Active";
-
-        activeElement.className =
-          "field-value status-active";
-
-      } else {
-
-        activeElement.textContent =
-          "Inactive";
-
-        activeElement.className =
-          "field-value status-inactive";
-      }
-
-
-      /* Contract dates */
-
-      document.getElementById(
-        "contractStart"
-      ).textContent =
-        formatDate(profile.contract_start);
-
-
-      document.getElementById(
-        "contractEnd"
-      ).textContent =
-        formatDate(profile.contract_end);
-
-
-      /* Email */
-
-      document.getElementById(
-        "email"
-      ).textContent =
-        user.email || "-";
-
-
-      /* Show profile */
-
-      document.getElementById(
-        "loading"
-      ).style.display =
-        "none";
-
-
-      document.getElementById(
-        "content"
-      ).style.display =
-        "block";
-
-    }
-
-    catch (error) {
-
-      console.error(
-        "Unexpected error:",
-        error
-      );
-
-      showError(
-        "Something went wrong while loading your profile. " +
-        "Please try again."
-      );
-    }
-  }
-
-
-  /* ================================
-     DATE FORMAT
-  ================================= */
-
-  function formatDate(date) {
-
-    if (!date) {
-      return "-";
-    }
-
-    const d =
-      new Date(date);
-
-
-    if (isNaN(d.getTime())) {
-      return date;
-    }
-
-
-    return d.toLocaleDateString(
-      "en-GB",
-      {
-        day: "2-digit",
-        month: "2-digit",
-        year: "numeric"
-      }
-    );
-  }
-
-
-  /* ================================
-     ERROR MESSAGE
-  ================================= */
-
-  function showError(message) {
-
-    document.getElementById(
-      "loading"
-    ).style.display =
-      "none";
-
-
-    const box =
-      document.getElementById(
-        "errorBox"
-      );
-
-
-    box.textContent =
-      message;
-
-
-    box.style.display =
+    message.style.display =
       "block";
   }
 
 
-  /* ================================
-     LOGOUT
-  ================================= */
+  form.addEventListener(
+    "submit",
+    async function(event) {
 
-  async function logout() {
+      event.preventDefault();
 
-    const {
-      error
-    } =
-      await supabaseClient.auth.signOut();
+      const email =
+        document
+          .getElementById("email")
+          .value
+          .trim();
+
+      const password =
+        document
+          .getElementById("password")
+          .value;
+
+      button.disabled = true;
+
+      button.textContent =
+        "Signing in...";
+
+      message.style.display =
+        "none";
 
 
-    if (error) {
+      try {
 
-      alert(
-        "Unable to log out. Please try again."
-      );
+        const {
+          data,
+          error
+        } =
+          await supabaseClient.auth.signInWithPassword({
+            email: email,
+            password: password
+          });
 
-      return;
+
+        if (error) {
+
+          showMessage(
+            error.message,
+            "error"
+          );
+
+          button.disabled = false;
+
+          button.textContent =
+            "Worker Login";
+
+          return;
+        }
+
+
+        if (!data.user) {
+
+          showMessage(
+            "Login could not be completed. Please try again.",
+            "error"
+          );
+
+          button.disabled = false;
+
+          button.textContent =
+            "Worker Login";
+
+          return;
+        }
+
+
+        showMessage(
+          "Login successful. Opening your worker profile...",
+          "success"
+        );
+
+
+        setTimeout(
+          function() {
+
+            window.location.href =
+              "https://ezelexenterprise.com/worker-profile.html";
+
+          },
+          700
+        );
+
+      }
+
+      catch (error) {
+
+        console.error(error);
+
+        showMessage(
+          "Unable to connect. Please try again.",
+          "error"
+        );
+
+        button.disabled = false;
+
+        button.textContent =
+          "Worker Login";
+      }
+
     }
-
-
-    window.location.href =
-      "https://ezelexenterprise.com/EZELEX_WORKER_PORTAL.html";
-  }
-
-
-  /* ================================
-     START
-  ================================= */
-
-  loadWorkerProfile();
+  );
 
 </script>
 
