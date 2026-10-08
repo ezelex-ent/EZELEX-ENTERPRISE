@@ -58,26 +58,26 @@ th{background:#f8fafc}
   <label>Password</label>
   <input id="password" type="password" placeholder="Password">
   <button id="loginBtn" class="primary" style="width:100%">Sign in</button>
-  <button id="forgotBtn" type="button" class="secondary" style="width:100%;margin-top:10px">Forgot Password?</button>
+  <button id="forgotBtn" type="button" class="soft" style="width:100%;margin-top:10px">Forgot Password?</button>
 </section>
 
 <section id="resetSection" class="login hidden">
-  <h2>Reset Your Password</h2>
-  <p>Enter your worker email to receive a password reset link.</p>
+  <h2>Reset Password</h2>
+  <p id="resetIntro">Enter your worker email and we will send you a password reset link.</p>
   <div id="resetMsg"></div>
   <div id="resetRequest">
     <label>Email</label>
     <input id="resetEmail" type="email" placeholder="Worker email">
-    <button id="sendResetBtn" class="primary" style="width:100%;margin-top:10px">Send Reset Link</button>
-    <button id="backToLoginBtn" type="button" class="secondary" style="width:100%;margin-top:10px">Back to Sign In</button>
+    <button id="sendResetBtn" type="button" class="primary" style="width:100%">Send Reset Link</button>
   </div>
   <div id="newPasswordBox" class="hidden">
     <label>New Password</label>
     <input id="newPassword" type="password" placeholder="At least 8 characters">
-    <label>Confirm New Password</label>
-    <input id="confirmPassword" type="password" placeholder="Confirm password">
-    <button id="savePasswordBtn" class="primary" style="width:100%;margin-top:10px">Update Password</button>
+    <label>Confirm Password</label>
+    <input id="confirmPassword" type="password" placeholder="Confirm new password">
+    <button id="savePasswordBtn" type="button" class="primary" style="width:100%">Save New Password</button>
   </div>
+  <button id="backToLoginBtn" type="button" class="soft" style="width:100%;margin-top:10px">Back to Login</button>
 </section>
 
 <main id="portal" class="wrap hidden">
@@ -210,50 +210,50 @@ async function start(){
 }
 function showLogin(){
   $("loginSection").classList.remove("hidden");
-  $("resetSection").classList.add("hidden");
   $("portal").classList.add("hidden");
   $("logoutBtn").classList.add("hidden");
-}
-function showReset(){
-  $("loginSection").classList.add("hidden");
-  $("resetSection").classList.remove("hidden");
-  $("portal").classList.add("hidden");
-  $("logoutBtn").classList.add("hidden");
-}
-function recoveryMode(){
-  const q=new URLSearchParams(location.search);
-  const h=new URLSearchParams((location.hash||"").replace(/^#/,""));
-  return q.get("type")==="recovery" || h.get("type")==="recovery";
-}
-async function requestReset(){
-  const email=$("resetEmail").value.trim();
-  if(!email){msg("resetMsg","Enter your worker email.","error");return;}
-  const {error}=await db.auth.resetPasswordForEmail(email,{redirectTo:"https://ezelexenterprise.com/EZELEX_WORKER_PORTAL.html"});
-  if(error){msg("resetMsg",error.message,"error");return;}
-  msg("resetMsg","Password reset link sent. Check your email and open the link on this worker portal.","success");
-}
-async function saveNewPassword(){
-  const a=$("newPassword").value,b=$("confirmPassword").value;
-  if(a.length<8){msg("resetMsg","Password must be at least 8 characters.","error");return;}
-  if(a!==b){msg("resetMsg","Passwords do not match.","error");return;}
-  const {error}=await db.auth.updateUser({password:a});
-  if(error){msg("resetMsg",error.message,"error");return;}
-  msg("resetMsg","Password updated successfully. Signing you in...","success");
-  $("newPasswordBox").classList.add("hidden");
-  const {data:{session}}=await db.auth.getSession();
-  history.replaceState({},document.title,location.pathname);
-  if(session) await loadProfile(session.user.id); else showLogin();
 }
 async function loadProfile(userId){
   const {data,error}=await db.from("worker_profiles")
-    .select("id,user_id,worker_id,full_name,role,active")
+    .select("user_id,worker_id,full_name,phone,role,active,activated_at,contract_start,contract_end")
     .eq("user_id",userId).maybeSingle();
 
-  if(error || !data || !data.active || data.role==="admin"){
+  if(error){
+    console.error("Worker profile lookup error:", error);
     await db.auth.signOut();
     showLogin();
-    msg("loginMsg","This account is not an active worker account.", "error");
-    return;
+    msg("loginMsg","Unable to verify your worker account. Please contact Ezelex Enterprise admin.","error");
+    return false;
+  }
+  if(!data || String(data.role||"").toLowerCase()==="admin"){
+    await db.auth.signOut();
+    showLogin();
+    msg("loginMsg","This account is not a worker account.","error");
+    return false;
+  }
+  // New workers are created inactive until their first successful portal login.
+  // Activate only if the profile has not been activated before.
+  if(!data.activated_at){
+    const activation=await db.from("worker_profiles")
+      .update({active:true,activated_at:new Date().toISOString()})
+      .eq("user_id",userId)
+      .is("activated_at",null)
+      .select("user_id,active,activated_at")
+      .maybeSingle();
+    if(activation.error || !activation.data){
+      console.error("Worker activation error:",activation.error);
+      await db.auth.signOut();
+      showLogin();
+      msg("loginMsg","Your worker account could not be activated. Please contact Ezelex Enterprise admin.","error");
+      return false;
+    }
+    data.active=true;
+    data.activated_at=activation.data.activated_at;
+  }else if(!data.active){
+    await db.auth.signOut();
+    showLogin();
+    msg("loginMsg","Your worker account is inactive. Please contact Ezelex Enterprise admin.","error");
+    return false;
   }
 
   profile=data;
@@ -265,12 +265,13 @@ async function loadProfile(userId){
   $("workerRole").textContent=data.role || "worker";
   $("saleDate").value=today();
   await loadSales();
+  return true;
 }
 
 async function loadSales(){
   const {data,error}=await db.from("sales")
     .select("*")
-    .eq("worker_id",profile.id)
+    .eq("worker_id",profile.user_id)
     .order("sale_date",{ascending:false});
 
   if(error){msg("saleMsg","Could not load your sales: "+error.message,"error");return;}
@@ -318,19 +319,53 @@ $("saveStockBtn").onclick=async()=>{
   if(!$("stockDate").value||!$("stockProduct").value.trim()||total<=0||capital<0||purchase<0||price<0||sold<0||damage<0||purchase>capital||sold+damage>total){msg("stockMsg","Please check the stock quantities, capital and costs. Purchase cost cannot be greater than capital, and sold + damage cannot be greater than total stock.","error");return}
   const cashInHand=capital-purchase,unitCost=purchase/total,revenue=sold*price,soldCost=sold*unitCost,damageValue=damage*unitCost,remaining=total-sold-damage,remainingValue=remaining*unitCost,profit=revenue-soldCost-damageValue;
   msg("stockMsg","Saving stock record...");
-  const record={worker_id:profile.id,stock_date:$("stockDate").value,product_service:$("stockProduct").value.trim(),total_quantity:total,capital_amount:capital,purchase_total:purchase,cash_in_hand:cashInHand,cost_per_unit:unitCost,selling_price_per_unit:price,sold_quantity:sold,damage_quantity:damage,loss_quantity:0,sales_revenue:revenue,sold_cost:soldCost,damage_value:damageValue,loss_value:0,remaining_quantity:remaining,remaining_value:remainingValue,profit_loss:profit,notes:$("stockNotes").value.trim()||null};
+  const record={worker_id:profile.user_id,stock_date:$("stockDate").value,product_service:$("stockProduct").value.trim(),total_quantity:total,capital_amount:capital,purchase_total:purchase,cash_in_hand:cashInHand,cost_per_unit:unitCost,selling_price_per_unit:price,sold_quantity:sold,damage_quantity:damage,loss_quantity:0,sales_revenue:revenue,sold_cost:soldCost,damage_value:damageValue,loss_value:0,remaining_quantity:remaining,remaining_value:remainingValue,profit_loss:profit,notes:$("stockNotes").value.trim()||null};
   const {error}=await db.from("worker_stock_batches").insert(record);
   if(error){msg("stockMsg","Stock record could not be saved: "+error.message,"error");return}
   msg("stockMsg","Stock record saved successfully and sent to EZELEX admin.","success");
   $("stockForm").reset();$("stockDate").value=today();$("stockSold").value=0;$("stockDamage").value=0;$("cashInHand").value="0.00";calculateStock();
 };
 
+function recoveryMode(){
+  const q=new URLSearchParams(location.search);
+  const h=new URLSearchParams((location.hash||"").replace(/^#/,""));
+  return q.get("type")==="recovery" || h.get("type")==="recovery";
+}
+function showReset(){
+  $("loginSection").classList.add("hidden");
+  $("resetSection").classList.remove("hidden");
+  $("portal").classList.add("hidden");
+  $("logoutBtn").classList.add("hidden");
+}
+function showLogin(){
+  $("loginSection").classList.remove("hidden");
+  $("resetSection").classList.add("hidden");
+  $("portal").classList.add("hidden");
+  $("logoutBtn").classList.add("hidden");
+}
+async function requestReset(){
+  const email=$("resetEmail").value.trim();
+  if(!email){msg("resetMsg","Enter your worker email.","error");return;}
+  const {error}=await db.auth.resetPasswordForEmail(email,{redirectTo:"https://ezelexenterprise.com/EZELEX_WORKER_PORTAL.html"});
+  if(error){msg("resetMsg",error.message,"error");return;}
+  msg("resetMsg","Password reset link sent. Check your email.","success");
+}
+async function saveNewPassword(){
+  const a=$("newPassword").value,b=$("confirmPassword").value;
+  if(a.length<8){msg("resetMsg","Password must be at least 8 characters.","error");return;}
+  if(a!==b){msg("resetMsg","Passwords do not match.","error");return;}
+  const {error}=await db.auth.updateUser({password:a});
+  if(error){msg("resetMsg",error.message,"error");return;}
+  msg("resetMsg","Password updated successfully. Signing you in...","success");
+  const {data:{session}}=await db.auth.getSession();
+  history.replaceState({},document.title,location.pathname);
+  if(session) await loadProfile(session.user.id); else showLogin();
+}
 $("forgotBtn").onclick=()=>{ $("resetEmail").value=$("email").value.trim(); showReset(); };
-$("backToLoginBtn").onclick=()=>showLogin();
+$("backToLoginBtn").onclick=showLogin;
 $("sendResetBtn").onclick=requestReset;
 $("savePasswordBtn").onclick=saveNewPassword;
-
-db.auth.onAuthStateChange((event,session)=>{
+db.auth.onAuthStateChange((event)=>{
   if(event==="PASSWORD_RECOVERY" || recoveryMode()){
     showReset();
     $("resetRequest").classList.add("hidden");
@@ -358,7 +393,7 @@ $("saleForm").onsubmit=async(e)=>{
   e.preventDefault();
   msg("saleMsg","Saving sale...");
   const sale={
-    worker_id:profile.id,
+    worker_id:profile.user_id,
     sale_date:$("saleDate").value,
     customer_reference:$("customer").value.trim() || null,
     product_service:$("product").value.trim(),
