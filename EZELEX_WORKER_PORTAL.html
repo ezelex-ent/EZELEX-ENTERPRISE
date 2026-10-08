@@ -3,27 +3,35 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>EZELEX Worker Portal</title>
+<title>Ezelex Enterprise — Worker Dashboard</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <style>
 *{box-sizing:border-box}
 body{margin:0;font-family:Arial,sans-serif;background:#f4f6f8;color:#17202a}
-header{background:#111827;color:#fff;padding:22px 5%;display:flex;justify-content:space-between;align-items:center;gap:15px}
-header h1{margin:0;font-size:23px}
-button{border:0;border-radius:8px;padding:12px 16px;cursor:pointer;font-weight:700}
-.primary{background:#111827;color:#fff}.danger{background:#b42318;color:#fff}
+header{background:#111827;color:#fff;padding:18px 5%;display:flex;justify-content:space-between;align-items:center;gap:15px;position:sticky;top:0;z-index:10}
+header h1{margin:0;font-size:22px}
+header small{display:block;color:#cbd5e1;margin-top:4px}
+button{border:0;border-radius:8px;padding:11px 16px;cursor:pointer;font-weight:700}
+.primary{background:#111827;color:#fff}.danger{background:#b42318;color:#fff}.secondary{background:#e5e7eb;color:#111827}
+.wrap{max-width:1150px;margin:25px auto;padding:0 16px}
 .login{max-width:430px;margin:60px auto;background:#fff;padding:30px;border-radius:14px;box-shadow:0 8px 30px #0001}
-.wrap{max-width:1050px;margin:30px auto;padding:0 18px}
-.panel{background:#fff;padding:22px;border-radius:12px;margin-bottom:20px;box-shadow:0 3px 15px #0000000d}
+.panel{background:#fff;padding:21px;border-radius:12px;margin-bottom:18px;box-shadow:0 3px 15px #0000000d}
 .grid{display:grid;grid-template-columns:1fr 1fr;gap:15px}
 label{font-weight:700;font-size:14px;display:block}
 input,select,textarea{width:100%;padding:12px;margin:7px 0 14px;border:1px solid #d5dbe1;border-radius:8px;font-size:15px}
 textarea{min-height:90px;resize:vertical}
 .full{grid-column:1/-1}
 .msg{padding:10px;border-radius:8px;margin:10px 0;background:#fef3c7}
-.error{background:#fee4e2;color:#912018}
-.success{background:#dcfae6;color:#067647}
-.workerInfo{font-size:14px;line-height:1.6}
+.error{background:#fee4e2;color:#912018}.success{background:#dcfae6;color:#067647}
+.hidden{display:none!important}
+.workerInfo{font-size:14px;line-height:1.7}
+.tabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:18px}
+.tab{background:#e5e7eb;color:#111827}.tab.active{background:#111827;color:#fff}
+.section{display:none}.section.active{display:block}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:18px}
+.stat{background:#f8fafc;border:1px solid #e5e7eb;border-radius:12px;padding:15px}
+.stat small{display:block;color:#64748b;font-weight:700;margin-bottom:6px}.stat strong{font-size:21px}
 .stockGrid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:15px 0}
 .stockCard{background:#f8fafc;border:1px solid #e5e7eb;border-radius:12px;padding:15px}
 .stockCard small{display:block;color:#64748b;font-weight:700;margin-bottom:6px}.stockCard strong{font-size:20px}
@@ -31,395 +39,840 @@ textarea{min-height:90px;resize:vertical}
 .resultCard{border-radius:12px;padding:16px;border:1px solid #e5e7eb;background:#fff}
 .resultCard h3{margin:0 0 7px;font-size:14px;color:#475569}.resultCard strong{font-size:21px}
 .profit{background:#ecfdf3;border-color:#a7f3d0}.loss{background:#fff1f2;border-color:#fecdd3}
-.live{font-size:13px;color:#475569;margin-top:8px}.stockNote{background:#fffbeb;border:1px solid #fde68a;padding:12px;border-radius:10px;font-size:13px;line-height:1.5}
-@media(max-width:900px){.stockGrid{grid-template-columns:1fr 1fr}.resultGrid{grid-template-columns:1fr 1fr}}
-@media(max-width:700px){.grid{grid-template-columns:1fr}.full{grid-column:auto}.login{margin:30px 15px}.wrap{padding:0 12px}.stockGrid,.resultGrid{grid-template-columns:1fr}}
-table{width:100%;border-collapse:collapse;min-width:700px}
-th,td{padding:12px;border-bottom:1px solid #eee;text-align:left;font-size:14px}
-th{background:#f8fafc}
-.tablebox{overflow:auto}
-.hidden{display:none}
-@media(max-width:700px){.grid{grid-template-columns:1fr}.full{grid-column:auto}.login{margin:30px 15px}.wrap{padding:0 12px}}
+.live{font-size:13px;color:#475569;margin-top:8px}
+.stockNote{background:#fffbeb;border:1px solid #fde68a;padding:12px;border-radius:10px;font-size:13px;line-height:1.5}
+.tablebox{overflow:auto}table{width:100%;border-collapse:collapse;min-width:700px}
+th,td{padding:11px;border-bottom:1px solid #eee;text-align:left;font-size:14px}th{background:#f8fafc}
+.badge{display:inline-block;padding:5px 9px;border-radius:99px;background:#dcfae6;color:#067647;font-size:12px;font-weight:700}
+.cardrow{display:grid;grid-template-columns:repeat(2,1fr);gap:15px}
+.infoBox{background:#f8fafc;border-radius:10px;padding:14px;line-height:1.7}
+.message{padding:13px;border:1px solid #e5e7eb;border-radius:10px;margin-bottom:10px}
+.message h4{margin:0 0 5px}.message small{color:#64748b}
+@media(max-width:900px){.stats,.stockGrid{grid-template-columns:1fr 1fr}.resultGrid{grid-template-columns:1fr 1fr}}
+@media(max-width:700px){.grid,.cardrow{grid-template-columns:1fr}.full{grid-column:auto}.login{margin:30px 15px}.wrap{padding:0 12px}.stats,.stockGrid,.resultGrid{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
 
 <header>
-  <h1>EZELEX Worker Portal</h1>
-  <button id="logoutBtn" class="danger hidden">Log out</button>
+  <div>
+    <h1>Ezelex Enterprise</h1>
+    <small>Worker Dashboard</small>
+  </div>
+  <a id="settingsBtn" class="secondary hidden" href="https://ezelexenterprise.com/worker-profile.html" style="text-decoration:none">Settings</a>
 </header>
 
 <section id="loginSection" class="login">
   <h2>Worker Login</h2>
-  <p>Sign in with your EZELEX worker account.</p>
+  <p>Sign in with your Ezelex Enterprise worker account.</p>
   <div id="loginMsg"></div>
   <label>Email</label>
   <input id="email" type="email" placeholder="Worker email">
   <label>Password</label>
   <input id="password" type="password" placeholder="Password">
   <button id="loginBtn" class="primary" style="width:100%">Sign in</button>
-  <button id="forgotBtn" type="button" class="soft" style="width:100%;margin-top:10px">Forgot Password?</button>
+  <button id="forgotBtn" class="secondary" type="button" style="width:100%;margin-top:10px">Forgot password?</button>
+  <div id="forgotBox" class="hidden" style="margin-top:18px">
+    <hr>
+    <h3>Reset your password</h3>
+    <p>Enter your worker email and Ezelex Enterprise will send you a password reset link.</p>
+    <input id="resetEmail" type="email" placeholder="Worker email">
+    <button id="sendResetBtn" class="primary" type="button" style="width:100%">Send Reset Link</button>
+    <button id="backLoginBtn" class="secondary" type="button" style="width:100%;margin-top:8px">Back to Sign In</button>
+    <div id="resetMsg"></div>
+  </div>
 </section>
 
-<section id="resetSection" class="login hidden">
-  <h2>Reset Password</h2>
-  <p id="resetIntro">Enter your worker email and we will send you a password reset link.</p>
-  <div id="resetMsg"></div>
-  <div id="resetRequest">
-    <label>Email</label>
-    <input id="resetEmail" type="email" placeholder="Worker email">
-    <button id="sendResetBtn" type="button" class="primary" style="width:100%">Send Reset Link</button>
-  </div>
-  <div id="newPasswordBox" class="hidden">
-    <label>New Password</label>
-    <input id="newPassword" type="password" placeholder="At least 8 characters">
-    <label>Confirm Password</label>
-    <input id="confirmPassword" type="password" placeholder="Confirm new password">
-    <button id="savePasswordBtn" type="button" class="primary" style="width:100%">Save New Password</button>
-  </div>
-  <button id="backToLoginBtn" type="button" class="soft" style="width:100%;margin-top:10px">Back to Login</button>
+<section id="passwordRecovery" class="login hidden">
+  <h2>Set New Password</h2>
+  <p>Choose a new password for your Ezelex Enterprise worker account.</p>
+  <div id="recoveryMsg"></div>
+  <label>New Password</label>
+  <input id="newPassword" type="password" placeholder="New password" minlength="6">
+  <label>Confirm Password</label>
+  <input id="confirmPassword" type="password" placeholder="Confirm password" minlength="6">
+  <button id="updatePasswordBtn" class="primary" type="button" style="width:100%">Update Password</button>
 </section>
 
 <main id="portal" class="wrap hidden">
   <div class="panel">
-    <h2>Welcome, <span id="workerName">Worker</span></h2>
+    <h2>Welcome, <span id="workerName">Worker</span> 👋</h2>
     <div class="workerInfo">
-      <strong>Worker ID:</strong> <span id="workerId">—</span><br>
-      <strong>Role:</strong> <span id="workerRole">—</span>
+      <strong>Worker ID:</strong> <span id="workerId">—</span> &nbsp; | &nbsp;
+      <strong>Role:</strong> <span id="workerRole">—</span> &nbsp; | &nbsp;
+      <strong>Status:</strong> <span id="workerStatus" class="badge">—</span>
+    </div>
+    <div class="stats">
+      <div class="stat"><small>Today Sale</small><strong id="todaySales">GH₵0.00</strong></div>
+      <div class="stat"><small>This Week</small><strong id="weekSales">GH₵0.00</strong></div>
+      <div class="stat"><small>This Month</small><strong id="monthSales">GH₵0.00</strong></div>
+      <div class="stat"><small>All Time</small><strong id="allSales">GH₵0.00</strong></div>
     </div>
   </div>
 
-  <div class="panel">
-    <h2>Record a Sale</h2>
-    <div id="saleMsg"></div>
-    <form id="saleForm" class="grid">
-      <div>
-        <label>Sale Date</label>
-        <input id="saleDate" type="date" required>
-      </div>
-      <div>
-        <label>Customer / Reference</label>
-        <input id="customer" type="text" placeholder="Customer name or reference">
-      </div>
-      <div>
-        <label>Product / Service</label>
-        <input id="product" type="text" placeholder="What was sold?" required>
-      </div>
-      <div>
-        <label>Quantity</label>
-        <input id="quantity" type="number" min="1" step="1" value="1" required>
-      </div>
-      <div>
-        <label>Sale Amount (GHS)</label>
-        <input id="amount" type="number" min="0" step="0.01" placeholder="0.00" required>
-      </div>
-      <div>
-        <label>Payment Method</label>
-        <select id="payment" required>
-          <option value="">Select payment method</option>
-          <option>Cash</option>
-          <option>Mobile Money</option>
-          <option>Bank Transfer</option>
-          <option>Card</option>
-          <option>Other</option>
-        </select>
-      </div>
-      <div class="full">
-        <label>Notes</label>
-        <textarea id="notes" placeholder="Optional notes"></textarea>
-      </div>
-      <div class="full">
-        <button class="primary" type="submit">Record Sale</button>
-      </div>
-    </form>
+  <div class="tabs">
+    <button class="tab active" data-tab="dashboard">Dashboard</button>
+    <button class="tab" data-tab="sales">Record Sale</button>
+    <button class="tab" data-tab="stock">Live Stock</button>
+    <a class="tab" href="https://ezelexenterprise.com/worker-profile.html" style="text-decoration:none">Settings</a>
   </div>
 
-  <div class="panel">
-    <h2>📦 Stock & Profit Calculator</h2>
-    <div class="stockNote"><strong>How Cash In Hand works:</strong> Enter the capital available for this stock batch. The portal automatically subtracts the total purchase cost from the capital. Example: Capital GH₵5,000 − eggs purchased for GH₵4,300 = <strong>GH₵700 Cash In Hand</strong>. Capital is always reconciled as <strong>Purchase Cost + Cash In Hand = Capital</strong>.</div>
-    <div id="stockMsg"></div>
-    <form id="stockForm" class="grid" style="margin-top:15px">
-      <div><label>Stock Date</label><input id="stockDate" type="date" required></div>
-      <div><label>Product / Stock Item</label><input id="stockProduct" type="text" placeholder="e.g. Eggs - 30 crate" required></div>
-      <div><label>Total Quantity Bought</label><input id="stockTotal" type="number" min="0" step="1" placeholder="100" required></div>
-      <div><label>Capital Available (GHS)</label><input id="capitalAmount" type="number" min="0" step="0.01" placeholder="5000" required></div>
-      <div><label>Total Purchase Cost (GHS)</label><input id="purchaseTotal" type="number" min="0" step="0.01" placeholder="4300" required></div>
-      <div><label>Selling Price Per Unit (GHS)</label><input id="sellPrice" type="number" min="0" step="0.01" placeholder="50" required></div>
-      <div><label>Sold Quantity</label><input id="stockSold" type="number" min="0" step="1" value="0"></div>
-      <div><label>Damage Quantity</label><input id="stockDamage" type="number" min="0" step="1" value="0"></div>
-      <div><label>Cash In Hand (GHS)</label><input id="cashInHand" type="number" min="0" step="0.01" value="0" readonly></div>
-      <div class="full"><label>Stock Notes</label><textarea id="stockNotes" placeholder="Optional notes about this stock batch"></textarea></div>
-    </form>
-
-    <div class="stockGrid">
-      <div class="stockCard"><small>Capital</small><strong id="calcCapital">GH₵0.00</strong><div id="calcCapitalNote">Total capital available</div></div>
-      <div class="stockCard"><small>Sold</small><strong id="calcSold">0 units</strong><div id="calcRevenue">GH₵0.00 revenue</div></div>
-      <div class="stockCard"><small>Remaining</small><strong id="calcRemaining">0 units</strong><div id="calcRemainingValue">GH₵0.00 stock value</div></div>
-      <div class="stockCard"><small>Unit Cost</small><strong id="calcUnitCost">GH₵0.00</strong><div>Cost per unit</div></div>
-    </div>
-    <div class="resultGrid">
-      <div class="resultCard"><h3>Cost of Sold Stock</h3><strong id="calcSoldCost">GH₵0.00</strong></div>
-      <div class="resultCard"><h3>Damage Value</h3><strong id="calcDamageValue">GH₵0.00</strong></div>
-      <div class="resultCard"><h3>Cash In Hand</h3><strong id="calcCashInHand">GH₵0.00</strong><div class="live">Capital − purchase cost</div></div>
-      <div class="resultCard"><h3>Sales Revenue</h3><strong id="calcSalesRevenue">GH₵0.00</strong></div>
-      <div class="resultCard" id="profitCard"><h3>Current Profit / Loss</h3><strong id="calcProfit">GH₵0.00</strong><div id="profitLabel" class="live">No sales/loss yet</div></div>
-      <div class="resultCard"><h3>Capital Reconciliation</h3><strong id="calcReconciliation">GH₵0.00</strong><div id="calcAccountedNote" class="live">Purchase + cash in hand = capital</div></div>
-    </div>
-    <div class="full" style="margin-top:15px"><button id="saveStockBtn" class="primary" type="button">Save Stock Record</button></div>
+  <section id="dashboard" class="section active">
+    <div class="panel">
+      <h2>Worker Overview</h2>
+      <p>Your sales are sent to the central Ezelex Enterprise admin dashboard. Stock records are also saved centrally.</p>
+      <div class="cardrow">
+        <div class="infoBox"><strong>Worker account</strong><br><span id="dashEmail">—</span><br><span id="dashPhone">—</span></div>
+        <div class="infoBox"><strong>Last activity</strong><br><span id="lastActivity">Loading...</span></div>
+      </div>
   </div>
-
-  <div class="panel">
-    <h2>My Sales History</h2>
-    <div class="tablebox">
-      <table>
-        <thead>
-          <tr><th>Date</th><th>Customer</th><th>Product/Service</th><th>Qty</th><th>Amount (GHS)</th><th>Payment</th><th>Notes</th></tr>
-        </thead>
-        <tbody id="salesBody"><tr><td colspan="7">No sales recorded yet.</td></tr></tbody>
-      </table>
+    <div class="panel">
+      <h2>Recent Sales</h2>
+      <div class="tablebox">
+        <table><thead><tr><th>Date</th><th>Customer</th><th>Product/Service</th><th>Qty</th><th>Amount</th><th>Payment</th></tr></thead>
+        <tbody id="recentSalesBody"><tr><td colspan="6">Loading...</td></tr></tbody></table>
+      </div>
     </div>
-  </div>
+  </section>
+
+  <section id="sales" class="section">
+    <div class="panel">
+      <h2 id="saleFormTitle">Record a Sale</h2>
+      <div id="saleMsg"></div>
+      <form id="saleForm" class="grid">
+        <input id="editingSaleId" type="hidden" value="">
+        <div><label>Sale Date</label><input id="saleDate" type="date" required></div>
+        <div><label>Customer / Reference</label><input id="customer" type="text" placeholder="Customer name or reference"></div>
+        <div><label>Product / Service</label><input id="product" type="text" placeholder="What was sold?" required></div>
+        <div><label>Quantity</label><input id="quantity" type="number" min="1" step="1" value="1" required></div>
+        <div><label>Sale Amount (GHS)</label><input id="amount" type="number" min="0" step="0.01" placeholder="0.00" required></div>
+        <div><label>Payment Method</label><select id="payment" required><option value="">Select payment method</option><option>Cash</option><option>Mobile Money</option><option>Bank Transfer</option><option>Card</option><option>Other</option></select></div>
+        <div class="full"><label>Notes</label><textarea id="notes" placeholder="Optional notes"></textarea></div>
+        <div class="full" style="display:flex;gap:10px;flex-wrap:wrap"><button id="saveSaleBtn" class="primary" type="submit">Record Sale</button><button id="cancelSaleEditBtn" type="button" style="display:none">Cancel Edit</button></div>
+      </form>
+    </div>
+    <div class="panel">
+      <h2>My Sales History</h2>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin:0 0 15px">
+        <button id="pdfReportBtn" class="primary" type="button">📄 Download PDF Report</button>
+        <button id="shareReportBtn" type="button">📤 Share Report</button>
+      </div>
+      <div id="reportMsg"></div>
+      <div class="tablebox"><table><thead><tr><th>Date</th><th>Customer</th><th>Product/Service</th><th>Qty</th><th>Amount (GHS)</th><th>Payment</th><th>Notes</th><th>Status / Action</th></tr></thead>
+      <tbody id="salesBody"><tr><td colspan="11">Loading...</td></tr></tbody></table></div>
+    </div>
+  </section>
+
+  <section id="stock" class="section">
+    <div class="panel">
+      <h2>📦 Live Stock & Profit</h2>
+      <div class="stockNote"><strong>Live central stock:</strong> saved stock batches are loaded from Ezelex records. The summary below is calculated from the stock records belonging to your worker account.</div>
+      <div id="stockLiveMsg"></div>
+      <div class="stockGrid">
+        <div class="stockCard"><small>Current Units</small><strong id="liveUnits">0</strong><div id="liveUnitsLabel">remaining</div></div>
+        <div class="stockCard"><small>Stock Value</small><strong id="liveValue">GH₵0.00</strong><div>remaining value</div></div>
+        <div class="stockCard"><small>Sales Revenue</small><strong id="liveRevenue">GH₵0.00</strong><div>from stock records</div></div>
+        <div class="stockCard"><small>Profit / Loss</small><strong id="liveProfit">GH₵0.00</strong><div id="liveProfitLabel">current total</div></div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2>Add Stock Record</h2>
+      <div id="stockMsg"></div>
+      <input type="hidden" id="editingStockId" value="">
+      <form id="stockForm" class="grid">
+        <div><label>Stock Date</label><input id="stockDate" type="date" required></div>
+        <div><label>Product / Stock Item</label><input id="stockProduct" type="text" placeholder="e.g. Eggs - 30 crate" required></div>
+        <div><label>Total Quantity Bought</label><input id="stockTotal" type="number" min="0" step="1" placeholder="100" required></div>
+        <div><label>Capital Available (GHS)</label><input id="capitalAmount" type="number" min="0" step="0.01" placeholder="5000" required></div>
+        <div><label>Total Purchase Cost (GHS)</label><input id="purchaseTotal" type="number" min="0" step="0.01" placeholder="4300" required></div>
+        <div><label>Selling Price Per Unit (GHS)</label><input id="sellPrice" type="number" min="0" step="0.01" placeholder="50" required></div>
+        <div><label>Sold Quantity</label><input id="stockSold" type="number" min="0" step="1" value="0"></div>
+        <div><label>Damage Quantity</label><input id="stockDamage" type="number" min="0" step="1" value="0"></div>
+        
+        <div class="full"><label>Stock Notes</label><textarea id="stockNotes" placeholder="Optional notes about this stock batch"></textarea></div>
+      </form>
+      <div class="stockGrid">
+        <div class="stockCard"><small>Total</small><strong id="calcTotal">0 units</strong><div id="calcTotalValue">GH₵0.00</div></div>
+        <div class="stockCard"><small>Sold</small><strong id="calcSold">0 units</strong><div id="calcRevenue">GH₵0.00 revenue</div></div>
+        <div class="stockCard"><small>Remaining</small><strong id="calcRemaining">0 units</strong><div id="calcRemainingValue">GH₵0.00 stock value</div></div>
+        <div class="stockCard"><small>Unit Cost</small><strong id="calcUnitCost">GH₵0.00</strong><div>Cost per unit</div></div>
+      </div>
+      <div class="resultGrid">
+        <div class="resultCard"><h3>Cost of Sold Stock</h3><strong id="calcSoldCost">GH₵0.00</strong></div>
+        <div class="resultCard"><h3>Damage Value</h3><strong id="calcDamageValue">GH₵0.00</strong></div>
+        <div class="resultCard"><h3>Capital Available</h3><strong id="calcCapital">GH₵0.00</strong></div>
+        <div class="resultCard"><h3>Cash In Hand</h3><strong id="calcCashInHand">GH₵0.00</strong><div>Capital − purchase cost</div></div>
+        <div class="resultCard"><h3>Sales Revenue</h3><strong id="calcSalesRevenue">GH₵0.00</strong></div>
+        <div class="resultCard" id="profitCard"><h3>Current Profit / Loss</h3><strong id="calcProfit">GH₵0.00</strong><div id="profitLabel" class="live">No sales/loss yet</div></div>
+        <div class="resultCard"><h3>Total Stock Accounted For</h3><strong id="calcAccounted">0 units</strong><div id="calcAccountedNote" class="live">Sold + damage</div></div>
+      </div>
+      <div style="margin-top:15px"><button id="saveStockBtn" class="primary" type="button">Save Stock Record</button> <button id="cancelEditStockBtn" type="button" style="display:none">Cancel Edit</button></div>
+    </div>
+
+    <div class="panel">
+      <h2>My Stock Records</h2><div class="stockNote">Capital is the money available for the stock purchase. <strong>Cash In Hand = Capital − Purchase Cost</strong>. Damage is tracked separately and is not treated as cash spent.</div>
+      <div class="tablebox"><table><thead><tr><th>Date</th><th>Product</th><th>Total</th><th>Sold</th><th>Damage</th><th>Remaining</th><th>Capital</th><th>Purchase</th><th>Cash In Hand</th><th>Profit/Loss</th><th>Actions</th></tr></thead>
+      <tbody id="stockBody"><tr><td colspan="11">Loading...</td></tr></tbody></table></div>
+    </div>
+  </section>
+
+  <section id="profile" class="section">
+    <div class="panel">
+      <h2>My Profile</h2>
+      <div class="infoBox">
+        <strong>Worker ID:</strong> <span id="profileWorkerId">—</span><br>
+        <strong>Full Name:</strong> <span id="profileFullName">—</span><br>
+        <strong>Phone:</strong> <span id="profilePhone">—</span><br>
+        <strong>Role:</strong> <span id="profileRole">—</span><br>
+        <strong>Status:</strong> <span id="profileActive">—</span><br>
+        <strong>Contract Start:</strong> <span id="profileStart">—</span><br>
+        <strong>Contract End:</strong> <span id="profileEnd">—</span><br>
+        <strong>Login Email:</strong> <span id="profileEmail">—</span>
+      </div>
+    </div>
+  </section>
+
+  <section id="communication" class="section">
+    <div class="panel">
+      <h2>📩 Communication</h2>
+      <p>Messages and announcements from Ezelex Enterprise will appear here when the communication records are available.</p>
+      <div id="messagesBody"><div class="message">No messages yet.</div></div>
+    </div>
+  </section>
+
+  <section id="contract" class="section">
+    <div class="panel">
+      <h2>📄 My Contract</h2>
+      <div class="infoBox">
+        <strong>Contract Start:</strong> <span id="contractStart">—</span><br>
+        <strong>Contract End:</strong> <span id="contractEnd">—</span>
+      </div>
+      <p style="margin-top:16px">Your contract details are linked to your worker profile. If Ezelex Enterprise has provided a contract document or link, it can be added here later without changing your worker login.</p>
+    </div>
+  </section>
 </main>
 
 <script>
-const SUPABASE_URL = "https://hweczhwoggmsrwhkktrx.supabase.co";
-const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_D0o90HRJ1AfROf_DAj7ZAg_uaPDwqvV";
-const {createClient} = supabase;
-const db = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
+const SUPABASE_URL="https://hweczhwoggmsrwhkktrx.supabase.co";
+const SUPABASE_PUBLISHABLE_KEY="sb_publishable_q52vf7tvpI4ho9FkGfZhvw_xdUv_bni";
+const {createClient}=supabase;
+const db=createClient(SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY);
+let profile=null;
+let currentUser=null;
+let reportSalesRows=[];
+let liveStockRows=[];
 
-let profile = null;
+const $=id=>document.getElementById(id);
+function msg(id,text,type=""){ $(id).innerHTML=text?`<div class="msg ${type}">${text}</div>`:""; }
+function today(){const d=new Date();return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");}
+function esc(v){return String(v??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[m]));}
+function money(v){return "GH₵"+Number(v||0).toLocaleString("en-GH",{minimumFractionDigits:2,maximumFractionDigits:2});}
+function num(id){const n=Number($(id).value);return Number.isFinite(n)&&n>=0?n:0;}
+function dateOnly(v){return v?String(v).slice(0,10):"—";}
 
-const $ = id => document.getElementById(id);
-function msg(id,text,type=""){ $(id).innerHTML=text ? `<div class="msg ${type}">${text}</div>` : ""; }
-function today(){
-  const d=new Date();
-  return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
-}
-function esc(v){return String(v??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[m]))}
-
-async function start(){
-  if(recoveryMode()){
-    showReset();
-    $("resetRequest").classList.add("hidden");
-    $("newPasswordBox").classList.remove("hidden");
-    return;
-  }
-  const {data:{session}}=await db.auth.getSession();
-  if(!session){showLogin();return;}
-  await loadProfile(session.user.id);
-}
 function showLogin(){
   $("loginSection").classList.remove("hidden");
   $("portal").classList.add("hidden");
-  $("logoutBtn").classList.add("hidden");
+  $("settingsBtn").classList.add("hidden");
 }
-async function loadProfile(userId){
+function showPortal(){
+  $("loginSection").classList.add("hidden");
+  $("portal").classList.remove("hidden");
+  $("settingsBtn").classList.remove("hidden");
+}
+
+async function start(){
+  const {data:{session}}=await db.auth.getSession();
+  if(!session){showLogin();return;}
+  await loadProfile(session.user);
+}
+
+async function loadProfile(user){
+  currentUser=user;
   const {data,error}=await db.from("worker_profiles")
     .select("user_id,worker_id,full_name,phone,role,active,activated_at,contract_start,contract_end")
-    .eq("user_id",userId).maybeSingle();
+    .eq("user_id",user.id).maybeSingle();
 
-  if(error){
-    console.error("Worker profile lookup error:", error);
-    await db.auth.signOut();
-    showLogin();
-    msg("loginMsg","Unable to verify your worker account. Please contact Ezelex Enterprise admin.","error");
-    return false;
-  }
-  if(!data || String(data.role||"").toLowerCase()==="admin"){
+  if(error||!data||String(data.role||"").toLowerCase()==="admin"){
     await db.auth.signOut();
     showLogin();
     msg("loginMsg","This account is not a worker account.","error");
-    return false;
-  }
-  // New workers are created inactive until their first successful portal login.
-  // Activate only if the profile has not been activated before.
-  if(!data.activated_at){
-    const activation=await db.from("worker_profiles")
-      .update({active:true,activated_at:new Date().toISOString()})
-      .eq("user_id",userId)
-      .is("activated_at",null)
-      .select("user_id,active,activated_at")
-      .maybeSingle();
-    if(activation.error || !activation.data){
-      console.error("Worker activation error:",activation.error);
-      await db.auth.signOut();
-      showLogin();
-      msg("loginMsg","Your worker account could not be activated. Please contact Ezelex Enterprise admin.","error");
-      return false;
-    }
-    data.active=true;
-    data.activated_at=activation.data.activated_at;
-  }else if(!data.active){
-    await db.auth.signOut();
-    showLogin();
-    msg("loginMsg","Your worker account is inactive. Please contact Ezelex Enterprise admin.","error");
-    return false;
-  }
-
-  profile=data;
-  $("loginSection").classList.add("hidden");
-  $("portal").classList.remove("hidden");
-  $("logoutBtn").classList.remove("hidden");
-  $("workerName").textContent=data.full_name || "Worker";
-  $("workerId").textContent=data.worker_id || "—";
-  $("workerRole").textContent=data.role || "worker";
-  $("saleDate").value=today();
-  await loadSales();
-  return true;
-}
-
-async function loadSales(){
-  const {data,error}=await db.from("sales")
-    .select("*")
-    .eq("worker_id",profile.user_id)
-    .order("sale_date",{ascending:false});
-
-  if(error){msg("saleMsg","Could not load your sales: "+error.message,"error");return;}
-
-  const body=$("salesBody");
-  if(!data || !data.length){
-    body.innerHTML='<tr><td colspan="7">No sales recorded yet.</td></tr>';
     return;
   }
-  body.innerHTML=data.map(s=>`<tr>
-    <td>${esc(String(s.sale_date||"").slice(0,10))}</td>
-    <td>${esc(s.customer_reference||"")}</td>
-    <td>${esc(s.product_service||"")}</td>
-    <td>${esc(s.quantity??"")}</td>
-    <td>${Number(s.sale_amount||0).toFixed(2)}</td>
-    <td>${esc(s.payment_method||"")}</td>
-    <td>${esc(s.notes||"")}</td>
+  if(!data.activated_at){
+    const activation=await db.from("worker_profiles").update({active:true,activated_at:new Date().toISOString()}).eq("user_id",user.id).is("activated_at",null).select("user_id,active,activated_at").maybeSingle();
+    if(activation.error||!activation.data){await db.auth.signOut();showLogin();msg("loginMsg","Your worker account could not be activated. Please contact Ezelex Enterprise admin.","error");return;}
+    data.active=true; data.activated_at=activation.data.activated_at;
+  }else if(!data.active){
+    await db.auth.signOut(); showLogin(); msg("loginMsg","Your worker account is inactive. Please contact Ezelex Enterprise admin.","error"); return;
+  }
+  profile=data;
+  showPortal();
+
+  $("workerName").textContent=data.full_name||"Worker";
+  $("workerId").textContent=data.worker_id||"—";
+  $("workerRole").textContent=data.role||"worker";
+  $("workerStatus").textContent=data.active?"Active":"Inactive";
+  $("saleDate").value=today();
+  $("stockDate").value=today();
+
+  $("dashEmail").textContent=user.email||"—";
+  $("dashPhone").textContent=data.phone||"—";
+  $("profileWorkerId").textContent=data.worker_id||"—";
+  $("profileFullName").textContent=data.full_name||"—";
+  $("profilePhone").textContent=data.phone||"—";
+  $("profileRole").textContent=data.role||"—";
+  $("profileActive").textContent=data.active?"Active":"Inactive";
+  $("profileStart").textContent=dateOnly(data.contract_start);
+  $("profileEnd").textContent=dateOnly(data.contract_end);
+  $("profileEmail").textContent=user.email||"—";
+  $("contractStart").textContent=dateOnly(data.contract_start);
+  $("contractEnd").textContent=dateOnly(data.contract_end);
+
+  await Promise.all([loadSales(),loadStock()]);
+  await loadMessages();
+}
+
+function salesForWorker(){
+  return db.from("sales").select("*").eq("worker_id",currentUser.id).order("sale_date",{ascending:false});
+}
+async function loadSales(){
+  const {data,error}=await salesForWorker();
+  if(error){
+    msg("saleMsg","Could not load your sales: "+error.message,"error");
+    $("salesBody").innerHTML='<tr><td colspan="8">Could not load sales.</td></tr>';
+    return;
+  }
+  const rows=data||[];
+  liveStockRows = rows;
+  reportSalesRows=rows;
+  const now=new Date();
+  const startDay=new Date(now.getFullYear(),now.getMonth(),now.getDate());
+  const weekStart=new Date(startDay); weekStart.setDate(startDay.getDate()-startDay.getDay());
+  const monthStart=new Date(now.getFullYear(),now.getMonth(),1);
+  let todayTotal=0,weekTotal=0,monthTotal=0,allTotal=0;
+  rows.forEach(s=>{
+    const amount=Number(s.sale_amount||0); allTotal+=amount;
+    const d=new Date(String(s.sale_date||"").slice(0,10)+"T00:00:00");
+    if(d>=startDay)todayTotal+=amount;
+    if(d>=weekStart)weekTotal+=amount;
+    if(d>=monthStart)monthTotal+=amount;
+  });
+  $("todaySales").textContent=money(todayTotal);
+  $("weekSales").textContent=money(weekTotal);
+  $("monthSales").textContent=money(monthTotal);
+  $("allSales").textContent=money(allTotal);
+  $("lastActivity").textContent=rows.length?dateOnly(rows[0].sale_date):"No sales recorded yet.";
+
+  if(!rows.length){
+    $("salesBody").innerHTML='<tr><td colspan="8">No sales recorded yet.</td></tr>';
+    $("recentSalesBody").innerHTML='<tr><td colspan="6">No sales recorded yet.</td></tr>';
+    return;
+  }
+  $("salesBody").innerHTML=rows.map(s=>{
+    const st=String(s.status||"pending").toLowerCase();
+    const pending=(st==="pending"||!s.status);
+    const action=pending
+      ? `<span style="display:inline-flex;gap:6px;flex-wrap:wrap;align-items:center"><span class="badge" style="background:#fff3cd;color:#8a5b00">PENDING</span><button type="button" onclick="editSale('${esc(s.id)}')" style="padding:7px 10px">Edit</button><button type="button" onclick="deleteSale('${esc(s.id)}')" style="padding:7px 10px;background:#b42318;color:#fff">Delete</button></span>`
+      : `<span class="badge" style="background:${st==='approved'?'#dcfae6':'#fee4e2'};color:${st==='approved'?'#067647':'#b42318'}">${esc(st.toUpperCase())}</span>`;
+    return `<tr>
+      <td>${esc(dateOnly(s.sale_date))}</td><td>${esc(s.customer_reference||"")}</td><td>${esc(s.product_service||"")}</td>
+      <td>${esc(s.quantity??"")}</td><td>${money(s.sale_amount)}</td><td>${esc(s.payment_method||"")}</td><td>${esc(s.notes||"")}</td><td>${action}</td>
+    </tr>`;
+  }).join("");
+  $("recentSalesBody").innerHTML=rows.slice(0,5).map(s=>`<tr>
+    <td>${esc(dateOnly(s.sale_date))}</td><td>${esc(s.customer_reference||"")}</td><td>${esc(s.product_service||"")}</td>
+    <td>${esc(s.quantity??"")}</td><td>${money(s.sale_amount)}</td><td>${esc(s.payment_method||"")}</td>
   </tr>`).join("");
 }
 
-function money(value){return "GH₵"+Number(value||0).toLocaleString("en-GH",{minimumFractionDigits:2,maximumFractionDigits:2})}
-function num(id){const n=Number($(id).value);return Number.isFinite(n)&&n>=0?n:0}
 function calculateStock(){
   const total=num("stockTotal"),capital=num("capitalAmount"),purchase=num("purchaseTotal"),price=num("sellPrice"),sold=num("stockSold"),damage=num("stockDamage");
-  const cashInHand=Math.max(0,capital-purchase);
-  const unitCost=total>0?purchase/total:0, remaining=Math.max(0,total-sold-damage), revenue=sold*price, soldCost=sold*unitCost, damageValue=damage*unitCost, remainingValue=remaining*unitCost, profit=revenue-soldCost-damageValue;
-  $("calcCapital").textContent=money(capital);$("calcCapitalNote").textContent="Total capital available";
-  $("cashInHand").value=cashInHand.toFixed(2);
+  const unitCost=total>0?purchase/total:0,remaining=Math.max(0,total-sold-damage),revenue=sold*price,soldCost=sold*unitCost,damageValue=damage*unitCost,remainingValue=remaining*unitCost,profit=revenue-soldCost-damageValue,accounted=sold+damage,cash=capital-purchase;
+  $("calcTotal").textContent=total+" units";$("calcTotalValue").textContent=money(purchase);
   $("calcSold").textContent=sold+" units";$("calcRevenue").textContent=money(revenue)+" revenue";
   $("calcRemaining").textContent=remaining+" units";$("calcRemainingValue").textContent=money(remainingValue)+" stock value";
   $("calcUnitCost").textContent=money(unitCost);$("calcSoldCost").textContent=money(soldCost);
-  $("calcDamageValue").textContent=money(damageValue);$("calcCashInHand").textContent=money(cashInHand);$("calcSalesRevenue").textContent=money(revenue);
-  $("calcProfit").textContent=money(profit);
-  $("calcReconciliation").textContent=money(purchase+cashInHand);
+  $("calcDamageValue").textContent=money(damageValue);$("calcCapital").textContent=money(capital);$("calcCashInHand").textContent=money(cash);$("calcSalesRevenue").textContent=money(revenue);
+  $("calcProfit").textContent=money(profit);$("calcAccounted").textContent=accounted+" units";
   const card=$("profitCard");card.classList.toggle("profit",profit>=0);card.classList.toggle("loss",profit<0);
   $("profitLabel").textContent=profit>0?"You are making a profit":profit<0?"You are currently making a loss":"Break-even";
-  const purchaseOverCapital=purchase>capital;
-  $("calcAccountedNote").textContent=purchaseOverCapital?"Purchase cost is greater than capital — check your numbers.":"Purchase + cash in hand = capital";
-  $("saveStockBtn").disabled=total<=0||capital<0||purchase<0||price<0||purchase>capital||sold+damage>total;
+  const over=accounted>total || purchase>capital;
+  $("calcAccountedNote").textContent=purchase>capital?"Purchase cost is greater than capital — check your figures.":over?"Too many units accounted for — check your numbers.":"Sold + damage";
+  $("saveStockBtn").disabled=total<=0||accounted>total||purchase>capital;
 }
+
+async function loadStock(){
+  const {data,error}=await db.from("worker_stock_batches").select("*").eq("worker_id",currentUser.id).order("stock_date",{ascending:false});
+  if(error){
+    $("stockBody").innerHTML='<tr><td colspan="11">Stock records could not be loaded.</td></tr>';
+    msg("stockLiveMsg","Could not load live stock: "+error.message,"error");
+    return;
+  }
+  const rows=data||[];
+  let units=0,value=0,revenue=0,profit=0,cash=0;
+  rows.forEach(r=>{
+    units+=Number(r.remaining_quantity||0); value+=Number(r.remaining_value||0); revenue+=Number(r.sales_revenue||0); profit+=Number(r.profit_loss||0);
+    const cap=Number(r.capital_amount ?? r.purchase_total ?? 0), pur=Number(r.purchase_total||0); cash+=Number(r.cash_in_hand ?? (cap-pur));
+  });
+  $("liveUnits").textContent=units.toLocaleString(); $("liveValue").textContent=money(value); $("liveRevenue").textContent=money(revenue); $("liveProfit").textContent=money(profit);
+  $("liveProfitLabel").textContent=profit>=0?"current total profit":"current total loss";
+  if(!rows.length){$("stockBody").innerHTML='<tr><td colspan="11">No stock records yet.</td></tr>';return;}
+  $("stockBody").innerHTML=rows.map(r=>{
+    const cap=Number(r.capital_amount ?? r.purchase_total ?? 0), pur=Number(r.purchase_total||0), ci=Number(r.cash_in_hand ?? (cap-pur));
+    return `<tr><td>${esc(dateOnly(r.stock_date))}</td><td>${esc(r.product_service||"")}</td><td>${esc(r.total_quantity??0)}</td><td>${esc(r.sold_quantity??0)}</td><td>${esc(r.damage_quantity??0)}</td><td>${esc(r.remaining_quantity??0)}</td><td>${money(cap)}</td><td>${money(pur)}</td><td>${money(ci)}</td><td>${money(r.profit_loss)}</td><td><button type="button" class="primary" onclick="editStock('${esc(r.id)}')">Edit</button></td></tr>`;
+  }).join("");
+}
+
 ["stockTotal","capitalAmount","purchaseTotal","sellPrice","stockSold","stockDamage"].forEach(id=>$(id).addEventListener("input",calculateStock));
-$("stockDate").value=today();
+
+let editingStockId="";
+function startStockEdit(r){
+  editingStockId=r.id||""; $("editingStockId").value=editingStockId;
+  $("stockDate").value=dateOnly(r.stock_date)||today(); $("stockProduct").value=r.product_service||"";
+  $("stockTotal").value=Number(r.total_quantity||0); $("capitalAmount").value=Number(r.capital_amount ?? r.purchase_total ?? 0); $("purchaseTotal").value=Number(r.purchase_total||0);
+  $("sellPrice").value=Number(r.selling_price_per_unit||0); $("stockSold").value=Number(r.sold_quantity||0); $("stockDamage").value=Number(r.damage_quantity||0); $("stockNotes").value=r.notes||"";
+  $("saveStockBtn").textContent="Update Stock Record"; $("cancelEditStockBtn").style.display="inline-block"; calculateStock(); document.getElementById("stockForm").scrollIntoView({behavior:"smooth",block:"center"});
+  msg("stockMsg","Editing stock batch. Update sold, damage, capital or purchase cost, then save.","success");
+}
+window.editStock=async function(id){
+  const {data,error}=await db.from("worker_stock_batches").select("*").eq("id",id).eq("worker_id",currentUser.id).maybeSingle();
+  if(error||!data){msg("stockMsg","Could not open that stock record for editing.","error");return;} startStockEdit(data);
+};
+function cancelStockEdit(){
+  editingStockId=""; $("editingStockId").value=""; $("stockForm").reset(); $("stockDate").value=today(); $("stockSold").value=0; $("stockDamage").value=0; $("saveStockBtn").textContent="Save Stock Record"; $("cancelEditStockBtn").style.display="none"; calculateStock(); msg("stockMsg","Edit cancelled","");
+}
+$("cancelEditStockBtn").onclick=cancelStockEdit;
 $("saveStockBtn").onclick=async()=>{
   const total=num("stockTotal"),capital=num("capitalAmount"),purchase=num("purchaseTotal"),price=num("sellPrice"),sold=num("stockSold"),damage=num("stockDamage");
-  if(!$("stockDate").value||!$("stockProduct").value.trim()||total<=0||capital<0||purchase<0||price<0||sold<0||damage<0||purchase>capital||sold+damage>total){msg("stockMsg","Please check the stock quantities, capital and costs. Purchase cost cannot be greater than capital, and sold + damage cannot be greater than total stock.","error");return}
-  const cashInHand=capital-purchase,unitCost=purchase/total,revenue=sold*price,soldCost=sold*unitCost,damageValue=damage*unitCost,remaining=total-sold-damage,remainingValue=remaining*unitCost,profit=revenue-soldCost-damageValue;
+  if(!$('stockDate').value||!$('stockProduct').value.trim()||total<=0||capital<0||purchase<0||price<0||purchase>capital||sold+damage>total){msg("stockMsg","Please check the stock quantities and costs. Purchase cost cannot be greater than capital, and sold + damage cannot be greater than total stock.","error");return;}
+  const unitCost=purchase/total,revenue=sold*price,soldCost=sold*unitCost,damageValue=damage*unitCost,remaining=total-sold-damage,remainingValue=remaining*unitCost,profit=revenue-soldCost-damageValue,cash=capital-purchase;
   msg("stockMsg","Saving stock record...");
-  const record={worker_id:profile.user_id,stock_date:$("stockDate").value,product_service:$("stockProduct").value.trim(),total_quantity:total,capital_amount:capital,purchase_total:purchase,cash_in_hand:cashInHand,cost_per_unit:unitCost,selling_price_per_unit:price,sold_quantity:sold,damage_quantity:damage,loss_quantity:0,sales_revenue:revenue,sold_cost:soldCost,damage_value:damageValue,loss_value:0,remaining_quantity:remaining,remaining_value:remainingValue,profit_loss:profit,notes:$("stockNotes").value.trim()||null};
-  const {error}=await db.from("worker_stock_batches").insert(record);
-  if(error){msg("stockMsg","Stock record could not be saved: "+error.message,"error");return}
-  msg("stockMsg","Stock record saved successfully and sent to EZELEX admin.","success");
-  $("stockForm").reset();$("stockDate").value=today();$("stockSold").value=0;$("stockDamage").value=0;$("cashInHand").value="0.00";calculateStock();
+  const record={worker_id:currentUser.id,stock_date:$('stockDate').value,product_service:$('stockProduct').value.trim(),total_quantity:total,capital_amount:capital,cash_in_hand:cash,purchase_total:purchase,cost_per_unit:unitCost,selling_price_per_unit:price,sold_quantity:sold,damage_quantity:damage,loss_quantity:0,sales_revenue:revenue,sold_cost:soldCost,damage_value:damageValue,loss_value:0,remaining_quantity:remaining,remaining_value:remainingValue,profit_loss:profit,notes:$('stockNotes').value.trim()||null};
+  let result=editingStockId?await db.from("worker_stock_batches").update(record).eq("id",editingStockId).eq("worker_id",currentUser.id):await db.from("worker_stock_batches").insert(record);
+  if(result.error){msg("stockMsg",(editingStockId?"Stock record could not be updated: ":"Stock record could not be saved: ")+result.error.message,"error");return;}
+  msg("stockMsg",editingStockId?"Stock record updated successfully.":"Stock record saved successfully and sent to Ezelex admin.","success");
+  editingStockId=""; $("editingStockId").value=""; $("stockForm").reset(); $("stockDate").value=today(); $("stockSold").value=0; $("stockDamage").value=0; $("saveStockBtn").textContent="Save Stock Record"; $("cancelEditStockBtn").style.display="none"; calculateStock(); await loadStock();
 };
 
-function recoveryMode(){
-  const q=new URLSearchParams(location.search);
-  const h=new URLSearchParams((location.hash||"").replace(/^#/,""));
-  return q.get("type")==="recovery" || h.get("type")==="recovery";
+async function loadMessages(){
+  /* Communication is intentionally read-only here.
+     If a communication table exists, this section can be connected without changing worker login/profile. */
+  $("messagesBody").innerHTML='<div class="message"><strong>Ezelex Enterprise</strong><br>Your worker communication area is ready.</div>';
 }
-function showReset(){
-  $("loginSection").classList.add("hidden");
-  $("resetSection").classList.remove("hidden");
-  $("portal").classList.add("hidden");
-  $("logoutBtn").classList.add("hidden");
-}
-function showLogin(){
-  $("loginSection").classList.remove("hidden");
-  $("resetSection").classList.add("hidden");
-  $("portal").classList.add("hidden");
-  $("logoutBtn").classList.add("hidden");
-}
-async function requestReset(){
-  const email=$("resetEmail").value.trim();
-  if(!email){msg("resetMsg","Enter your worker email.","error");return;}
-  const {error}=await db.auth.resetPasswordForEmail(email,{redirectTo:"https://ezelexenterprise.com/EZELEX_WORKER_PORTAL.html"});
-  if(error){msg("resetMsg",error.message,"error");return;}
-  msg("resetMsg","Password reset link sent. Check your email.","success");
-}
-async function saveNewPassword(){
-  const a=$("newPassword").value,b=$("confirmPassword").value;
-  if(a.length<8){msg("resetMsg","Password must be at least 8 characters.","error");return;}
-  if(a!==b){msg("resetMsg","Passwords do not match.","error");return;}
-  const {error}=await db.auth.updateUser({password:a});
-  if(error){msg("resetMsg",error.message,"error");return;}
-  msg("resetMsg","Password updated successfully. Signing you in...","success");
-  const {data:{session}}=await db.auth.getSession();
-  history.replaceState({},document.title,location.pathname);
-  if(session) await loadProfile(session.user.id); else showLogin();
-}
-$("forgotBtn").onclick=()=>{ $("resetEmail").value=$("email").value.trim(); showReset(); };
-$("backToLoginBtn").onclick=showLogin;
-$("sendResetBtn").onclick=requestReset;
-$("savePasswordBtn").onclick=saveNewPassword;
-db.auth.onAuthStateChange((event)=>{
-  if(event==="PASSWORD_RECOVERY" || recoveryMode()){
-    showReset();
-    $("resetRequest").classList.add("hidden");
-    $("newPasswordBox").classList.remove("hidden");
-  }
-});
 
-$("loginBtn").onclick=async()=>{
-  msg("loginMsg","Signing in...");
-  const {data,error}=await db.auth.signInWithPassword({
-    email:$("email").value.trim(),
-    password:$("password").value
+function stockMoney(v){
+  return "GHS "+Number(v||0).toFixed(2);
+}
+
+function buildLiveStockReportText(){
+  const rows=liveStockRows||[];
+  const totalRemaining=rows.reduce((n,s)=>n+Number(s.remaining_quantity||0),0);
+  const totalValue=rows.reduce((n,s)=>n+Number(s.remaining_value||0),0);
+  const totalProfit=rows.reduce((n,s)=>n+Number(s.profit_loss||0),0);
+
+  const lines=[
+    "Ezelex Enterprise - Live Stock Report",
+    "Worker: "+(profile?.full_name||"Worker"),
+    "Worker ID: "+(profile?.worker_id||"—"),
+    "Report Date: "+reportTitleDate(),
+    "",
+    "Live Stock Summary",
+    "Products/Batches: "+rows.length,
+    "Remaining Quantity: "+totalRemaining,
+    "Remaining Stock Value: "+stockMoney(totalValue),
+    "Profit/Loss: "+stockMoney(totalProfit),
+    "",
+    "Stock Details"
+  ];
+
+  rows.forEach((s,i)=>{
+    lines.push(
+      (i+1)+". "+(s.product_service||"—")+
+      " | Total: "+(s.total_quantity??0)+
+      " | Sold: "+(s.sold_quantity??0)+
+      " | Damage: "+(s.damage_quantity??0)+
+      " | Remaining: "+(s.remaining_quantity??0)+
+      " | Capital: "+stockMoney(s.capital_amount ?? s.purchase_total)+
+      " | Purchase: "+stockMoney(s.purchase_total)+
+      " | Cash In Hand: "+stockMoney(s.cash_in_hand ?? ((s.capital_amount ?? s.purchase_total)-Number(s.purchase_total||0)))+
+      " | Remaining Value: "+stockMoney(s.remaining_value)+
+      " | Profit/Loss: "+stockMoney(s.profit_loss)
+    );
   });
-  if(error){msg("loginMsg",error.message,"error");return;}
-  await loadProfile(data.user.id);
+  return lines.join("\n");
+}
+
+function downloadLiveStockPDF(){
+  if(!window.jspdf?.jsPDF){
+    msg("stockReportMsg","PDF library could not be loaded. Please refresh the page and try again.","error");
+    return;
+  }
+
+  const rows=liveStockRows||[];
+  const totalQty=rows.reduce((n,s)=>n+Number(s.total_quantity||0),0);
+  const totalSold=rows.reduce((n,s)=>n+Number(s.sold_quantity||0),0);
+  const totalDamage=rows.reduce((n,s)=>n+Number(s.damage_quantity||0),0);
+  const totalRemaining=rows.reduce((n,s)=>n+Number(s.remaining_quantity||0),0);
+  const totalValue=rows.reduce((n,s)=>n+Number(s.remaining_value||0),0);
+  const totalCapital=rows.reduce((n,s)=>n+Number(s.capital_amount ?? s.purchase_total ?? 0),0);
+  const totalPurchase=rows.reduce((n,s)=>n+Number(s.purchase_total||0),0);
+  const totalCash=rows.reduce((n,s)=>n+Number(s.cash_in_hand ?? ((s.capital_amount ?? s.purchase_total)-Number(s.purchase_total||0))),0);
+  const totalProfit=rows.reduce((n,s)=>n+Number(s.profit_loss||0),0);
+
+  const {jsPDF}=window.jspdf;
+  const doc=new jsPDF({orientation:"landscape"});
+  let y=15;
+
+  doc.setFontSize(18);
+  doc.text("Ezelex Enterprise",14,y); y+=8;
+  doc.setFontSize(14);
+  doc.text("Live Stock Report",14,y); y+=8;
+
+  doc.setFontSize(9);
+  doc.text("Worker: "+(profile?.full_name||"Worker")+"   Worker ID: "+(profile?.worker_id||"—")+"   Date: "+reportTitleDate(),14,y); y+=8;
+
+  doc.setFontSize(11);
+  doc.text("Summary",14,y); y+=6;
+  doc.setFontSize(9);
+  doc.text("Batches: "+rows.length,14,y);
+  doc.text("Total Qty: "+totalQty,55,y);
+  doc.text("Sold: "+totalSold,92,y);
+  doc.text("Damage: "+totalDamage,125,y);
+  doc.text("Remaining: "+totalRemaining,160,y);
+  doc.text("Capital: "+stockMoney(totalCapital),195,y);
+  doc.text("Purchase: "+stockMoney(totalPurchase),238,y);
+  doc.text("Cash In Hand: "+stockMoney(totalCash),14,y+6);
+  doc.text("Remaining Value: "+stockMoney(totalValue),70,y+6);
+  doc.text("Profit/Loss: "+stockMoney(totalProfit),160,y+6);
+  y+=14;
+
+  const headers=["Product / Service","Total","Sold","Damage","Remaining","Capital","Purchase","Cash In Hand","Profit/Loss"];
+  const x=[10,72,92,111,132,153,182,211,250];
+
+  function header(){
+    doc.setFontSize(8);
+    headers.forEach((h,i)=>doc.text(h,x[i],y));
+    y+=5;
+  }
+  header();
+
+  rows.forEach((s)=>{
+    if(y>195){
+      doc.addPage();
+      y=15;
+      doc.setFontSize(12);
+      doc.text("Ezelex Enterprise - Live Stock Report (continued)",14,y);
+      y+=8;
+      header();
+    }
+
+    doc.setFontSize(7.5);
+    doc.text(String(s.product_service||"—").slice(0,34),x[0],y);
+    doc.text(String(s.total_quantity??0),x[1],y);
+    doc.text(String(s.sold_quantity??0),x[2],y);
+    doc.text(String(s.damage_quantity??0),x[3],y);
+    doc.text(String(s.remaining_quantity??0),x[4],y);
+    doc.text(stockMoney(s.capital_amount ?? s.purchase_total),x[5],y);
+    doc.text(stockMoney(s.purchase_total),x[6],y);
+    doc.text(stockMoney(s.cash_in_hand ?? ((s.capital_amount ?? s.purchase_total)-Number(s.purchase_total||0))),x[7],y);
+    doc.text(stockMoney(s.profit_loss),x[8],y);
+    y+=5;
+  });
+
+  if(!rows.length) doc.text("No live stock records found.",14,y);
+
+  doc.setFontSize(8);
+  doc.text("Generated by Ezelex Enterprise Worker Portal",14,202);
+  doc.save("Ezelex-Live-Stock-Report-"+(profile?.worker_id||"Worker")+"-"+reportTitleDate()+".pdf");
+  msg("stockReportMsg","Live stock PDF created successfully.","success");
+}
+
+async function shareLiveStockReport(){
+  const text=buildLiveStockReportText();
+  try{
+    if(navigator.share){
+      await navigator.share({
+        title:"Ezelex Enterprise Live Stock Report",
+        text:text
+      });
+      msg("stockReportMsg","Live stock report shared successfully.","success");
+      return;
+    }
+    await navigator.clipboard.writeText(text);
+    msg("stockReportMsg","Sharing is not available on this device/browser, so the live stock report was copied to your clipboard.","success");
+  }catch(err){
+    if(err?.name==="AbortError") return;
+    try{
+      await navigator.clipboard.writeText(text);
+      msg("stockReportMsg","The share window was unavailable, so the live stock report was copied to your clipboard.","success");
+    }catch(copyErr){
+      msg("stockReportMsg","Could not share or copy the live stock report. Please try again.","error");
+    }
+  }
+}
+
+document.getElementById("stockPdfReportBtn")?.addEventListener("click",downloadLiveStockPDF);
+document.getElementById("stockShareReportBtn")?.addEventListener("click",shareLiveStockReport);
+
+function reportTitleDate(){
+  const d=new Date();
+  return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
+}
+
+function buildReportText(){
+  const rows=reportSalesRows||[];
+  const total=rows.reduce((sum,s)=>sum+Number(s.sale_amount||0),0);
+  const lines=[
+    "Ezelex Enterprise - Worker Sales Report",
+    "Worker: "+(profile?.full_name||"Worker"),
+    "Worker ID: "+(profile?.worker_id||"—"),
+    "Report Date: "+reportTitleDate(),
+    "",
+    "Sales Summary",
+    "Transactions: "+rows.length,
+    "Total Sales: "+money(total),
+    "",
+    "Sales Details"
+  ];
+  rows.forEach((s,i)=>{
+    lines.push(
+      (i+1)+". "+dateOnly(s.sale_date)+" | "+
+      (s.product_service||"—")+" | Qty: "+(s.quantity??0)+" | "+
+      money(s.sale_amount)+" | "+(s.payment_method||"—")
+    );
+  });
+  return lines.join("\n");
+}
+
+function downloadSalesPDF(){
+  if(!window.jspdf?.jsPDF){
+    msg("reportMsg","PDF library could not be loaded. Please refresh the page and try again.","error");
+    return;
+  }
+  const rows=reportSalesRows||[];
+  const total=rows.reduce((sum,s)=>sum+Number(s.sale_amount||0),0);
+  const {jsPDF}=window.jspdf;
+  const doc=new jsPDF();
+  let y=18;
+
+  doc.setFontSize(18);
+  doc.text("Ezelex Enterprise",14,y); y+=9;
+  doc.setFontSize(14);
+  doc.text("Worker Sales Report",14,y); y+=9;
+
+  doc.setFontSize(10);
+  doc.text("Worker: "+(profile?.full_name||"Worker"),14,y); y+=6;
+  doc.text("Worker ID: "+(profile?.worker_id||"—"),14,y); y+=6;
+  doc.text("Report Date: "+reportTitleDate(),14,y); y+=9;
+
+  doc.setFontSize(12);
+  doc.text("Summary",14,y); y+=7;
+  doc.setFontSize(10);
+  doc.text("Transactions: "+rows.length,14,y); y+=6;
+  doc.text("Total Sales: "+money(total),14,y); y+=10;
+
+  doc.setFontSize(12);
+  doc.text("Sales Details",14,y); y+=7;
+  doc.setFontSize(8);
+
+  const headers=["Date","Product / Service","Qty","Amount","Payment"];
+  const x=[14,43,126,146,174];
+  headers.forEach((h,i)=>doc.text(h,x[i],y));
+  y+=5;
+
+  rows.forEach((s)=>{
+    if(y>278){doc.addPage(); y=18; headers.forEach((h,i)=>doc.text(h,x[i],y)); y+=5;}
+    const product=String(s.product_service||"—").slice(0,42);
+    const payment=String(s.payment_method||"—").slice(0,18);
+    doc.text(dateOnly(s.sale_date),x[0],y);
+    doc.text(product,x[1],y);
+    doc.text(String(s.quantity??0),x[2],y);
+    doc.text(money(s.sale_amount),x[3],y);
+    doc.text(payment,x[4],y);
+    y+=5;
+  });
+
+  if(!rows.length){
+    doc.text("No sales recorded yet.",14,y);
+  }
+
+  doc.setFontSize(8);
+  doc.text("Generated by Ezelex Enterprise Worker Portal",14,289);
+  doc.save("Ezelex-Worker-Sales-Report-"+(profile?.worker_id||"Worker")+"-"+reportTitleDate()+".pdf");
+  msg("reportMsg","PDF report created successfully.","success");
+}
+
+async function shareSalesReport(){
+  const text=buildReportText();
+  const shareData={
+    title:"Ezelex Enterprise Worker Sales Report",
+    text:text
+  };
+
+  try{
+    if(navigator.share){
+      await navigator.share(shareData);
+      msg("reportMsg","Report shared successfully.","success");
+      return;
+    }
+    await navigator.clipboard.writeText(text);
+    msg("reportMsg","Sharing is not available on this device/browser, so the report text was copied to your clipboard. You can paste it into WhatsApp, email, or another app.","success");
+  }catch(err){
+    if(err?.name==="AbortError") return;
+    try{
+      await navigator.clipboard.writeText(text);
+      msg("reportMsg","The share window was unavailable, so the report text was copied to your clipboard.","success");
+    }catch(copyErr){
+      msg("reportMsg","Could not open sharing or copy the report. Please try again.","error");
+    }
+  }
+}
+
+$("pdfReportBtn").onclick=downloadSalesPDF;
+$("shareReportBtn").onclick=shareSalesReport;
+
+window.editSale=async function(id){
+  const {data,error}=await db.from("sales").select("*").eq("id",id).eq("worker_id",currentUser.id).maybeSingle();
+  if(error||!data){msg("saleMsg",error?.message||"Sale not found.","error");return;}
+  const st=String(data.status||"pending").toLowerCase();
+  if(st!=="pending"){msg("saleMsg","Only sales waiting for admin approval can be edited.","error");return;}
+  $("editingSaleId").value=data.id;
+  $("saleDate").value=dateOnly(data.sale_date);
+  $("customer").value=data.customer_reference||"";
+  $("product").value=data.product_service||"";
+  $("quantity").value=data.quantity??1;
+  $("amount").value=data.sale_amount??0;
+  $("payment").value=data.payment_method||"";
+  $("notes").value=data.notes||"";
+  $("saleFormTitle").textContent="Edit Sale";
+  $("saveSaleBtn").textContent="Update Sale";
+  $("cancelSaleEditBtn").style.display="inline-block";
+  window.scrollTo({top:$("sales").offsetTop||0,behavior:"smooth"});
 };
 
-$("logoutBtn").onclick=async()=>{
-  await db.auth.signOut();
-  profile=null;
-  showLogin();
+window.deleteSale=async function(id){
+  const {data,error}=await db.from("sales").select("id,status").eq("id",id).eq("worker_id",currentUser.id).maybeSingle();
+  if(error||!data){msg("saleMsg",error?.message||"Sale not found.","error");return;}
+  const st=String(data.status||"pending").toLowerCase();
+  if(st!=="pending"){msg("saleMsg","Only sales waiting for admin approval can be deleted.","error");return;}
+  if(!confirm("Delete this sale? This cannot be undone."))return;
+  const r=await db.from("sales").delete().eq("id",id).eq("worker_id",currentUser.id).eq("status","pending");
+  if(r.error){msg("saleMsg","Sale could not be deleted: "+r.error.message,"error");return;}
+  msg("saleMsg","Sale deleted successfully.","success");
+  await loadSales();
 };
+
+function cancelSaleEdit(){
+  $("editingSaleId").value="";
+  $("saleForm").reset();
+  $("saleDate").value=today();
+  $("quantity").value=1;
+  $("saleFormTitle").textContent="Record a Sale";
+  $("saveSaleBtn").textContent="Record Sale";
+  $("cancelSaleEditBtn").style.display="none";
+  msg("saleMsg","");
+}
+
+$("cancelSaleEditBtn").onclick=cancelSaleEdit;
 
 $("saleForm").onsubmit=async(e)=>{
   e.preventDefault();
   msg("saleMsg","Saving sale...");
   const sale={
-    worker_id:profile.user_id,
-    sale_date:$("saleDate").value,
-    customer_reference:$("customer").value.trim() || null,
-    product_service:$("product").value.trim(),
-    quantity:Number($("quantity").value),
-    sale_amount:Number($("amount").value),
-    payment_method:$("payment").value,
-    notes:$("notes").value.trim() || null
+    worker_id:currentUser.id,sale_date:$("saleDate").value,
+    customer_reference:$("customer").value.trim()||null,product_service:$("product").value.trim(),
+    quantity:Number($("quantity").value),sale_amount:Number($("amount").value),
+    payment_method:$("payment").value,notes:$("notes").value.trim()||null
   };
-
-  if(!sale.sale_date || !sale.product_service || sale.quantity<1 || sale.sale_amount<0 || !sale.payment_method){
+  if(!sale.sale_date||!sale.product_service||sale.quantity<1||sale.sale_amount<0||!sale.payment_method){
     msg("saleMsg","Please complete the required fields.","error");return;
   }
-
-  const {error}=await db.from("sales").insert(sale);
-  if(error){
-    msg("saleMsg","Sale could not be saved: "+error.message,"error");
-    return;
+  const editingId=$("editingSaleId").value.trim();
+  let error;
+  if(editingId){
+    const r=await db.from("sales").update({
+      sale_date:sale.sale_date,customer_reference:sale.customer_reference,product_service:sale.product_service,
+      quantity:sale.quantity,sale_amount:sale.sale_amount,payment_method:sale.payment_method,notes:sale.notes
+    }).eq("id",editingId).eq("worker_id",currentUser.id).eq("status","pending");
+    error=r.error;
+    if(!error && !r.data && r.count===0){}
+  }else{
+    const r=await db.from("sales").insert(sale);
+    error=r.error;
   }
-
-  msg("saleMsg","Sale recorded successfully.","success");
-  $("saleForm").reset();
-  $("saleDate").value=today();
-  $("quantity").value=1;
+  if(error){msg("saleMsg","Sale could not be saved: "+error.message,"error");return;}
+  msg("saleMsg",editingId?"Sale updated successfully and remains pending admin approval.":"Sale recorded successfully.","success");
+  cancelSaleEdit();
   await loadSales();
 };
 
+$("loginBtn").onclick=async()=>{
+  msg("loginMsg","Signing in...");
+  const email=$("email").value.trim();
+  const password=$("password").value;
+  if(!email||!password){msg("loginMsg","Enter your email and password.","error");return;}
+  const {data,error}=await db.auth.signInWithPassword({email,password});
+  if(error){
+    const detail=(error.message||"").toLowerCase();
+    if(detail.includes("invalid api key")){
+      msg("loginMsg","The Supabase API key used by this website is no longer valid. The login code is correct, but the project key needs to be updated in this file.","error");
+    }else{
+      msg("loginMsg",error.message,"error");
+    }
+    return;
+  }
+  await loadProfile(data.user);
+};
+
+$("forgotBtn").onclick=()=>{
+  $("forgotBox").classList.remove("hidden");
+  $("resetEmail").value=$("email").value.trim();
+  $("resetEmail").focus();
+};
+$("backLoginBtn").onclick=()=>{$("forgotBox").classList.add("hidden");$("resetMsg").innerHTML="";};
+$("sendResetBtn").onclick=async()=>{
+  const email=$("resetEmail").value.trim();
+  if(!email){msg("resetMsg","Enter your worker email.","error");return;}
+  msg("resetMsg","Sending reset link...");
+  const {error}=await db.auth.resetPasswordForEmail(email,{redirectTo:"https://ezelexenterprise.com/EZELEX_SET_PASSWORD.html"});
+  if(error){msg("resetMsg",error.message,"error");return;}
+  msg("resetMsg","Password reset link sent. Check your email and follow the link.","success");
+};
+
+$("updatePasswordBtn").onclick=async()=>{
+  const p=$("newPassword").value;
+  const c=$("confirmPassword").value;
+  if(p.length<6){msg("recoveryMsg","Password must be at least 6 characters.","error");return;}
+  if(p!==c){msg("recoveryMsg","The passwords do not match.","error");return;}
+  msg("recoveryMsg","Updating password...");
+  const {error}=await db.auth.updateUser({password:p});
+  if(error){msg("recoveryMsg",error.message,"error");return;}
+  msg("recoveryMsg","Password updated successfully. You can now sign in.","success");
+  setTimeout(async()=>{await db.auth.signOut();$("passwordRecovery").classList.add("hidden");showLogin();$("loginMsg").innerHTML='<div class="msg success">Password updated. Please sign in with your new password.</div>';},900);
+};
+
+db.auth.onAuthStateChange((event,session)=>{
+  if(event==="PASSWORD_RECOVERY"){
+    $("loginSection").classList.add("hidden");
+    $("portal").classList.add("hidden");
+    $("settingsBtn").classList.add("hidden");
+    $("passwordRecovery").classList.remove("hidden");
+  }
+});
+
+
+
+document.querySelectorAll(".tab").forEach(btn=>{
+  btn.addEventListener("click",()=>{
+    document.querySelectorAll(".tab").forEach(b=>b.classList.remove("active"));
+    document.querySelectorAll(".section").forEach(s=>s.classList.remove("active"));
+    btn.classList.add("active");$(btn.dataset.tab).classList.add("active");
+  });
+});
+
+calculateStock();
 start();
 </script>
 </body>
