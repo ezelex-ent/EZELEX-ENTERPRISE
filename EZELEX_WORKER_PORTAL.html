@@ -58,6 +58,26 @@ th{background:#f8fafc}
   <label>Password</label>
   <input id="password" type="password" placeholder="Password">
   <button id="loginBtn" class="primary" style="width:100%">Sign in</button>
+  <button id="forgotBtn" type="button" class="secondary" style="width:100%;margin-top:10px">Forgot Password?</button>
+</section>
+
+<section id="resetSection" class="login hidden">
+  <h2>Reset Your Password</h2>
+  <p>Enter your worker email to receive a password reset link.</p>
+  <div id="resetMsg"></div>
+  <div id="resetRequest">
+    <label>Email</label>
+    <input id="resetEmail" type="email" placeholder="Worker email">
+    <button id="sendResetBtn" class="primary" style="width:100%;margin-top:10px">Send Reset Link</button>
+    <button id="backToLoginBtn" type="button" class="secondary" style="width:100%;margin-top:10px">Back to Sign In</button>
+  </div>
+  <div id="newPasswordBox" class="hidden">
+    <label>New Password</label>
+    <input id="newPassword" type="password" placeholder="At least 8 characters">
+    <label>Confirm New Password</label>
+    <input id="confirmPassword" type="password" placeholder="Confirm password">
+    <button id="savePasswordBtn" class="primary" style="width:100%;margin-top:10px">Update Password</button>
+  </div>
 </section>
 
 <main id="portal" class="wrap hidden">
@@ -178,18 +198,55 @@ function today(){
 function esc(v){return String(v??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[m]))}
 
 async function start(){
+  if(recoveryMode()){
+    showReset();
+    $("resetRequest").classList.add("hidden");
+    $("newPasswordBox").classList.remove("hidden");
+    return;
+  }
   const {data:{session}}=await db.auth.getSession();
   if(!session){showLogin();return;}
   await loadProfile(session.user.id);
 }
 function showLogin(){
   $("loginSection").classList.remove("hidden");
+  $("resetSection").classList.add("hidden");
   $("portal").classList.add("hidden");
   $("logoutBtn").classList.add("hidden");
 }
+function showReset(){
+  $("loginSection").classList.add("hidden");
+  $("resetSection").classList.remove("hidden");
+  $("portal").classList.add("hidden");
+  $("logoutBtn").classList.add("hidden");
+}
+function recoveryMode(){
+  const q=new URLSearchParams(location.search);
+  const h=new URLSearchParams((location.hash||"").replace(/^#/,""));
+  return q.get("type")==="recovery" || h.get("type")==="recovery";
+}
+async function requestReset(){
+  const email=$("resetEmail").value.trim();
+  if(!email){msg("resetMsg","Enter your worker email.","error");return;}
+  const {error}=await db.auth.resetPasswordForEmail(email,{redirectTo:"https://ezelexenterprise.com/EZELEX_WORKER_PORTAL.html"});
+  if(error){msg("resetMsg",error.message,"error");return;}
+  msg("resetMsg","Password reset link sent. Check your email and open the link on this worker portal.","success");
+}
+async function saveNewPassword(){
+  const a=$("newPassword").value,b=$("confirmPassword").value;
+  if(a.length<8){msg("resetMsg","Password must be at least 8 characters.","error");return;}
+  if(a!==b){msg("resetMsg","Passwords do not match.","error");return;}
+  const {error}=await db.auth.updateUser({password:a});
+  if(error){msg("resetMsg",error.message,"error");return;}
+  msg("resetMsg","Password updated successfully. Signing you in...","success");
+  $("newPasswordBox").classList.add("hidden");
+  const {data:{session}}=await db.auth.getSession();
+  history.replaceState({},document.title,location.pathname);
+  if(session) await loadProfile(session.user.id); else showLogin();
+}
 async function loadProfile(userId){
   const {data,error}=await db.from("worker_profiles")
-    .select("id,worker_id,full_name,role,active")
+    .select("id,user_id,worker_id,full_name,role,active")
     .eq("user_id",userId).maybeSingle();
 
   if(error || !data || !data.active || data.role==="admin"){
@@ -267,6 +324,19 @@ $("saveStockBtn").onclick=async()=>{
   msg("stockMsg","Stock record saved successfully and sent to EZELEX admin.","success");
   $("stockForm").reset();$("stockDate").value=today();$("stockSold").value=0;$("stockDamage").value=0;$("cashInHand").value="0.00";calculateStock();
 };
+
+$("forgotBtn").onclick=()=>{ $("resetEmail").value=$("email").value.trim(); showReset(); };
+$("backToLoginBtn").onclick=()=>showLogin();
+$("sendResetBtn").onclick=requestReset;
+$("savePasswordBtn").onclick=saveNewPassword;
+
+db.auth.onAuthStateChange((event,session)=>{
+  if(event==="PASSWORD_RECOVERY" || recoveryMode()){
+    showReset();
+    $("resetRequest").classList.add("hidden");
+    $("newPasswordBox").classList.remove("hidden");
+  }
+});
 
 $("loginBtn").onclick=async()=>{
   msg("loginMsg","Signing in...");
