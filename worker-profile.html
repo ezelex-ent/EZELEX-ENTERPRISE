@@ -11,7 +11,7 @@
 <body>
 <header><h1>Ezelex Enterprise</h1><p>Worker Profile</p></header>
 <div class="container">
-<div class="card" id="mainCard">
+<div class="card hidden" id="mainCard">
 <h2>Welcome, Worker</h2>
 <div id="message" class="status loading">Loading your worker profile...</div>
 <div id="profile" class="hidden">
@@ -29,9 +29,9 @@
 <button class="settings" id="settingsBtn">Settings</button>
 </div></div></div>
 
-<div class="card hidden" id="settingsCard">
+<div class="card" id="settingsCard">
 <div id="settingsHome">
-<h2>Settings</h2><p class="small">Your worker settings and account options are kept together here.</p>
+<h2>Welcome, Worker</h2><p class="small"><strong>Settings</strong> — your worker settings and account options are kept together here.</p>
 <button class="option" onclick="openSection('myProfile')"><strong>👤 My Profile</strong><span>View your worker details and change your password.</span></button>
 <button class="option" onclick="openSection('myContract')"><strong>📄 My Contract</strong><span>View your contract dates and worker information.</span></button>
 <button class="option" onclick="openSection('communication')"><strong>💬 Communication</strong><span>Read messages sent to you by Ezelex Enterprise.</span></button>
