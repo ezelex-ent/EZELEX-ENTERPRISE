@@ -48,6 +48,16 @@ th,td{padding:11px;border-bottom:1px solid #eee;text-align:left;font-size:14px}t
 .infoBox{background:#f8fafc;border-radius:10px;padding:14px;line-height:1.7}
 .message{padding:13px;border:1px solid #e5e7eb;border-radius:10px;margin-bottom:10px}
 .message h4{margin:0 0 5px}.message small{color:#64748b}
+
+.dailyChartPanel{border:1px solid #e5e7eb;border-radius:12px;padding:14px;background:#fff;overflow:hidden}
+#dailyPerformanceChart{display:block;width:100%;height:320px}
+.dailyChartLegend{display:flex;gap:18px;flex-wrap:wrap;margin-top:10px;font-size:13px;color:#475569}
+.dailyChartLegend span{display:inline-flex;align-items:center;gap:7px}
+.dailyChartLegend i{display:inline-block;width:12px;height:12px;border-radius:3px}
+.legendUnits{background:#2563eb}.legendValue{background:#16a34a}
+.dailyChartAccessible{font-size:13px;color:#475569;margin-top:8px;line-height:1.5}
+@media(max-width:700px){#dailyPerformanceChart{height:270px}.dailyChartPanel{padding:8px}}
+
 @media(max-width:900px){.stats,.stockGrid{grid-template-columns:1fr 1fr}.resultGrid{grid-template-columns:1fr 1fr}}
 @media(max-width:700px){.grid,.cardrow{grid-template-columns:1fr}.full{grid-column:auto}.login{margin:30px 15px}.wrap{padding:0 12px}.stats,.stockGrid,.resultGrid{grid-template-columns:1fr}}
 </style>
@@ -229,7 +239,16 @@ th,td{padding:11px;border-bottom:1px solid #eee;text-align:left;font-size:14px}t
         <div class="stockCard"><small>Recorded Sales Value</small><strong id="historySalesValue">GH₵0.00</strong></div>
       </div>
       <h3>Daily Performance</h3>
-      <div class="tablebox"><table><thead><tr><th>Day</th><th>Stock Item</th><th>Units Sold That Day</th><th>Estimated Sales Value</th></tr></thead><tbody id="stockDailyBody"><tr><td colspan="4">Loading...</td></tr></tbody></table></div>
+      <p class="live">Daily units sold and estimated sales value from your recorded stock updates.</p>
+      <div class="dailyChartPanel">
+        <div id="dailyChartEmpty" class="msg hidden">No stock sales have been recorded through stock edits yet.</div>
+        <canvas id="dailyPerformanceChart" role="img" aria-label="Daily stock sales performance chart"></canvas>
+        <div id="dailyChartLegend" class="dailyChartLegend">
+          <span><i class="legendUnits"></i> Units sold</span>
+          <span><i class="legendValue"></i> Estimated sales value (GH₵)</span>
+        </div>
+        <div id="dailyChartAccessible" class="dailyChartAccessible" aria-live="polite"></div>
+      </div>
       <h3 style="margin-top:22px">Full Edit History</h3>
       <div class="tablebox"><table><thead><tr><th>Date & Time Edited</th><th>Stock Item</th><th>Action</th><th>Sold Change</th><th>Sold Total</th><th>Damage Total</th><th>Remaining</th><th>Notes</th></tr></thead><tbody id="stockHistoryBody"><tr><td colspan="8">Loading...</td></tr></tbody></table></div>
     </div>
@@ -451,6 +470,84 @@ async function loadStockHistory(){
   if(error){$("stockHistoryBody").innerHTML='<tr><td colspan="8">History unavailable. Please run the supplied stock history SQL in Supabase.</td></tr>';$("stockDailyBody").innerHTML='<tr><td colspan="4">History unavailable.</td></tr>';msg("stockHistoryMsg","Could not load stock history: "+esc(error.message),"error");return;}
   stockHistoryRows=data||[];renderStockHistory();
 }
+function drawDailyPerformanceChart(daily){
+  const canvas=$("dailyPerformanceChart");
+  const empty=$("dailyChartEmpty");
+  const legend=$("dailyChartLegend");
+  const accessible=$("dailyChartAccessible");
+  if(!canvas)return;
+  const ctx=canvas.getContext("2d");
+  if(!ctx)return;
+
+  if(!daily.length){
+    canvas.classList.add("hidden");
+    legend.classList.add("hidden");
+    empty.classList.remove("hidden");
+    accessible.textContent="";
+    return;
+  }
+  canvas.classList.remove("hidden");
+  legend.classList.remove("hidden");
+  empty.classList.add("hidden");
+
+  // Display up to the latest 14 days in chronological order.
+  const points=daily.slice().sort((a,b)=>a.day.localeCompare(b.day)).slice(-14);
+  const rect=canvas.getBoundingClientRect();
+  const width=Math.max(300,Math.floor(rect.width||600));
+  const height=Math.max(250,Math.floor(rect.height||320));
+  const ratio=window.devicePixelRatio||1;
+  canvas.width=Math.floor(width*ratio);
+  canvas.height=Math.floor(height*ratio);
+  ctx.setTransform(ratio,0,0,ratio,0,0);
+  ctx.clearRect(0,0,width,height);
+
+  const pad={left:48,right:16,top:18,bottom:52};
+  const plotW=width-pad.left-pad.right;
+  const plotH=height-pad.top-pad.bottom;
+  const maxUnits=Math.max(1,...points.map(p=>Number(p.units)||0));
+  const maxValue=Math.max(1,...points.map(p=>Number(p.value)||0));
+  const slot=plotW/points.length;
+  const barW=Math.max(5,Math.min(22,slot*0.28));
+
+  ctx.font="11px Arial";
+  ctx.textBaseline="middle";
+  // Horizontal grid and left-axis unit labels.
+  for(let i=0;i<=4;i++){
+    const y=pad.top+plotH-(plotH*i/4);
+    ctx.beginPath();ctx.moveTo(pad.left,y);ctx.lineTo(width-pad.right,y);
+    ctx.strokeStyle="#e5e7eb";ctx.lineWidth=1;ctx.stroke();
+    ctx.fillStyle="#64748b";
+    ctx.textAlign="right";
+    ctx.fillText(String(Math.round(maxUnits*i/4)),pad.left-8,y);
+  }
+
+  points.forEach((p,i)=>{
+    const cx=pad.left+slot*i+slot/2;
+    const unitH=(Number(p.units)||0)/maxUnits*plotH;
+    const valueH=(Number(p.value)||0)/maxValue*plotH;
+    ctx.fillStyle="#2563eb";
+    ctx.fillRect(cx-barW-2,pad.top+plotH-unitH,barW,unitH);
+    ctx.fillStyle="#16a34a";
+    ctx.fillRect(cx+2,pad.top+plotH-valueH,barW,valueH);
+
+    ctx.save();
+    ctx.translate(cx,height-pad.bottom+9);
+    ctx.rotate(-Math.PI/5);
+    ctx.fillStyle="#475569";
+    ctx.textAlign="right";
+    ctx.fillText(String(p.day).slice(5),0,0);
+    ctx.restore();
+  });
+
+  ctx.fillStyle="#475569";
+  ctx.textAlign="left";
+  ctx.fillText("Units sold",pad.left,10);
+  ctx.textAlign="right";
+  ctx.fillText("Bars compare each measure against its own scale",width-pad.right,height-8);
+  accessible.textContent="Chart showing the latest "+points.length+" days. "+
+    points.map(p=>p.day+": "+p.units+" units sold, estimated sales value "+money(p.value)).join("; ")+".";
+} 
+
 function renderStockHistory(){
   const byDay={};let soldTotal=0,valueTotal=0;
   stockHistoryRows.forEach(h=>{const delta=Number(h.sold_delta||0);if(delta>0){const day=dateOnly(h.changed_at);const key=day+"|"+(h.product_service||"Stock");if(!byDay[key])byDay[key]={day,product:h.product_service||"Stock",units:0,value:0};byDay[key].units+=delta;byDay[key].value+=delta*Number(h.selling_price_per_unit||0);soldTotal+=delta;valueTotal+=delta*Number(h.selling_price_per_unit||0);}});
@@ -459,7 +556,7 @@ function renderStockHistory(){
   const days=Object.entries(dayTotals).sort((a,b)=>b[0].localeCompare(a[0]));
   const best=days.slice().sort((a,b)=>b[1].value-a[1].value)[0];
   $("historyDaysCount").textContent=days.length;$("historyUnitsSold").textContent=soldTotal.toLocaleString();$("historyBestDay").textContent=best?best[0]+" ("+money(best[1].value)+")":"—";$("historySalesValue").textContent=money(valueTotal);
-  $("stockDailyBody").innerHTML=daily.length?daily.map(x=>`<tr><td>${esc(x.day)}</td><td>${esc(x.product)}</td><td>${x.units}</td><td>${money(x.value)}</td></tr>`).join(""):'<tr><td colspan="4">No stock sales have been recorded through stock edits yet.</td></tr>';
+  drawDailyPerformanceChart(daily);
   $("stockHistoryBody").innerHTML=stockHistoryRows.length?stockHistoryRows.map(h=>`<tr><td>${esc(dateTime(h.changed_at))}</td><td>${esc(h.product_service||"")}</td><td>${esc(h.action||"Edited")}</td><td>${Number(h.sold_delta||0)>0?"+":""}${Number(h.sold_delta||0)}</td><td>${esc(h.sold_after??"—")}</td><td>${esc(h.damage_after??"—")}</td><td>${esc(h.remaining_after??"—")}</td><td>${esc(h.notes||"")}</td></tr>`).join(""):'<tr><td colspan="8">No stock edits recorded yet.</td></tr>';
 }
 async function writeStockHistory(before,after,action){
@@ -941,6 +1038,14 @@ document.querySelectorAll(".tab").forEach(btn=>{
     document.querySelectorAll(".section").forEach(s=>s.classList.remove("active"));
     btn.classList.add("active");$(btn.dataset.tab).classList.add("active");
   });
+});
+
+let dailyChartResizeTimer;
+window.addEventListener("resize",()=>{
+  clearTimeout(dailyChartResizeTimer);
+  dailyChartResizeTimer=setTimeout(()=>{
+    if(typeof stockHistoryRows!=="undefined" && stockHistoryRows.length)renderStockHistory();
+  },120);
 });
 
 calculateStock();
