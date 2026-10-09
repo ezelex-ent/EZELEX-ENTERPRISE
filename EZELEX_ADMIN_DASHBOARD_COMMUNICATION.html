@@ -32,7 +32,7 @@ table{width:100%;border-collapse:collapse;min-width:1050px}th,td{padding:11px;bo
 
 <main id="dashboard" class="wrap hidden"><div id="dashMsg"></div>
 <div class="nav">
-<button class="soft active" data-section="overview">Dashboard</button><button class="soft" data-section="sales">Sales</button><button class="soft" data-section="stock">Stock & Profit</button><button class="soft" data-section="workers">Workers</button><button class="soft" data-section="communication">Communication Centre</button><button class="soft" data-section="profile">Admin Profile</button><button class="soft" data-section="security">Security</button>
+<button class="soft active" data-section="overview">Dashboard</button><button class="soft" data-section="sales">Sales</button><button class="soft" data-section="stock">Stock & Profit</button><button class="soft" data-section="stockHistory">Edit History</button><button class="soft" data-section="workers">Workers</button><button class="soft" data-section="communication">Communication Centre</button><button class="soft" data-section="profile">Admin Profile</button><button class="soft" data-section="security">Security</button>
 </div>
 
 <section id="overview" class="page">
@@ -64,6 +64,8 @@ table{width:100%;border-collapse:collapse;min-width:1050px}th,td{padding:11px;bo
 <div class="toolbar"><select id="invWorkerFilter" style="max-width:240px"><option value="">All workers</option></select><input id="invFromDate" type="date" style="max-width:170px"><input id="invToDate" type="date" style="max-width:170px"><button id="applyInvFilters" class="primary">Apply</button><button id="refreshInventory" class="soft">Refresh</button><button id="invCsvBtn" class="gold">CSV</button></div>
 <div class="tablebox"><table><thead><tr><th>Date</th><th>Worker</th><th>Worker ID</th><th>Product</th><th>Total</th><th>Sold</th><th>Damaged</th><th>Remaining</th><th>Purchase</th><th>Revenue</th><th>Damage Value</th><th>Profit/Loss</th></tr></thead><tbody id="inventoryBody"></tbody></table></div>
 </div></section>
+
+<section id="stockHistory" class="page hidden"><div class="section"><h2>Stock Edit History & Daily Sales</h2><p class="muted">Audit trail for stock batches, including date/time edited, sold quantity changes, damage changes, and deleted stock records. Workers and admin see the same shared history.</p><div class="toolbar"><select id="historyWorkerFilter" style="max-width:240px"><option value="">All workers</option></select><input id="historyFromDate" type="date" style="max-width:170px"><input id="historyToDate" type="date" style="max-width:170px"><button id="applyHistoryFilters" class="primary">Apply</button><button id="refreshStockHistory" class="soft">Refresh</button></div><h3>Daily Sales Performance</h3><div class="tablebox"><table><thead><tr><th>Day</th><th>Worker</th><th>Stock Item</th><th>Units Sold That Day</th><th>Estimated Sales Value</th></tr></thead><tbody id="adminStockDailyBody"><tr><td colspan="5" class="empty">Loading history...</td></tr></tbody></table></div><h3 style="margin-top:22px">Full Edit History</h3><div class="tablebox"><table><thead><tr><th>Date & Time</th><th>Worker</th><th>Worker ID</th><th>Stock Item</th><th>Action</th><th>Sold Change</th><th>Sold Total</th><th>Damage Total</th><th>Remaining</th><th>Notes</th></tr></thead><tbody id="adminStockHistoryBody"><tr><td colspan="10" class="empty">Loading history...</td></tr></tbody></table></div></div></section>
 
 <section id="workers" class="page hidden">
 <div class="section"><h2>Create Worker</h2><div id="workerMsg"></div><div class="grid3">
@@ -102,7 +104,7 @@ async function adminCheck(){
  const {data:{session:s}}=await db.auth.getSession();session=s;if(!s){showLogin();return false}
  let {data}=await db.from("worker_profiles").select("*").eq("user_id",s.user.id).maybeSingle();
  if(!data||data.role!=="admin"||!data.active){await db.auth.signOut();showLogin();msg("loginMsg","This account does not have active EZELEX admin access.","error");return false}
- $("loginSection").classList.add("hidden");$("dashboard").classList.remove("hidden");$("logoutBtn").classList.remove("hidden");$("adminEmail").textContent=s.user.email||"";await loadWorkers();await Promise.all([loadSales(),loadInventory()]);await loadCommunication();return true
+ $("loginSection").classList.add("hidden");$("dashboard").classList.remove("hidden");$("logoutBtn").classList.remove("hidden");$("adminEmail").textContent=s.user.email||"";await loadWorkers();await Promise.all([loadSales(),loadInventory(),loadStockHistory()]);await loadCommunication();return true
 }
 function showLogin(){$("loginSection").classList.remove("hidden");$("dashboard").classList.add("hidden");$("logoutBtn").classList.add("hidden")}
 async function loadWorkers(){
@@ -135,6 +137,25 @@ function updateInventorySummary(){
  $("invTotal").textContent=Number(a.total.toFixed(2));$("invRemain").textContent=Number(a.rem.toFixed(2));$("invDamage").textContent=money(a.damage);$("invProfit").textContent=money(a.profit);
  $("stockRemaining").textContent=Number(a.rem.toFixed(2));$("damageValue").textContent=money(a.damage);$("profitValue").textContent=money(a.profit);$("profitValue").className=a.profit<0?"value loss":"value profit"
 }
+let allStockHistory=[];
+function historyDateTime(v){if(!v)return "—";const d=new Date(v);return Number.isNaN(d.getTime())?String(v):d.toLocaleString("en-GB",{day:"2-digit",month:"short",year:"numeric",hour:"2-digit",minute:"2-digit",second:"2-digit"});}
+async function loadStockHistory(){
+ const r=await db.from("worker_stock_edit_history").select("*").order("changed_at",{ascending:false}).limit(2000);
+ if(r.error){$("adminStockHistoryBody").innerHTML='<tr><td colspan="10" class="empty">History unavailable. Run the supplied stock history SQL and check admin read policy.</td></tr>';return;}
+ allStockHistory=r.data||[];
+ const select=$("historyWorkerFilter");if(select){const current=select.value;select.innerHTML='<option value="">All workers</option>'+workers.map(w=>`<option value="${esc(w.user_id||w.id)}">${esc(w.full_name||w.worker_id||w.email||"Worker")}</option>`).join("");select.value=current;}
+ renderAdminStockHistory();
+}
+function renderAdminStockHistory(){
+ const wid=$("historyWorkerFilter")?.value||"",from=$("historyFromDate")?.value||"",to=$("historyToDate")?.value||"";
+ const rows=allStockHistory.filter(h=>{const d=dateOnly(h.changed_at);return(!wid||h.worker_id===wid)&&(!from||d>=from)&&(!to||d<=to)});
+ const daily={};rows.forEach(h=>{const delta=Number(h.sold_delta||0);if(delta<=0)return;const day=dateOnly(h.changed_at),key=day+'|'+h.worker_id+'|'+(h.product_service||'Stock');if(!daily[key])daily[key]={day,worker:h.worker_id,product:h.product_service||'Stock',units:0,value:0};daily[key].units+=delta;daily[key].value+=delta*Number(h.selling_price_per_unit||0)});
+ const drows=Object.values(daily).sort((a,b)=>b.day.localeCompare(a.day)||b.units-a.units);
+ $("adminStockDailyBody").innerHTML=drows.length?drows.map(x=>{const w=workerInfo(x.worker);return `<tr><td>${esc(x.day)}</td><td>${esc(w.full_name||w.worker_id||'')}</td><td>${esc(x.product)}</td><td>${x.units}</td><td>${money(x.value)}</td></tr>`}).join(""):'<tr><td colspan="5" class="empty">No stock sales recorded for these filters yet.</td></tr>';
+ $("adminStockHistoryBody").innerHTML=rows.length?rows.map(h=>{const w=workerInfo(h.worker_id);return `<tr><td>${esc(historyDateTime(h.changed_at))}</td><td>${esc(w.full_name||"")}</td><td>${esc(w.worker_id||h.worker_id||"")}</td><td>${esc(h.product_service||"")}</td><td>${esc(h.action||"Edited")}</td><td>${Number(h.sold_delta||0)>0?"+":""}${Number(h.sold_delta||0)}</td><td>${esc(h.sold_after??"—")}</td><td>${esc(h.damage_after??"—")}</td><td>${esc(h.remaining_after??"—")}</td><td>${esc(h.notes||"")}</td></tr>`}).join(""):'<tr><td colspan="10" class="empty">No stock edit history found for these filters.</td></tr>';
+}
+$("applyHistoryFilters").onclick=renderAdminStockHistory;$("refreshStockHistory").onclick=loadStockHistory;
+
 function isPendingWorker(w){return !w.active && !w.activated_at;}
 function renderWorkers(){
  const pending=workers.filter(isPendingWorker), established=workers.filter(w=>!isPendingWorker(w));
@@ -145,7 +166,7 @@ function renderWorkers(){
 window.resendWorkerInvite=async(uid)=>{const w=workers.find(x=>(x.user_id||x.id)===uid);if(!w||!isPendingWorker(w)){msg("workerMsg","This worker is no longer pending profile activation.","error");return}if(!confirm(`Resend the welcome email to ${w.full_name||w.email}?`))return;const {data:{session:s}}=await db.auth.getSession();if(!s){msg("workerMsg","Admin session expired. Please sign in again.","error");return}msg("workerMsg",`Resending welcome email to ${w.email}...`);try{const r=await fetch(SUPABASE_URL+"/functions/v1/resend-worker-invite",{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+s.access_token,"apikey":SUPABASE_PUBLISHABLE_KEY},body:JSON.stringify({user_id:uid})});const j=await r.json().catch(()=>({}));if(!r.ok||!j.success){msg("workerMsg",j.error||"Could not resend the welcome email.","error");return}msg("workerMsg","Welcome email resent successfully. The worker remains pending until they activate their account.","ok")}catch(e){msg("workerMsg",e.message||"Could not reach the email service.","error")}}
 
 window.toggleWorker=async(uid,wid,currentlyActive)=>{wid=String(wid||"").trim();if(wid==="ADMIN001"){alert("ADMIN001 cannot be changed.");return}const action=currentlyActive?"deactivate":"reactivate";if(!confirm(`${action[0].toUpperCase()+action.slice(1)} worker ${wid}? ${currentlyActive?"They will no longer be able to log in, but all sales and stock history will be kept.":"Their worker account will become active again."}`))return;const r=await db.from("worker_profiles").update({active:!currentlyActive}).eq("user_id",uid);if(r.error){msg("workerMsg","Could not "+action+" worker: "+r.error.message,"error");return}msg("workerMsg",`Worker ${wid} ${currentlyActive?"deactivated":"reactivated"} successfully. ${currentlyActive?"Sales and stock history were kept.":""}`,"ok");await loadWorkers()};
-window.deleteWorker=async(uid,wid)=>{if(wid==="ADMIN001"){alert("ADMIN001 cannot be deleted.");return}if(!confirm(`Delete worker ${wid}? This will remove the worker profile, sales and login account.`))return;const {data:{session:s}}=await db.auth.getSession();const r=await fetch("https://hweczhwoggmsrwhkktrx.supabase.co/functions/v1/delete-worker",{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+s.access_token},body:JSON.stringify({user_id:uid})});let j={};try{j=await r.json()}catch{}if(!r.ok){msg("workerMsg",j.error||"Could not delete worker.","error");return}msg("workerMsg","Worker deleted successfully.","ok");await loadWorkers();await Promise.all([loadSales(),loadInventory()])}
+window.deleteWorker=async(uid,wid)=>{if(wid==="ADMIN001"){alert("ADMIN001 cannot be deleted.");return}if(!confirm(`Delete worker ${wid}? This will remove the worker profile, sales and login account.`))return;const {data:{session:s}}=await db.auth.getSession();const r=await fetch("https://hweczhwoggmsrwhkktrx.supabase.co/functions/v1/delete-worker",{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+s.access_token},body:JSON.stringify({user_id:uid})});let j={};try{j=await r.json()}catch{}if(!r.ok){msg("workerMsg",j.error||"Could not delete worker.","error");return}msg("workerMsg","Worker deleted successfully.","ok");await loadWorkers();await Promise.all([loadSales(),loadInventory(),loadStockHistory()])}
 async function loadCommunication(){
  const r=await db.from("communications").select("*").order("created_at",{ascending:false}).limit(100);
  if(r.error){$("commBodyRows").innerHTML='<tr><td colspan="5" class="empty">Communication history is not available yet.</td></tr>';return}
@@ -164,7 +185,7 @@ $("createWorkerBtn").onclick=async()=>{const p={worker_id:$("wId").value.trim(),
 $("loginBtn").onclick=async()=>{msg("loginMsg","Signing in...");const r=await db.auth.signInWithPassword({email:$("email").value.trim(),password:$("password").value});if(r.error){msg("loginMsg",r.error.message,"error");return}await adminCheck()}
 $("forgotBtn").onclick=async()=>{const email=$("email").value.trim();if(!email){msg("loginMsg","Enter your admin email first.","error");return}const r=await db.auth.resetPasswordForEmail(email,{redirectTo:location.href});msg("loginMsg",r.error?r.error.message:"Password recovery email sent. Check your inbox.",r.error?"error":"ok")}
 $("logoutBtn").onclick=async()=>{await db.auth.signOut();showLogin()}
-$("refreshBtn").onclick=async()=>{await loadWorkers();await Promise.all([loadSales(),loadInventory()])}
+$("refreshBtn").onclick=async()=>{await loadWorkers();await Promise.all([loadSales(),loadInventory(),loadStockHistory()])}
 $("refreshWorkers").onclick=loadWorkers;$("applyFilters").onclick=applyFilters;$("statusFilter").onchange=applyFilters;$("workerFilter").onchange=applyFilters;$("refreshInventory").onclick=loadInventory;$("applyInvFilters").onclick=applyInvFilters;$("invWorkerFilter").onchange=applyInvFilters
 document.querySelectorAll(".nav button").forEach(b=>b.onclick=()=>{document.querySelectorAll(".nav button").forEach(x=>x.classList.remove("active"));b.classList.add("active");document.querySelectorAll(".page").forEach(p=>p.classList.add("hidden"));$(b.dataset.section).classList.remove("hidden")})
 $("changePass").onclick=async()=>{const a=$("newPass").value,b=$("confirmPass").value;if(a.length<8){msg("securityMsg","Password must be at least 8 characters.","error");return}if(a!==b){msg("securityMsg","Passwords do not match.","error");return}const r=await db.auth.updateUser({password:a});msg("securityMsg",r.error?r.error.message:"Password changed successfully.",r.error?"error":"ok");if(!r.error){$("newPass").value="";$("confirmPass").value=""}}
