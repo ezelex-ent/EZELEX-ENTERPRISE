@@ -589,10 +589,8 @@ $("deleteStockBtn").onclick=async()=>{
   const product=$("stockProduct").value.trim()||"this stock record";
   if(!confirm(`Delete the stock record for "${product}"? This will remove it from your stock records and the admin dashboard too. This action cannot be undone.`))return;
   $("deleteStockBtn").disabled=true;
-  msg("stockMsg","Recording deletion and deleting stock record...");
-  const before=editingStockOriginal||liveStockRows.find(x=>String(x.id)===String(editingStockId))||{};
-  const historyError=await writeStockHistory(before,{...before, id:editingStockId, product_service:product, remaining_quantity:before.remaining_quantity||0},"Stock deleted");
-  if(historyError){$("deleteStockBtn").disabled=false;msg("stockMsg","Deletion stopped because the history could not be saved. Please run the supplied stock history SQL. "+historyError.message,"error");return;}
+  msg("stockMsg","Deleting stock record...");
+  // Deletions are intentionally not added to the shared edit-history table.
   const {error}=await db.from("worker_stock_batches").delete().eq("id",editingStockId).eq("worker_id",currentUser.id);
   $("deleteStockBtn").disabled=false;
   if(error){msg("stockMsg","Stock record could not be deleted: "+error.message,"error");return;}
