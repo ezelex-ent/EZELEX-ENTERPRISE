@@ -114,6 +114,7 @@ th,td{padding:11px;border-bottom:1px solid #eee;text-align:left;font-size:14px}t
     <button class="tab active" data-tab="dashboard">Dashboard</button>
     <button class="tab" data-tab="sales">Record Sale</button>
     <button class="tab" data-tab="stock">Live Stock</button>
+    <button class="tab" data-tab="stockHistory">Edit History</button>
   </div>
 
   <section id="dashboard" class="section active">
@@ -206,13 +207,31 @@ th,td{padding:11px;border-bottom:1px solid #eee;text-align:left;font-size:14px}t
         <div class="resultCard" id="profitCard"><h3>Current Profit / Loss</h3><strong id="calcProfit">GH₵0.00</strong><div id="profitLabel" class="live">No sales/loss yet</div></div>
         <div class="resultCard"><h3>Total Stock Accounted For</h3><strong id="calcAccounted">0 units</strong><div id="calcAccountedNote" class="live">Sold + damage</div></div>
       </div>
-      <div style="margin-top:15px"><button id="saveStockBtn" class="primary" type="button">Save Stock Record</button> <button id="cancelEditStockBtn" type="button" style="display:none">Cancel Edit</button></div>
+      <div style="margin-top:15px"><button id="saveStockBtn" class="primary" type="button">Save Stock Record</button> <button id="cancelEditStockBtn" type="button" style="display:none">Cancel Edit</button> <button id="deleteStockBtn" type="button" class="danger" style="display:none">Delete Stock Record</button></div>
     </div>
 
     <div class="panel">
       <h2>My Stock Records</h2><div class="stockNote">Capital is the money available for the stock purchase. <strong>Cash In Hand = Capital − Purchase Cost</strong>. Damage is tracked separately and is not treated as cash spent.</div>
       <div class="tablebox"><table><thead><tr><th>Date</th><th>Product</th><th>Total</th><th>Sold</th><th>Damage</th><th>Remaining</th><th>Capital</th><th>Purchase</th><th>Cash In Hand</th><th>Profit/Loss</th><th>Actions</th></tr></thead>
       <tbody id="stockBody"><tr><td colspan="11">Loading...</td></tr></tbody></table></div>
+    </div>
+  </section>
+
+  <section id="stockHistory" class="section">
+    <div class="panel">
+      <h2>📅 Stock Edit & Daily Sales History</h2>
+      <p>Each stock batch keeps one record. Every time you update its sold or damaged quantity, the date, time and quantity change are recorded here for you and Ezelex admin.</p>
+      <div id="stockHistoryMsg"></div>
+      <div class="stockGrid">
+        <div class="stockCard"><small>Days With Sales</small><strong id="historyDaysCount">0</strong></div>
+        <div class="stockCard"><small>Units Sold From Updates</small><strong id="historyUnitsSold">0</strong></div>
+        <div class="stockCard"><small>Best Sales Day</small><strong id="historyBestDay">—</strong></div>
+        <div class="stockCard"><small>Recorded Sales Value</small><strong id="historySalesValue">GH₵0.00</strong></div>
+      </div>
+      <h3>Daily Performance</h3>
+      <div class="tablebox"><table><thead><tr><th>Day</th><th>Stock Item</th><th>Units Sold That Day</th><th>Estimated Sales Value</th></tr></thead><tbody id="stockDailyBody"><tr><td colspan="4">Loading...</td></tr></tbody></table></div>
+      <h3 style="margin-top:22px">Full Edit History</h3>
+      <div class="tablebox"><table><thead><tr><th>Date & Time Edited</th><th>Stock Item</th><th>Action</th><th>Sold Change</th><th>Sold Total</th><th>Damage Total</th><th>Remaining</th><th>Notes</th></tr></thead><tbody id="stockHistoryBody"><tr><td colspan="8">Loading...</td></tr></tbody></table></div>
     </div>
   </section>
 
@@ -261,6 +280,8 @@ let profile=null;
 let currentUser=null;
 let reportSalesRows=[];
 let liveStockRows=[];
+let stockHistoryRows=[];
+let editingStockOriginal=null;
 
 const $=id=>document.getElementById(id);
 function msg(id,text,type=""){ $(id).innerHTML=text?`<div class="msg ${type}">${text}</div>`:""; }
@@ -329,7 +350,7 @@ async function loadProfile(user){
   $("contractStart").textContent=dateOnly(data.contract_start);
   $("contractEnd").textContent=dateOnly(data.contract_end);
 
-  await Promise.all([loadSales(),loadStock()]);
+  await Promise.all([loadSales(),loadStock(),loadStockHistory()]);
   await loadMessages();
 }
 
@@ -424,11 +445,34 @@ async function loadStock(){
   }).join("");
 }
 
+function dateTime(v){if(!v)return "—";const d=new Date(v);return Number.isNaN(d.getTime())?String(v):d.toLocaleString("en-GB",{day:"2-digit",month:"short",year:"numeric",hour:"2-digit",minute:"2-digit",second:"2-digit"});}
+async function loadStockHistory(){
+  const {data,error}=await db.from("worker_stock_edit_history").select("*").eq("worker_id",currentUser.id).order("changed_at",{ascending:false}).limit(1000);
+  if(error){$("stockHistoryBody").innerHTML='<tr><td colspan="8">History unavailable. Please run the supplied stock history SQL in Supabase.</td></tr>';$("stockDailyBody").innerHTML='<tr><td colspan="4">History unavailable.</td></tr>';msg("stockHistoryMsg","Could not load stock history: "+esc(error.message),"error");return;}
+  stockHistoryRows=data||[];renderStockHistory();
+}
+function renderStockHistory(){
+  const byDay={};let soldTotal=0,valueTotal=0;
+  stockHistoryRows.forEach(h=>{const delta=Number(h.sold_delta||0);if(delta>0){const day=dateOnly(h.changed_at);const key=day+"|"+(h.product_service||"Stock");if(!byDay[key])byDay[key]={day,product:h.product_service||"Stock",units:0,value:0};byDay[key].units+=delta;byDay[key].value+=delta*Number(h.selling_price_per_unit||0);soldTotal+=delta;valueTotal+=delta*Number(h.selling_price_per_unit||0);}});
+  const daily=Object.values(byDay).sort((a,b)=>b.day.localeCompare(a.day)||b.units-a.units);
+  const dayTotals={};daily.forEach(x=>{if(!dayTotals[x.day])dayTotals[x.day]={units:0,value:0};dayTotals[x.day].units+=x.units;dayTotals[x.day].value+=x.value;});
+  const days=Object.entries(dayTotals).sort((a,b)=>b[0].localeCompare(a[0]));
+  const best=days.slice().sort((a,b)=>b[1].value-a[1].value)[0];
+  $("historyDaysCount").textContent=days.length;$("historyUnitsSold").textContent=soldTotal.toLocaleString();$("historyBestDay").textContent=best?best[0]+" ("+money(best[1].value)+")":"—";$("historySalesValue").textContent=money(valueTotal);
+  $("stockDailyBody").innerHTML=daily.length?daily.map(x=>`<tr><td>${esc(x.day)}</td><td>${esc(x.product)}</td><td>${x.units}</td><td>${money(x.value)}</td></tr>`).join(""):'<tr><td colspan="4">No stock sales have been recorded through stock edits yet.</td></tr>';
+  $("stockHistoryBody").innerHTML=stockHistoryRows.length?stockHistoryRows.map(h=>`<tr><td>${esc(dateTime(h.changed_at))}</td><td>${esc(h.product_service||"")}</td><td>${esc(h.action||"Edited")}</td><td>${Number(h.sold_delta||0)>0?"+":""}${Number(h.sold_delta||0)}</td><td>${esc(h.sold_after??"—")}</td><td>${esc(h.damage_after??"—")}</td><td>${esc(h.remaining_after??"—")}</td><td>${esc(h.notes||"")}</td></tr>`).join(""):'<tr><td colspan="8">No stock edits recorded yet.</td></tr>';
+}
+async function writeStockHistory(before,after,action){
+  const soldBefore=Number(before?.sold_quantity||0),soldAfter=Number(after?.sold_quantity||0),damageBefore=Number(before?.damage_quantity||0),damageAfter=Number(after?.damage_quantity||0);
+  const row={stock_batch_id:String(after.id||before?.id||""),worker_id:currentUser.id,stock_date:after.stock_date||before?.stock_date||today(),product_service:after.product_service||before?.product_service||"Stock",action,sold_before:soldBefore,sold_after:soldAfter,sold_delta:soldAfter-soldBefore,damage_before:damageBefore,damage_after:damageAfter,remaining_after:Number(after.remaining_quantity||0),selling_price_per_unit:Number(after.selling_price_per_unit||before?.selling_price_per_unit||0),notes:after.notes||null,changed_at:new Date().toISOString()};
+  const {error}=await db.from("worker_stock_edit_history").insert(row);return error;
+}
+
 ["stockTotal","capitalAmount","purchaseTotal","sellPrice","stockSold","stockDamage"].forEach(id=>$(id).addEventListener("input",calculateStock));
 
 let editingStockId="";
 function startStockEdit(r){
-  editingStockId=r.id||""; $("editingStockId").value=editingStockId;
+  editingStockId=r.id||""; editingStockOriginal={...r}; $("editingStockId").value=editingStockId; $("deleteStockBtn").style.display="inline-block";
   $("stockDate").value=dateOnly(r.stock_date)||today(); $("stockProduct").value=r.product_service||"";
   $("stockTotal").value=Number(r.total_quantity||0); $("capitalAmount").value=Number(r.capital_amount ?? r.purchase_total ?? 0); $("purchaseTotal").value=Number(r.purchase_total||0);
   $("sellPrice").value=Number(r.selling_price_per_unit||0); $("stockSold").value=Number(r.sold_quantity||0); $("stockDamage").value=Number(r.damage_quantity||0); $("stockNotes").value=r.notes||"";
@@ -440,19 +484,47 @@ window.editStock=async function(id){
   if(error||!data){msg("stockMsg","Could not open that stock record for editing.","error");return;} startStockEdit(data);
 };
 function cancelStockEdit(){
-  editingStockId=""; $("editingStockId").value=""; $("stockForm").reset(); $("stockDate").value=today(); $("stockSold").value=0; $("stockDamage").value=0; $("saveStockBtn").textContent="Save Stock Record"; $("cancelEditStockBtn").style.display="none"; calculateStock(); msg("stockMsg","Edit cancelled","");
+  editingStockId=""; editingStockOriginal=null; $("editingStockId").value=""; $("stockForm").reset(); $("stockDate").value=today(); $("stockSold").value=0; $("stockDamage").value=0; $("saveStockBtn").textContent="Save Stock Record"; $("cancelEditStockBtn").style.display="none"; $("deleteStockBtn").style.display="none"; calculateStock(); msg("stockMsg","Edit cancelled","");
 }
 $("cancelEditStockBtn").onclick=cancelStockEdit;
+$("deleteStockBtn").onclick=async()=>{
+  if(!editingStockId){msg("stockMsg","Open a stock record with Edit before deleting it.","error");return;}
+  const product=$("stockProduct").value.trim()||"this stock record";
+  if(!confirm(`Delete the stock record for "${product}"? This will remove it from your stock records and the admin dashboard too. This action cannot be undone.`))return;
+  $("deleteStockBtn").disabled=true;
+  msg("stockMsg","Recording deletion and deleting stock record...");
+  const before=editingStockOriginal||liveStockRows.find(x=>String(x.id)===String(editingStockId))||{};
+  const historyError=await writeStockHistory(before,{...before, id:editingStockId, product_service:product, remaining_quantity:before.remaining_quantity||0},"Stock deleted");
+  if(historyError){$("deleteStockBtn").disabled=false;msg("stockMsg","Deletion stopped because the history could not be saved. Please run the supplied stock history SQL. "+historyError.message,"error");return;}
+  const {error}=await db.from("worker_stock_batches").delete().eq("id",editingStockId).eq("worker_id",currentUser.id);
+  $("deleteStockBtn").disabled=false;
+  if(error){msg("stockMsg","Stock record could not be deleted: "+error.message,"error");return;}
+  editingStockId=""; editingStockOriginal=null; $("editingStockId").value=""; $("stockForm").reset(); $("stockDate").value=today(); $("stockSold").value=0; $("stockDamage").value=0;
+  $("saveStockBtn").textContent="Save Stock Record"; $("cancelEditStockBtn").style.display="none"; $("deleteStockBtn").style.display="none"; calculateStock();
+  msg("stockMsg","Stock record deleted successfully. It has also been removed from the admin stock view.","success");
+  await Promise.all([loadStock(),loadStockHistory()]);
+};
 $("saveStockBtn").onclick=async()=>{
   const total=num("stockTotal"),capital=num("capitalAmount"),purchase=num("purchaseTotal"),price=num("sellPrice"),sold=num("stockSold"),damage=num("stockDamage");
   if(!$('stockDate').value||!$('stockProduct').value.trim()||total<=0||capital<0||purchase<0||price<0||purchase>capital||sold+damage>total){msg("stockMsg","Please check the stock quantities and costs. Purchase cost cannot be greater than capital, and sold + damage cannot be greater than total stock.","error");return;}
   const unitCost=purchase/total,revenue=sold*price,soldCost=sold*unitCost,damageValue=damage*unitCost,remaining=total-sold-damage,remainingValue=remaining*unitCost,profit=revenue-soldCost-damageValue,cash=capital-purchase;
   msg("stockMsg","Saving stock record...");
   const record={worker_id:currentUser.id,stock_date:$('stockDate').value,product_service:$('stockProduct').value.trim(),total_quantity:total,capital_amount:capital,cash_in_hand:cash,purchase_total:purchase,cost_per_unit:unitCost,selling_price_per_unit:price,sold_quantity:sold,damage_quantity:damage,loss_quantity:0,sales_revenue:revenue,sold_cost:soldCost,damage_value:damageValue,loss_value:0,remaining_quantity:remaining,remaining_value:remainingValue,profit_loss:profit,notes:$('stockNotes').value.trim()||null};
-  let result=editingStockId?await db.from("worker_stock_batches").update(record).eq("id",editingStockId).eq("worker_id",currentUser.id):await db.from("worker_stock_batches").insert(record);
-  if(result.error){msg("stockMsg",(editingStockId?"Stock record could not be updated: ":"Stock record could not be saved: ")+result.error.message,"error");return;}
-  msg("stockMsg",editingStockId?"Stock record updated successfully.":"Stock record saved successfully and sent to Ezelex admin.","success");
-  editingStockId=""; $("editingStockId").value=""; $("stockForm").reset(); $("stockDate").value=today(); $("stockSold").value=0; $("stockDamage").value=0; $("saveStockBtn").textContent="Save Stock Record"; $("cancelEditStockBtn").style.display="none"; calculateStock(); await loadStock();
+  const wasEditing=!!editingStockId;
+  let result;
+  if(wasEditing){
+    const historyError=await writeStockHistory(editingStockOriginal,record,"Stock updated");
+    if(historyError){msg("stockMsg","History could not be saved, so the stock was not changed. Please run the supplied stock history SQL in Supabase. "+historyError.message,"error");return;}
+    result=await db.from("worker_stock_batches").update(record).eq("id",editingStockId).eq("worker_id",currentUser.id);
+    if(result.error){msg("stockMsg","Stock update failed: "+result.error.message+". A history entry was retained for audit.","error");return;}
+  }else{
+    result=await db.from("worker_stock_batches").insert(record).select("*").single();
+    if(result.error){msg("stockMsg","Stock record could not be saved: "+result.error.message,"error");return;}
+    const historyError=await writeStockHistory(null,result.data,"Stock intake created");
+    if(historyError){msg("stockMsg","Stock was saved, but its history entry could not be saved. Please check the stock history SQL/policies: "+historyError.message,"error");}
+  }
+  msg("stockMsg",wasEditing?"Stock updated and date/time history recorded.":"Stock record saved successfully and sent to Ezelex admin.","success");
+  editingStockId=""; editingStockOriginal=null; $("editingStockId").value=""; $("stockForm").reset(); $("stockDate").value=today(); $("stockSold").value=0; $("stockDamage").value=0; $("saveStockBtn").textContent="Save Stock Record"; $("cancelEditStockBtn").style.display="none"; $("deleteStockBtn").style.display="none"; calculateStock(); await Promise.all([loadStock(),loadStockHistory()]);
 };
 
 async function loadMessages(){
