@@ -468,7 +468,8 @@ function dateTime(v){if(!v)return "—";const d=new Date(v);return Number.isNaN(
 async function loadStockHistory(){
   const {data,error}=await db.from("worker_stock_edit_history").select("*").eq("worker_id",currentUser.id).order("changed_at",{ascending:false}).limit(1000);
   if(error){$("stockHistoryBody").innerHTML='<tr><td colspan="8">History unavailable. Please run the supplied stock history SQL in Supabase.</td></tr>';$("stockDailyBody").innerHTML='<tr><td colspan="4">History unavailable.</td></tr>';msg("stockHistoryMsg","Could not load stock history: "+esc(error.message),"error");return;}
-  stockHistoryRows=data||[];renderStockHistory();
+  // Hide historical deletion entries from the worker Edit History; keep normal stock edits visible.
+  stockHistoryRows=(data||[]).filter(h=>!String(h.action||"").toLowerCase().includes("delet"));renderStockHistory();
 }
 function drawDailyPerformanceChart(daily){
   const canvas=$("dailyPerformanceChart");
