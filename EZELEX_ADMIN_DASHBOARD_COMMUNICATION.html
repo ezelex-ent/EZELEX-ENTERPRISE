@@ -19,6 +19,14 @@ table{width:100%;border-collapse:collapse;min-width:1050px}th,td{padding:11px;bo
 .badge{display:inline-block;padding:5px 9px;border-radius:999px;font-size:11px;font-weight:800}.pending{background:#fff3cd;color:#8a5b00}.approved{background:#dcfae6;color:#067647}.rejected{background:#fee4e2;color:#b42318}.profit{color:#087443;font-weight:800}.loss{color:#b42318;font-weight:800}
 .profile{display:grid;grid-template-columns:110px 1fr;gap:18px;align-items:center}.avatar{width:92px;height:92px;border-radius:50%;background:linear-gradient(135deg,#12355b,#d9a441);display:grid;place-items:center;color:#fff;font-size:30px;font-weight:900}.muted{color:#667085}.empty{text-align:center;padding:30px;color:#667085}
 @media(max-width:1050px){.cards{grid-template-columns:repeat(2,1fr)}.grid3{grid-template-columns:1fr}.profile{grid-template-columns:1fr;text-align:center}.avatar{margin:auto}}@media(max-width:650px){.cards,.grid2{grid-template-columns:1fr}.wrap{padding:0 11px}.brand h1{font-size:16px}}
+
+.daily-chart-wrap{width:100%;min-height:300px;position:relative;padding:12px;border:1px solid #edf0f3;border-radius:12px;background:#fff}
+.daily-chart-legend{display:flex;gap:18px;flex-wrap:wrap;font-size:13px;color:#475467;margin:4px 0 12px}
+.daily-chart-legend span{display:inline-flex;align-items:center;gap:7px}
+.legend-dot{display:inline-block;width:11px;height:11px;border-radius:3px}
+#adminDailyPerformanceChart{display:block;width:100%;height:300px}
+.daily-chart-note{font-size:12px;color:#667085;margin-top:8px}
+@media(max-width:650px){.daily-chart-wrap{padding:7px}#adminDailyPerformanceChart{height:260px}}
 </style>
 </head>
 <body>
@@ -65,7 +73,7 @@ table{width:100%;border-collapse:collapse;min-width:1050px}th,td{padding:11px;bo
 <div class="tablebox"><table><thead><tr><th>Date</th><th>Worker</th><th>Worker ID</th><th>Product</th><th>Total</th><th>Sold</th><th>Damaged</th><th>Remaining</th><th>Purchase</th><th>Revenue</th><th>Damage Value</th><th>Profit/Loss</th></tr></thead><tbody id="inventoryBody"></tbody></table></div>
 </div></section>
 
-<section id="stockHistory" class="page hidden"><div class="section"><h2>Stock Edit History & Daily Sales</h2><p class="muted">Audit trail for stock batches, including date/time edited, sold quantity changes, damage changes, and deleted stock records. Workers and admin see the same shared history.</p><div class="toolbar"><select id="historyWorkerFilter" style="max-width:240px"><option value="">All workers</option></select><input id="historyFromDate" type="date" style="max-width:170px"><input id="historyToDate" type="date" style="max-width:170px"><button id="applyHistoryFilters" class="primary">Apply</button><button id="refreshStockHistory" class="soft">Refresh</button></div><h3>Daily Sales Performance</h3><div class="tablebox"><table><thead><tr><th>Day</th><th>Worker</th><th>Stock Item</th><th>Units Sold That Day</th><th>Estimated Sales Value</th></tr></thead><tbody id="adminStockDailyBody"><tr><td colspan="5" class="empty">Loading history...</td></tr></tbody></table></div><h3 style="margin-top:22px">Full Edit History</h3><div class="tablebox"><table><thead><tr><th>Date & Time</th><th>Worker</th><th>Worker ID</th><th>Stock Item</th><th>Action</th><th>Sold Change</th><th>Sold Total</th><th>Damage Total</th><th>Remaining</th><th>Notes</th></tr></thead><tbody id="adminStockHistoryBody"><tr><td colspan="10" class="empty">Loading history...</td></tr></tbody></table></div></div></section>
+<section id="stockHistory" class="page hidden"><div class="section"><h2>Stock Edit History & Daily Sales</h2><p class="muted">Audit trail for stock batches, including date/time edited, sold quantity changes, damage changes, and deleted stock records. Workers and admin see the same shared history.</p><div class="toolbar"><select id="historyWorkerFilter" style="max-width:240px"><option value="">All workers</option></select><input id="historyFromDate" type="date" style="max-width:170px"><input id="historyToDate" type="date" style="max-width:170px"><button id="applyHistoryFilters" class="primary">Apply</button><button id="refreshStockHistory" class="soft">Refresh</button></div><h3>Daily Sales Performance</h3><div class="daily-chart-wrap"><div class="daily-chart-legend"><span><i class="legend-dot" style="background:#2463eb"></i>Units sold</span><span><i class="legend-dot" style="background:#15945b"></i>Estimated sales value (GH₵)</span></div><canvas id="adminDailyPerformanceChart" role="img" aria-label="Daily stock sales performance chart"></canvas><div id="adminDailyChartNote" class="daily-chart-note">Loading history...</div></div><h3 style="margin-top:22px">Full Edit History</h3><div class="tablebox"><table><thead><tr><th>Date & Time</th><th>Worker</th><th>Worker ID</th><th>Stock Item</th><th>Action</th><th>Sold Change</th><th>Sold Total</th><th>Damage Total</th><th>Remaining</th><th>Notes</th></tr></thead><tbody id="adminStockHistoryBody"><tr><td colspan="10" class="empty">Loading history...</td></tr></tbody></table></div></div></section>
 
 <section id="workers" class="page hidden">
 <div class="section"><h2>Create Worker</h2><div id="workerMsg"></div><div class="grid3">
@@ -146,12 +154,33 @@ async function loadStockHistory(){
  const select=$("historyWorkerFilter");if(select){const current=select.value;select.innerHTML='<option value="">All workers</option>'+workers.map(w=>`<option value="${esc(w.user_id||w.id)}">${esc(w.full_name||w.worker_id||w.email||"Worker")}</option>`).join("");select.value=current;}
  renderAdminStockHistory();
 }
+
+function drawAdminDailyPerformanceChart(detailRows){
+ const canvas=$("adminDailyPerformanceChart"),note=$("adminDailyChartNote");if(!canvas||!note)return;
+ const grouped={};detailRows.forEach(r=>{if(!grouped[r.day])grouped[r.day]={day:r.day,units:0,value:0};grouped[r.day].units+=Number(r.units||0);grouped[r.day].value+=Number(r.value||0)});
+ const data=Object.values(grouped).sort((a,b)=>a.day.localeCompare(b.day)).slice(-14);
+ const width=Math.max(300,Math.floor(canvas.getBoundingClientRect().width||700)),height=300,dpr=window.devicePixelRatio||1;
+ canvas.width=width*dpr;canvas.height=height*dpr;canvas.style.height=height+"px";
+ const ctx=canvas.getContext("2d");if(!ctx)return;ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,width,height);
+ if(!data.length){note.textContent="No stock sales recorded for these filters yet.";return}
+ const pad={l:48,r:48,t:20,b:58},plotW=width-pad.l-pad.r,plotH=height-pad.t-pad.b;
+ const maxU=Math.max(1,...data.map(x=>x.units)),maxV=Math.max(1,...data.map(x=>x.value)),slot=plotW/data.length,bar=Math.max(4,Math.min(18,slot*.25));
+ ctx.font="11px Arial";ctx.textBaseline="middle";
+ for(let i=0;i<=4;i++){const y=pad.t+plotH-plotH*i/4;ctx.beginPath();ctx.moveTo(pad.l,y);ctx.lineTo(width-pad.r,y);ctx.strokeStyle="#e5e7eb";ctx.stroke();ctx.fillStyle="#64748b";ctx.textAlign="right";ctx.fillText(String(Math.round(maxU*i/4)),pad.l-7,y);ctx.textAlign="left";ctx.fillText((maxV*i/4).toFixed(0),width-pad.r+7,y)}
+ data.forEach((x,i)=>{const cx=pad.l+slot*i+slot/2,uh=x.units/maxU*plotH,vh=x.value/maxV*plotH;ctx.fillStyle="#2463eb";ctx.fillRect(cx-bar-2,pad.t+plotH-uh,bar,uh);ctx.fillStyle="#15945b";ctx.fillRect(cx+2,pad.t+plotH-vh,bar,vh);ctx.save();ctx.translate(cx,height-pad.b+12);ctx.rotate(-Math.PI/5);ctx.fillStyle="#475467";ctx.textAlign="right";ctx.fillText(x.day.slice(5),0,0);ctx.restore()});
+ ctx.fillStyle="#475467";ctx.textAlign="left";ctx.fillText("Units",pad.l,10);ctx.textAlign="right";ctx.fillText("Value (GH₵)",width-pad.r,10);
+ const totalUnits=data.reduce((a,x)=>a+x.units,0),totalValue=data.reduce((a,x)=>a+x.value,0);
+ note.textContent=`Latest ${data.length} day(s): ${totalUnits} units sold; estimated sales value ${money(totalValue)}. Each measure uses its own scale.`;
+ canvas.setAttribute("aria-label",`Daily performance for ${data.length} days. ${totalUnits} units sold and estimated sales value ${money(totalValue)}.`);
+}
+window.addEventListener("resize",()=>{if(typeof allStockHistory!=="undefined"&&allStockHistory.length)renderAdminStockHistory()});
+
 function renderAdminStockHistory(){
  const wid=$("historyWorkerFilter")?.value||"",from=$("historyFromDate")?.value||"",to=$("historyToDate")?.value||"";
  const rows=allStockHistory.filter(h=>{const d=dateOnly(h.changed_at);return(!wid||h.worker_id===wid)&&(!from||d>=from)&&(!to||d<=to)});
  const daily={};rows.forEach(h=>{const delta=Number(h.sold_delta||0);if(delta<=0)return;const day=dateOnly(h.changed_at),key=day+'|'+h.worker_id+'|'+(h.product_service||'Stock');if(!daily[key])daily[key]={day,worker:h.worker_id,product:h.product_service||'Stock',units:0,value:0};daily[key].units+=delta;daily[key].value+=delta*Number(h.selling_price_per_unit||0)});
  const drows=Object.values(daily).sort((a,b)=>b.day.localeCompare(a.day)||b.units-a.units);
- $("adminStockDailyBody").innerHTML=drows.length?drows.map(x=>{const w=workerInfo(x.worker);return `<tr><td>${esc(x.day)}</td><td>${esc(w.full_name||w.worker_id||'')}</td><td>${esc(x.product)}</td><td>${x.units}</td><td>${money(x.value)}</td></tr>`}).join(""):'<tr><td colspan="5" class="empty">No stock sales recorded for these filters yet.</td></tr>';
+ drawAdminDailyPerformanceChart(drows);
  $("adminStockHistoryBody").innerHTML=rows.length?rows.map(h=>{const w=workerInfo(h.worker_id);return `<tr><td>${esc(historyDateTime(h.changed_at))}</td><td>${esc(w.full_name||"")}</td><td>${esc(w.worker_id||h.worker_id||"")}</td><td>${esc(h.product_service||"")}</td><td>${esc(h.action||"Edited")}</td><td>${Number(h.sold_delta||0)>0?"+":""}${Number(h.sold_delta||0)}</td><td>${esc(h.sold_after??"—")}</td><td>${esc(h.damage_after??"—")}</td><td>${esc(h.remaining_after??"—")}</td><td>${esc(h.notes||"")}</td></tr>`}).join(""):'<tr><td colspan="10" class="empty">No stock edit history found for these filters.</td></tr>';
 }
 $("applyHistoryFilters").onclick=renderAdminStockHistory;$("refreshStockHistory").onclick=loadStockHistory;
