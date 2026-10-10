@@ -225,6 +225,23 @@ th,td{padding:11px;border-bottom:1px solid #eee;text-align:left;font-size:14px}t
       <div class="tablebox"><table><thead><tr><th>Date</th><th>Product</th><th>Total</th><th>Sold</th><th>Damage</th><th>Remaining</th><th>Capital</th><th>Purchase</th><th>Cash In Hand</th><th>Profit/Loss</th><th>Actions</th></tr></thead>
       <tbody id="stockBody"><tr><td colspan="11">Loading...</td></tr></tbody></table></div>
     </div>
+
+    <div class="panel" id="creditPanel">
+      <h2>🧾 On-Credit Egg Sales</h2>
+      <p class="stockNote">Record crates given to a customer who has not paid yet. Credit sales count as sold and earned profit, but unpaid money is excluded from Cash In Hand until the customer pays. Ezelex admin can see outstanding credit.</p>
+      <div id="creditMsg"></div>
+      <form id="creditForm" class="grid">
+        <div><label>Stock Batch</label><select id="creditStockBatch" required><option value="">Choose stock batch</option></select></div>
+        <div><label>Customer Name / Reference</label><input id="creditCustomer" required placeholder="Customer name or phone"></div>
+        <div><label>Credit Date</label><input id="creditDate" type="date" required></div>
+        <div><label>Crates on Credit</label><input id="creditQuantity" type="number" min="1" step="1" required></div>
+        <div><label>Amount Due (GH₵)</label><input id="creditAmount" type="number" min="0.01" step="0.01" required></div>
+        <div class="full"><label>Notes</label><textarea id="creditNotes" placeholder="Optional payment promise or notes"></textarea></div>
+      </form>
+      <button id="saveCreditBtn" class="primary" type="button">Record On-Credit Sale</button>
+      <div class="stockGrid" style="margin-top:16px"><div class="stockCard"><small>Outstanding Credit</small><strong id="creditOutstanding">GH₵0.00</strong></div><div class="stockCard"><small>Crates on Credit</small><strong id="creditUnits">0</strong></div></div>
+      <h3>My Credit Records</h3><div class="tablebox"><table><thead><tr><th>Date</th><th>Customer</th><th>Stock</th><th>Crates</th><th>Amount Due</th><th>Paid</th><th>Balance</th><th>Status</th><th>Action</th></tr></thead><tbody id="creditBody"><tr><td colspan="9">Loading credit records...</td></tr></tbody></table></div>
+    </div>
   </section>
 
   <section id="stockHistory" class="section">
@@ -301,6 +318,7 @@ let reportSalesRows=[];
 let liveStockRows=[];
 let stockHistoryRows=[];
 let editingStockOriginal=null;
+let creditRows=[];
 
 const $=id=>document.getElementById(id);
 function msg(id,text,type=""){ $(id).innerHTML=text?`<div class="msg ${type}">${text}</div>`:""; }
@@ -355,6 +373,7 @@ async function loadProfile(user){
   $("workerStatus").textContent=data.active?"Active":"Inactive";
   $("saleDate").value=today();
   $("stockDate").value=today();
+  if($("creditDate"))$("creditDate").value=today();
 
   $("dashEmail").textContent=user.email||"—";
   $("dashPhone").textContent=data.phone||"—";
@@ -369,7 +388,7 @@ async function loadProfile(user){
   $("contractStart").textContent=dateOnly(data.contract_start);
   $("contractEnd").textContent=dateOnly(data.contract_end);
 
-  await Promise.all([loadSales(),loadStock(),loadStockHistory()]);
+  await Promise.all([loadSales(),loadStock(),loadStockHistory(),loadCredits()]);
   await loadMessages();
 }
 
@@ -428,7 +447,7 @@ async function loadSales(){
 
 function calculateStock(){
   const total=num("stockTotal"),capital=num("capitalAmount"),unitCost=num("costPerUnit"),purchase=total*unitCost,price=num("sellPrice"),sold=num("stockSold"),damage=num("stockDamage");
-  const remaining=Math.max(0,total-sold-damage),revenue=sold*price,soldCost=sold*unitCost,damageValue=damage*unitCost,remainingValue=remaining*unitCost,profit=revenue-soldCost-damageValue,accounted=sold+damage,cash=capital+revenue-purchase;
+  const remaining=Math.max(0,total-sold-damage),revenue=sold*price,soldCost=sold*unitCost,damageValue=damage*unitCost,remainingValue=remaining*unitCost,profit=revenue-soldCost-damageValue,accounted=sold+damage,cash=capital+revenue-Number(editingStockOriginal?.credit_outstanding||0)-purchase;
   $("calcTotal").textContent=total+" units";$("calcTotalValue").textContent=money(purchase);
   $("calcSold").textContent=sold+" units";$("calcRevenue").textContent=money(revenue)+" revenue";
   $("calcRemaining").textContent=remaining+" units";$("calcRemainingValue").textContent=money(remainingValue)+" stock value";
@@ -449,19 +468,20 @@ async function loadStock(){
     msg("stockLiveMsg","Could not load live stock: "+error.message,"error");
     return;
   }
-  const rows=data||[];
+  const rows=data||[]; liveStockRows=rows;
   let units=0,value=0,revenue=0,profit=0,cash=0;
   rows.forEach(r=>{
     units+=Number(r.remaining_quantity||0); value+=Number(r.remaining_value||0); revenue+=Number(r.sales_revenue||0); profit+=Number(r.profit_loss||0);
-    const cap=Number(r.capital_amount ?? r.purchase_total ?? 0), pur=Number(r.purchase_total||0); cash+=Number(r.cash_in_hand ?? (cap+Number(r.sales_revenue||0)-pur));
+    const cap=Number(r.capital_amount ?? r.purchase_total ?? 0), pur=Number(r.purchase_total||0); cash+=Number(r.cash_in_hand ?? (cap+Number(r.sales_revenue||0)-Number(r.credit_outstanding||0)-pur));
   });
   $("liveUnits").textContent=units.toLocaleString(); $("liveValue").textContent=money(value); $("liveRevenue").textContent=money(revenue); $("liveProfit").textContent=money(profit);
   $("liveProfitLabel").textContent=profit>=0?"current total profit":"current total loss";
   if(!rows.length){$("stockBody").innerHTML='<tr><td colspan="11">No stock records yet.</td></tr>';return;}
   $("stockBody").innerHTML=rows.map(r=>{
-    const cap=Number(r.capital_amount ?? r.purchase_total ?? 0), pur=Number(r.purchase_total||0), ci=Number(r.cash_in_hand ?? (cap+Number(r.sales_revenue||0)-pur));
+    const cap=Number(r.capital_amount ?? r.purchase_total ?? 0), pur=Number(r.purchase_total||0), ci=Number(r.cash_in_hand ?? (cap+Number(r.sales_revenue||0)-Number(r.credit_outstanding||0)-pur));
     return `<tr><td>${esc(dateOnly(r.stock_date))}</td><td>${esc(r.product_service||"")}</td><td>${esc(r.total_quantity??0)}</td><td>${esc(r.sold_quantity??0)}</td><td>${esc(r.damage_quantity??0)}</td><td>${esc(r.remaining_quantity??0)}</td><td>${money(cap)}</td><td>${money(pur)}</td><td>${money(ci)}</td><td>${money(r.profit_loss)}</td><td><button type="button" class="primary" onclick="editStock('${esc(r.id)}')">Edit</button></td></tr>`;
   }).join("");
+  const sel=$("creditStockBatch"); if(sel){const prev=sel.value;sel.innerHTML='<option value="">Choose stock batch</option>'+rows.map(r=>`<option value="${esc(r.id)}">${esc(dateOnly(r.stock_date))} — ${esc(r.product_service||"Stock")} (remaining ${Number(r.remaining_quantity||0)})</option>`).join("");if(rows.some(r=>r.id===prev))sel.value=prev;}
 }
 
 function dateTime(v){if(!v)return "—";const d=new Date(v);return Number.isNaN(d.getTime())?String(v):d.toLocaleString("en-GB",{day:"2-digit",month:"short",year:"numeric",hour:"2-digit",minute:"2-digit",second:"2-digit"});}
@@ -609,7 +629,7 @@ $("saveStockBtn").onclick=async()=>{
   // an equal or higher value is treated as the cumulative quantity for this stock batch.
   const sold=editingStockId&&enteredSold<oldSold?oldSold+enteredSold:enteredSold;
   const damage=editingStockId&&enteredDamage<oldDamage?oldDamage+enteredDamage:enteredDamage;
-  const revenue=sold*price,cash=capital+revenue-purchase;
+  const revenue=sold*price,creditOutstanding=Number(old.credit_outstanding||0),cash=capital+revenue-creditOutstanding-purchase;
   if(!$('stockDate').value||!$('stockProduct').value.trim()||total<=0||capital<0||unitCost<0||price<0||cash<0||sold+damage>total){msg("stockMsg","Please check the stock quantities and costs. Available cash (starting capital plus recorded sales) cannot be negative, and sold + damage cannot be greater than total stock.","error");return;}
   const soldCost=sold*unitCost,damageValue=damage*unitCost,remaining=total-sold-damage,remainingValue=remaining*unitCost;
   // Keep already-earned profit and add only the profit/loss from quantities newly recorded.
@@ -617,7 +637,7 @@ $("saveStockBtn").onclick=async()=>{
   const priorProfit=Number(old.profit_loss||0);
   const profit=editingStockId?priorProfit+(addedSold*(price-unitCost))-(addedDamage*unitCost):(revenue-soldCost-damageValue);
   msg("stockMsg","Saving stock record...");
-  const record={worker_id:currentUser.id,stock_date:$('stockDate').value,product_service:$('stockProduct').value.trim(),total_quantity:total,capital_amount:capital,cash_in_hand:cash,purchase_total:purchase,cost_per_unit:unitCost,selling_price_per_unit:price,sold_quantity:sold,damage_quantity:damage,loss_quantity:0,sales_revenue:revenue,sold_cost:soldCost,damage_value:damageValue,loss_value:0,remaining_quantity:remaining,remaining_value:remainingValue,profit_loss:profit,notes:$('stockNotes').value.trim()||null};
+  const record={worker_id:currentUser.id,credit_quantity:Number(old.credit_quantity||0),credit_outstanding:creditOutstanding,stock_date:$('stockDate').value,product_service:$('stockProduct').value.trim(),total_quantity:total,capital_amount:capital,cash_in_hand:cash,purchase_total:purchase,cost_per_unit:unitCost,selling_price_per_unit:price,sold_quantity:sold,damage_quantity:damage,loss_quantity:0,sales_revenue:revenue,sold_cost:soldCost,damage_value:damageValue,loss_value:0,remaining_quantity:remaining,remaining_value:remainingValue,profit_loss:profit,notes:$('stockNotes').value.trim()||null};
   const wasEditing=!!editingStockId;
   let result;
   if(wasEditing){
@@ -644,6 +664,41 @@ $("saveStockBtn").onclick=async()=>{
   editingStockId=""; editingStockOriginal=null; $("editingStockId").value=""; $("stockForm").reset(); $("stockDate").value=savedStockDate||today(); $("stockSold").value=0; $("stockDamage").value=0; $("saveStockBtn").textContent="Save Stock Record"; $("cancelEditStockBtn").style.display="none"; $("deleteStockBtn").style.display="none"; calculateStock(); await Promise.all([loadStock(),loadStockHistory()]);
 };
 
+async function loadCredits(){
+  if(!$('creditBody'))return;
+  const r=await db.from('worker_stock_credit_sales').select('*').eq('worker_id',currentUser.id).order('credit_date',{ascending:false}).order('created_at',{ascending:false});
+  if(r.error){$('creditBody').innerHTML='<tr><td colspan="9">Credit records unavailable. Check the supplied credit SQL and policies.</td></tr>';msg('creditMsg','Could not load credit records: '+esc(r.error.message),'error');return;}
+  creditRows=r.data||[];renderCredits();
+}
+function renderCredits(){
+  const open=creditRows.filter(c=>Number(c.amount_due||0)>Number(c.amount_paid||0));
+  $('creditOutstanding').textContent=money(open.reduce((n,c)=>n+Number(c.amount_due||0)-Number(c.amount_paid||0),0));
+  $('creditUnits').textContent=open.reduce((n,c)=>n+Number(c.quantity||0),0).toLocaleString();
+  $('creditBody').innerHTML=creditRows.length?creditRows.map(c=>{const bal=Math.max(0,Number(c.amount_due||0)-Number(c.amount_paid||0));return `<tr><td>${esc(dateOnly(c.credit_date))}</td><td>${esc(c.customer_name||'')}</td><td>${esc(c.product_service||'Eggs')}</td><td>${Number(c.quantity||0)}</td><td>${money(c.amount_due)}</td><td>${money(c.amount_paid)}</td><td><b>${money(bal)}</b></td><td>${bal<=0?'<span class="badge approved">PAID</span>':'<span class="badge pending">OUTSTANDING</span>'}</td><td>${bal>0?`<button class="primary" onclick="markCreditPaid('${esc(c.id)}')">Mark fully paid</button>`:'—'}</td></tr>`}).join(''):'<tr><td colspan="9">No credit sales recorded.</td></tr>';
+}
+$('creditQuantity')?.addEventListener('input',()=>{const r=liveStockRows.find(x=>x.id===$('creditStockBatch').value);if(r&&Number($('creditQuantity').value)>0)$('creditAmount').value=(Number($('creditQuantity').value)*Number(r.selling_price_per_unit||0)).toFixed(2);});
+$('creditStockBatch')?.addEventListener('change',()=>{const r=liveStockRows.find(x=>x.id===$('creditStockBatch').value);if(r&&Number($('creditQuantity').value)>0)$('creditAmount').value=(Number($('creditQuantity').value)*Number(r.selling_price_per_unit||0)).toFixed(2);});
+$('saveCreditBtn')?.addEventListener('click',async()=>{
+  const batchId=$('creditStockBatch').value,stock=liveStockRows.find(x=>x.id===batchId),customer=$('creditCustomer').value.trim(),qty=Number($('creditQuantity').value),amount=Number($('creditAmount').value),date=$('creditDate').value;
+  if(!stock||!customer||!date||!Number.isInteger(qty)||qty<=0||!Number.isFinite(amount)||amount<=0){msg('creditMsg','Choose a stock batch and enter customer, date, crate quantity and amount due.','error');return;}
+  if(qty>Number(stock.remaining_quantity||0)){msg('creditMsg','There are not enough remaining crates in this stock batch.','error');return;}
+  const unit=Number(stock.cost_per_unit||0),oldSold=Number(stock.sold_quantity||0),oldRevenue=Number(stock.sales_revenue||0),newSold=oldSold+qty,newRevenue=oldRevenue+amount,newRemaining=Number(stock.total_quantity||0)-newSold-Number(stock.damage_quantity||0),oldCredit=Number(stock.credit_outstanding||0),newCredit=oldCredit+amount;
+  const credit={stock_batch_id:stock.id,worker_id:currentUser.id,customer_name:customer,product_service:stock.product_service||'Eggs',quantity:qty,amount_due:amount,amount_paid:0,credit_date:date,notes:$('creditNotes').value.trim()||null,status:'unpaid'};
+  msg('creditMsg','Saving credit sale...');
+  const ins=await db.from('worker_stock_credit_sales').insert(credit).select('*').single();if(ins.error){msg('creditMsg','Credit sale could not be saved: '+esc(ins.error.message),'error');return;}
+  const upd=await db.from('worker_stock_batches').update({sold_quantity:newSold,sales_revenue:newRevenue,sold_cost:newSold*unit,remaining_quantity:newRemaining,remaining_value:newRemaining*unit,profit_loss:Number(stock.profit_loss||0)+(amount-qty*unit),credit_quantity:Number(stock.credit_quantity||0)+qty,credit_outstanding:newCredit,cash_in_hand:Number(stock.capital_amount||0)+newRevenue-newCredit-Number(stock.purchase_total||0)}).eq('id',stock.id).eq('worker_id',currentUser.id);
+  if(upd.error){await db.from('worker_stock_credit_sales').delete().eq('id',ins.data.id).eq('worker_id',currentUser.id);msg('creditMsg','Credit record was not applied to stock: '+esc(upd.error.message),'error');return;}
+  $('creditForm').reset();$('creditDate').value=today();msg('creditMsg','On-credit sale recorded. Stock, profit and outstanding balance updated; unpaid credit is not counted as cash in hand.','success');await Promise.all([loadStock(),loadStockHistory(),loadCredits()]);
+});
+window.markCreditPaid=async id=>{
+  const c=creditRows.find(x=>x.id===id);if(!c||Number(c.amount_due||0)<=Number(c.amount_paid||0))return;
+  if(!confirm(`Confirm that ${money(Number(c.amount_due)-Number(c.amount_paid))} has been received from ${c.customer_name}?`))return;
+  const bal=Number(c.amount_due||0)-Number(c.amount_paid||0);const stock=liveStockRows.find(x=>x.id===c.stock_batch_id);
+  const up=await db.from('worker_stock_credit_sales').update({amount_paid:Number(c.amount_due),status:'paid',paid_at:new Date().toISOString()}).eq('id',id).eq('worker_id',currentUser.id);
+  if(up.error){msg('creditMsg','Payment could not be saved: '+esc(up.error.message),'error');return;}
+  if(stock){const next=Math.max(0,Number(stock.credit_outstanding||0)-bal);const su=await db.from('worker_stock_batches').update({credit_outstanding:next,cash_in_hand:Number(stock.capital_amount||0)+Number(stock.sales_revenue||0)-next-Number(stock.purchase_total||0)}).eq('id',stock.id).eq('worker_id',currentUser.id);if(su.error){msg('creditMsg','Payment saved but stock cash summary needs refresh: '+esc(su.error.message),'error');}}
+  msg('creditMsg','Payment recorded. Cash in hand has been updated.','success');await Promise.all([loadStock(),loadCredits()]);
+};
 async function loadMessages(){
   /* Communication is intentionally read-only here.
      If a communication table exists, this section can be connected without changing worker login/profile. */
