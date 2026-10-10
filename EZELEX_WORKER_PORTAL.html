@@ -187,15 +187,15 @@ th,td{padding:11px;border-bottom:1px solid #eee;text-align:left;font-size:14px}t
     </div>
 
     <div class="panel">
-      <h2>Add Stock Record</h2>
+      <h2>Add / Edit Stock Record</h2>
       <div id="stockMsg"></div>
       <input type="hidden" id="editingStockId" value="">
       <form id="stockForm" class="grid">
         <div><label>Stock Date</label><input id="stockDate" type="date" required></div>
         <div><label>Product / Stock Item</label><input id="stockProduct" type="text" placeholder="e.g. Eggs - 30 crate" required></div>
         <div><label>Total Quantity Bought</label><input id="stockTotal" type="number" min="0" step="1" placeholder="100" required></div>
-        <div><label>Capital Available (GHS)</label><input id="capitalAmount" type="number" min="0" step="0.01" placeholder="5000" required></div>
-        <div><label>Total Purchase Cost (GHS)</label><input id="purchaseTotal" type="number" min="0" step="0.01" placeholder="4300" required></div>
+        <div><label>Starting Capital (GHS)</label><input id="capitalAmount" type="number" min="0" step="0.01" placeholder="5000" required></div>
+        <div><label>Purchase Cost per Unit (GHS)</label><input id="costPerUnit" type="number" min="0" step="0.01" placeholder="50" required></div>
         <div><label>Selling Price Per Unit (GHS)</label><input id="sellPrice" type="number" min="0" step="0.01" placeholder="50" required></div>
         <div><label>Sold Quantity</label><input id="stockSold" type="number" min="0" step="1" value="0"></div>
         <div><label>Damage Quantity</label><input id="stockDamage" type="number" min="0" step="1" value="0"></div>
@@ -203,7 +203,7 @@ th,td{padding:11px;border-bottom:1px solid #eee;text-align:left;font-size:14px}t
         <div class="full"><label>Stock Notes</label><textarea id="stockNotes" placeholder="Optional notes about this stock batch"></textarea></div>
       </form>
       <div class="stockGrid">
-        <div class="stockCard"><small>Total</small><strong id="calcTotal">0 units</strong><div id="calcTotalValue">GH₵0.00</div></div>
+        <div class="stockCard"><small>Total Quantity / Purchase Cost</small><strong id="calcTotal">0 units</strong><div id="calcTotalValue">GH₵0.00 calculated</div></div>
         <div class="stockCard"><small>Sold</small><strong id="calcSold">0 units</strong><div id="calcRevenue">GH₵0.00 revenue</div></div>
         <div class="stockCard"><small>Remaining</small><strong id="calcRemaining">0 units</strong><div id="calcRemainingValue">GH₵0.00 stock value</div></div>
         <div class="stockCard"><small>Unit Cost</small><strong id="calcUnitCost">GH₵0.00</strong><div>Cost per unit</div></div>
@@ -212,7 +212,7 @@ th,td{padding:11px;border-bottom:1px solid #eee;text-align:left;font-size:14px}t
         <div class="resultCard"><h3>Cost of Sold Stock</h3><strong id="calcSoldCost">GH₵0.00</strong></div>
         <div class="resultCard"><h3>Damage Value</h3><strong id="calcDamageValue">GH₵0.00</strong></div>
         <div class="resultCard"><h3>Capital Available</h3><strong id="calcCapital">GH₵0.00</strong></div>
-        <div class="resultCard"><h3>Cash In Hand</h3><strong id="calcCashInHand">GH₵0.00</strong><div>Capital − purchase cost</div></div>
+        <div class="resultCard"><h3>Cash In Hand</h3><strong id="calcCashInHand">GH₵0.00</strong><div>Starting capital + sales − purchase cost</div></div>
         <div class="resultCard"><h3>Sales Revenue</h3><strong id="calcSalesRevenue">GH₵0.00</strong></div>
         <div class="resultCard" id="profitCard"><h3>Current Profit / Loss</h3><strong id="calcProfit">GH₵0.00</strong><div id="profitLabel" class="live">No sales/loss yet</div></div>
         <div class="resultCard"><h3>Total Stock Accounted For</h3><strong id="calcAccounted">0 units</strong><div id="calcAccountedNote" class="live">Sold + damage</div></div>
@@ -221,7 +221,7 @@ th,td{padding:11px;border-bottom:1px solid #eee;text-align:left;font-size:14px}t
     </div>
 
     <div class="panel">
-      <h2>My Stock Records</h2><div class="stockNote">Capital is the money available for the stock purchase. <strong>Cash In Hand = Capital − Purchase Cost</strong>. Damage is tracked separately and is not treated as cash spent.</div>
+      <h2>My Stock Records</h2><div class="stockNote">Enter your starting capital and purchase cost per unit. Total purchase cost is calculated automatically as quantity × unit cost. <strong>Cash In Hand = Starting Capital + Sales Revenue − Total Purchase Cost</strong>. Damage is tracked separately and is not treated as cash spent.</div>
       <div class="tablebox"><table><thead><tr><th>Date</th><th>Product</th><th>Total</th><th>Sold</th><th>Damage</th><th>Remaining</th><th>Capital</th><th>Purchase</th><th>Cash In Hand</th><th>Profit/Loss</th><th>Actions</th></tr></thead>
       <tbody id="stockBody"><tr><td colspan="11">Loading...</td></tr></tbody></table></div>
     </div>
@@ -427,8 +427,8 @@ async function loadSales(){
 }
 
 function calculateStock(){
-  const total=num("stockTotal"),capital=num("capitalAmount"),purchase=num("purchaseTotal"),price=num("sellPrice"),sold=num("stockSold"),damage=num("stockDamage");
-  const unitCost=total>0?purchase/total:0,remaining=Math.max(0,total-sold-damage),revenue=sold*price,soldCost=sold*unitCost,damageValue=damage*unitCost,remainingValue=remaining*unitCost,profit=revenue-soldCost-damageValue,accounted=sold+damage,cash=capital-purchase;
+  const total=num("stockTotal"),capital=num("capitalAmount"),unitCost=num("costPerUnit"),purchase=total*unitCost,price=num("sellPrice"),sold=num("stockSold"),damage=num("stockDamage");
+  const remaining=Math.max(0,total-sold-damage),revenue=sold*price,soldCost=sold*unitCost,damageValue=damage*unitCost,remainingValue=remaining*unitCost,profit=revenue-soldCost-damageValue,accounted=sold+damage,cash=capital+revenue-purchase;
   $("calcTotal").textContent=total+" units";$("calcTotalValue").textContent=money(purchase);
   $("calcSold").textContent=sold+" units";$("calcRevenue").textContent=money(revenue)+" revenue";
   $("calcRemaining").textContent=remaining+" units";$("calcRemainingValue").textContent=money(remainingValue)+" stock value";
@@ -437,9 +437,9 @@ function calculateStock(){
   $("calcProfit").textContent=money(profit);$("calcAccounted").textContent=accounted+" units";
   const card=$("profitCard");card.classList.toggle("profit",profit>=0);card.classList.toggle("loss",profit<0);
   $("profitLabel").textContent=profit>0?"You are making a profit":profit<0?"You are currently making a loss":"Break-even";
-  const over=accounted>total || purchase>capital;
-  $("calcAccountedNote").textContent=purchase>capital?"Purchase cost is greater than capital — check your figures.":over?"Too many units accounted for — check your numbers.":"Sold + damage";
-  $("saveStockBtn").disabled=total<=0||accounted>total||purchase>capital;
+  const over=accounted>total || cash<0;
+  $("calcAccountedNote").textContent=accounted>total?"Too many units accounted for — check your numbers.":cash<0?"Purchase cost exceeds starting capital plus recorded sales — check your figures.":"Sold + damage";
+  $("saveStockBtn").disabled=total<=0||accounted>total||cash<0;
 }
 
 async function loadStock(){
@@ -453,13 +453,13 @@ async function loadStock(){
   let units=0,value=0,revenue=0,profit=0,cash=0;
   rows.forEach(r=>{
     units+=Number(r.remaining_quantity||0); value+=Number(r.remaining_value||0); revenue+=Number(r.sales_revenue||0); profit+=Number(r.profit_loss||0);
-    const cap=Number(r.capital_amount ?? r.purchase_total ?? 0), pur=Number(r.purchase_total||0); cash+=Number(r.cash_in_hand ?? (cap-pur));
+    const cap=Number(r.capital_amount ?? r.purchase_total ?? 0), pur=Number(r.purchase_total||0); cash+=Number(r.cash_in_hand ?? (cap+Number(r.sales_revenue||0)-pur));
   });
   $("liveUnits").textContent=units.toLocaleString(); $("liveValue").textContent=money(value); $("liveRevenue").textContent=money(revenue); $("liveProfit").textContent=money(profit);
   $("liveProfitLabel").textContent=profit>=0?"current total profit":"current total loss";
   if(!rows.length){$("stockBody").innerHTML='<tr><td colspan="11">No stock records yet.</td></tr>';return;}
   $("stockBody").innerHTML=rows.map(r=>{
-    const cap=Number(r.capital_amount ?? r.purchase_total ?? 0), pur=Number(r.purchase_total||0), ci=Number(r.cash_in_hand ?? (cap-pur));
+    const cap=Number(r.capital_amount ?? r.purchase_total ?? 0), pur=Number(r.purchase_total||0), ci=Number(r.cash_in_hand ?? (cap+Number(r.sales_revenue||0)-pur));
     return `<tr><td>${esc(dateOnly(r.stock_date))}</td><td>${esc(r.product_service||"")}</td><td>${esc(r.total_quantity??0)}</td><td>${esc(r.sold_quantity??0)}</td><td>${esc(r.damage_quantity??0)}</td><td>${esc(r.remaining_quantity??0)}</td><td>${money(cap)}</td><td>${money(pur)}</td><td>${money(ci)}</td><td>${money(r.profit_loss)}</td><td><button type="button" class="primary" onclick="editStock('${esc(r.id)}')">Edit</button></td></tr>`;
   }).join("");
 }
@@ -566,16 +566,16 @@ async function writeStockHistory(before,after,action){
   const {error}=await db.from("worker_stock_edit_history").insert(row);return error;
 }
 
-["stockTotal","capitalAmount","purchaseTotal","sellPrice","stockSold","stockDamage"].forEach(id=>$(id).addEventListener("input",calculateStock));
+["stockTotal","capitalAmount","costPerUnit","sellPrice","stockSold","stockDamage"].forEach(id=>$(id).addEventListener("input",calculateStock));
 
 let editingStockId="";
 function startStockEdit(r){
   editingStockId=r.id||""; editingStockOriginal={...r}; $("editingStockId").value=editingStockId; $("deleteStockBtn").style.display="inline-block";
   $("stockDate").value=dateOnly(r.stock_date)||today(); $("stockProduct").value=r.product_service||"";
-  $("stockTotal").value=Number(r.total_quantity||0); $("capitalAmount").value=Number(r.capital_amount ?? r.purchase_total ?? 0); $("purchaseTotal").value=Number(r.purchase_total||0);
+  $("stockTotal").value=Number(r.total_quantity||0); $("capitalAmount").value=Number(r.capital_amount ?? r.purchase_total ?? 0); $("costPerUnit").value=Number(r.cost_per_unit ?? (Number(r.total_quantity||0)>0?Number(r.purchase_total||0)/Number(r.total_quantity||0):0));
   $("sellPrice").value=Number(r.selling_price_per_unit||0); $("stockSold").value=Number(r.sold_quantity||0); $("stockDamage").value=Number(r.damage_quantity||0); $("stockNotes").value=r.notes||"";
   $("saveStockBtn").textContent="Update Stock Record"; $("cancelEditStockBtn").style.display="inline-block"; calculateStock(); document.getElementById("stockForm").scrollIntoView({behavior:"smooth",block:"center"});
-  msg("stockMsg","Editing stock batch. Update sold, damage, capital or purchase cost, then save.","success");
+  msg("stockMsg","Editing stock batch. Update quantity, purchase cost per unit, sold or damage quantity, then save. ","success");
 }
 window.editStock=async function(id){
   const {data,error}=await db.from("worker_stock_batches").select("*").eq("id",id).eq("worker_id",currentUser.id).maybeSingle();
@@ -601,15 +601,24 @@ $("deleteStockBtn").onclick=async()=>{
   await Promise.all([loadStock(),loadStockHistory()]);
 };
 $("saveStockBtn").onclick=async()=>{
-  const total=num("stockTotal"),capital=num("capitalAmount"),purchase=num("purchaseTotal"),price=num("sellPrice"),sold=num("stockSold"),damage=num("stockDamage");
-  if(!$('stockDate').value||!$('stockProduct').value.trim()||total<=0||capital<0||purchase<0||price<0||purchase>capital||sold+damage>total){msg("stockMsg","Please check the stock quantities and costs. Purchase cost cannot be greater than capital, and sold + damage cannot be greater than total stock.","error");return;}
-  const unitCost=purchase/total,revenue=sold*price,soldCost=sold*unitCost,damageValue=damage*unitCost,remaining=total-sold-damage,remainingValue=remaining*unitCost,profit=revenue-soldCost-damageValue,cash=capital-purchase;
+  const total=num("stockTotal"),capital=num("capitalAmount"),unitCost=num("costPerUnit"),purchase=total*unitCost,price=num("sellPrice"),sold=num("stockSold"),damage=num("stockDamage");
+  const revenue=sold*price,cash=capital+revenue-purchase;
+  if(!$('stockDate').value||!$('stockProduct').value.trim()||total<=0||capital<0||unitCost<0||price<0||cash<0||sold+damage>total){msg("stockMsg","Please check the stock quantities and costs. Available cash (starting capital plus recorded sales) cannot be negative, and sold + damage cannot be greater than total stock.","error");return;}
+  const soldCost=sold*unitCost,damageValue=damage*unitCost,remaining=total-sold-damage,remainingValue=remaining*unitCost,profit=revenue-soldCost-damageValue;
   msg("stockMsg","Saving stock record...");
   const record={worker_id:currentUser.id,stock_date:$('stockDate').value,product_service:$('stockProduct').value.trim(),total_quantity:total,capital_amount:capital,cash_in_hand:cash,purchase_total:purchase,cost_per_unit:unitCost,selling_price_per_unit:price,sold_quantity:sold,damage_quantity:damage,loss_quantity:0,sales_revenue:revenue,sold_cost:soldCost,damage_value:damageValue,loss_value:0,remaining_quantity:remaining,remaining_value:remainingValue,profit_loss:profit,notes:$('stockNotes').value.trim()||null};
   const wasEditing=!!editingStockId;
   let result;
   if(wasEditing){
-    const historyError=await writeStockHistory(editingStockOriginal,record,"Stock updated");
+    const beforeTotal=Number(editingStockOriginal?.total_quantity||0),beforeUnit=Number(editingStockOriginal?.cost_per_unit ?? (beforeTotal>0?Number(editingStockOriginal?.purchase_total||0)/beforeTotal:0));
+    const purchaseChanged=beforeTotal!==total||Math.abs(beforeUnit-unitCost)>0.0001;
+    const historyAction=purchaseChanged?"Stock updated — purchase quantity/unit cost changed":"Stock updated";
+    let historyRecord=record;
+    if(purchaseChanged){
+      const audit=`Purchase quantity: ${beforeTotal} → ${total}; unit cost: ${money(beforeUnit)} → ${money(unitCost)}; calculated purchase total: ${money(Number(editingStockOriginal?.purchase_total||0))} → ${money(purchase)}.`;
+      historyRecord={...record,notes:[audit,String(record.notes||"")].filter(Boolean).join(" ")||null};
+    }
+    const historyError=await writeStockHistory(editingStockOriginal,historyRecord,historyAction);
     if(historyError){msg("stockMsg","History could not be saved, so the stock was not changed. Please run the supplied stock history SQL in Supabase. "+historyError.message,"error");return;}
     result=await db.from("worker_stock_batches").update(record).eq("id",editingStockId).eq("worker_id",currentUser.id);
     if(result.error){msg("stockMsg","Stock update failed: "+result.error.message+". A history entry was retained for audit.","error");return;}
@@ -663,7 +672,7 @@ function buildLiveStockReportText(){
       " | Remaining: "+(s.remaining_quantity??0)+
       " | Capital: "+stockMoney(s.capital_amount ?? s.purchase_total)+
       " | Purchase: "+stockMoney(s.purchase_total)+
-      " | Cash In Hand: "+stockMoney(s.cash_in_hand ?? ((s.capital_amount ?? s.purchase_total)-Number(s.purchase_total||0)))+
+      " | Cash In Hand: "+stockMoney(s.cash_in_hand ?? ((s.capital_amount ?? s.purchase_total)+Number(s.sales_revenue||0)-Number(s.purchase_total||0)))+
       " | Remaining Value: "+stockMoney(s.remaining_value)+
       " | Profit/Loss: "+stockMoney(s.profit_loss)
     );
@@ -685,7 +694,7 @@ function downloadLiveStockPDF(){
   const totalValue=rows.reduce((n,s)=>n+Number(s.remaining_value||0),0);
   const totalCapital=rows.reduce((n,s)=>n+Number(s.capital_amount ?? s.purchase_total ?? 0),0);
   const totalPurchase=rows.reduce((n,s)=>n+Number(s.purchase_total||0),0);
-  const totalCash=rows.reduce((n,s)=>n+Number(s.cash_in_hand ?? ((s.capital_amount ?? s.purchase_total)-Number(s.purchase_total||0))),0);
+  const totalCash=rows.reduce((n,s)=>n+Number(s.cash_in_hand ?? ((s.capital_amount ?? s.purchase_total)+Number(s.sales_revenue||0)-Number(s.purchase_total||0))),0);
   const totalProfit=rows.reduce((n,s)=>n+Number(s.profit_loss||0),0);
 
   const {jsPDF}=window.jspdf;
@@ -743,7 +752,7 @@ function downloadLiveStockPDF(){
     doc.text(String(s.remaining_quantity??0),x[4],y);
     doc.text(stockMoney(s.capital_amount ?? s.purchase_total),x[5],y);
     doc.text(stockMoney(s.purchase_total),x[6],y);
-    doc.text(stockMoney(s.cash_in_hand ?? ((s.capital_amount ?? s.purchase_total)-Number(s.purchase_total||0))),x[7],y);
+    doc.text(stockMoney(s.cash_in_hand ?? ((s.capital_amount ?? s.purchase_total)+Number(s.sales_revenue||0)-Number(s.purchase_total||0))),x[7],y);
     doc.text(stockMoney(s.profit_loss),x[8],y);
     y+=5;
   });
