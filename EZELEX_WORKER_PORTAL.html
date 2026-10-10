@@ -125,6 +125,7 @@ th,td{padding:11px;border-bottom:1px solid #eee;text-align:left;font-size:14px}t
     <button class="tab" data-tab="sales">Record Sale</button>
     <button class="tab" data-tab="stock">Live Stock</button>
     <button class="tab" data-tab="stockHistory">Edit History</button>
+    <button class="tab" data-tab="credit">On-Credit</button>
   </div>
 
   <section id="dashboard" class="section active">
@@ -211,7 +212,9 @@ th,td{padding:11px;border-bottom:1px solid #eee;text-align:left;font-size:14px}t
       <div class="resultGrid">
         <div class="resultCard"><h3>Cost of Sold Stock</h3><strong id="calcSoldCost">GH₵0.00</strong></div>
         <div class="resultCard"><h3>Damage Value</h3><strong id="calcDamageValue">GH₵0.00</strong></div>
-        <div class="resultCard"><h3>Capital Available</h3><strong id="calcCapital">GH₵0.00</strong></div>
+        <div class="resultCard"><h3>Starting Capital</h3><strong id="calcCapital">GH₵0.00</strong></div>
+        <div class="resultCard"><h3>Outstanding Credit</h3><strong id="calcCreditCapital">GH₵0.00</strong><div>Money customers still owe</div></div>
+        <div class="resultCard"><h3>Total Business Capital</h3><strong id="calcTotalCapital">GH₵0.00</strong><div>Starting capital + outstanding credit</div></div>
         <div class="resultCard"><h3>Cash In Hand</h3><strong id="calcCashInHand">GH₵0.00</strong><div>Starting capital + sales − purchase cost</div></div>
         <div class="resultCard"><h3>Sales Revenue</h3><strong id="calcSalesRevenue">GH₵0.00</strong></div>
         <div class="resultCard" id="profitCard"><h3>Current Profit / Loss</h3><strong id="calcProfit">GH₵0.00</strong><div id="profitLabel" class="live">No sales/loss yet</div></div>
@@ -226,6 +229,9 @@ th,td{padding:11px;border-bottom:1px solid #eee;text-align:left;font-size:14px}t
       <tbody id="stockBody"><tr><td colspan="11">Loading...</td></tr></tbody></table></div>
     </div>
 
+  </section>
+
+  <section id="credit" class="section">
     <div class="panel" id="creditPanel">
       <h2>🧾 On-Credit Egg Sales</h2>
       <p class="stockNote">Record crates given to a customer who has not paid yet. Credit sales count as sold and earned profit, but unpaid money is excluded from Cash In Hand until the customer pays. Ezelex admin can see outstanding credit.</p>
@@ -448,11 +454,12 @@ async function loadSales(){
 function calculateStock(){
   const total=num("stockTotal"),capital=num("capitalAmount"),unitCost=num("costPerUnit"),purchase=total*unitCost,price=num("sellPrice"),sold=num("stockSold"),damage=num("stockDamage");
   const remaining=Math.max(0,total-sold-damage),revenue=sold*price,soldCost=sold*unitCost,damageValue=damage*unitCost,remainingValue=remaining*unitCost,profit=revenue-soldCost-damageValue,accounted=sold+damage,cash=capital+revenue-Number(editingStockOriginal?.credit_outstanding||0)-purchase;
+  const outstandingCredit=(creditRows||[]).reduce((sum,c)=>sum+Math.max(0,Number(c.amount_due||0)-Number(c.amount_paid||0)),0);
   $("calcTotal").textContent=total+" units";$("calcTotalValue").textContent=money(purchase);
   $("calcSold").textContent=sold+" units";$("calcRevenue").textContent=money(revenue)+" revenue";
   $("calcRemaining").textContent=remaining+" units";$("calcRemainingValue").textContent=money(remainingValue)+" stock value";
   $("calcUnitCost").textContent=money(unitCost);$("calcSoldCost").textContent=money(soldCost);
-  $("calcDamageValue").textContent=money(damageValue);$("calcCapital").textContent=money(capital);$("calcCashInHand").textContent=money(cash);$("calcSalesRevenue").textContent=money(revenue);
+  $("calcDamageValue").textContent=money(damageValue);$("calcCapital").textContent=money(capital);$("calcCreditCapital").textContent=money(outstandingCredit);$("calcTotalCapital").textContent=money(capital+outstandingCredit);$("calcCashInHand").textContent=money(cash);$("calcSalesRevenue").textContent=money(revenue);
   $("calcProfit").textContent=money(profit);$("calcAccounted").textContent=accounted+" units";
   const card=$("profitCard");card.classList.toggle("profit",profit>=0);card.classList.toggle("loss",profit<0);
   $("profitLabel").textContent=profit>0?"You are making a profit":profit<0?"You are currently making a loss":"Break-even";
@@ -668,7 +675,7 @@ async function loadCredits(){
   if(!$('creditBody'))return;
   const r=await db.from('worker_stock_credit_sales').select('*').eq('worker_id',currentUser.id).order('credit_date',{ascending:false}).order('created_at',{ascending:false});
   if(r.error){$('creditBody').innerHTML='<tr><td colspan="9">Credit records unavailable. Check the supplied credit SQL and policies.</td></tr>';msg('creditMsg','Could not load credit records: '+esc(r.error.message),'error');return;}
-  creditRows=r.data||[];renderCredits();
+  creditRows=r.data||[];renderCredits();if(typeof calculateStock==="function")calculateStock();
 }
 function renderCredits(){
   const open=creditRows.filter(c=>Number(c.amount_due||0)>Number(c.amount_paid||0));
@@ -688,7 +695,7 @@ $('saveCreditBtn')?.addEventListener('click',async()=>{
   const ins=await db.from('worker_stock_credit_sales').insert(credit).select('*').single();if(ins.error){msg('creditMsg','Credit sale could not be saved: '+esc(ins.error.message),'error');return;}
   const upd=await db.from('worker_stock_batches').update({sold_quantity:newSold,sales_revenue:newRevenue,sold_cost:newSold*unit,remaining_quantity:newRemaining,remaining_value:newRemaining*unit,profit_loss:Number(stock.profit_loss||0)+(amount-qty*unit),credit_quantity:Number(stock.credit_quantity||0)+qty,credit_outstanding:newCredit,cash_in_hand:Number(stock.capital_amount||0)+newRevenue-newCredit-Number(stock.purchase_total||0)}).eq('id',stock.id).eq('worker_id',currentUser.id);
   if(upd.error){await db.from('worker_stock_credit_sales').delete().eq('id',ins.data.id).eq('worker_id',currentUser.id);msg('creditMsg','Credit record was not applied to stock: '+esc(upd.error.message),'error');return;}
-  $('creditForm').reset();$('creditDate').value=today();msg('creditMsg','On-credit sale recorded. Stock, profit and outstanding balance updated; unpaid credit is not counted as cash in hand.','success');await Promise.all([loadStock(),loadStockHistory(),loadCredits()]);
+  $('creditForm').reset();$('creditDate').value=today();msg('creditMsg','On-credit sale recorded. Stock, profit and outstanding balance updated; unpaid credit is included in total business capital but not cash in hand until paid.','success');await Promise.all([loadStock(),loadStockHistory(),loadCredits()]);calculateStock();
 });
 window.markCreditPaid=async id=>{
   const c=creditRows.find(x=>x.id===id);if(!c||Number(c.amount_due||0)<=Number(c.amount_paid||0))return;
@@ -697,7 +704,7 @@ window.markCreditPaid=async id=>{
   const up=await db.from('worker_stock_credit_sales').update({amount_paid:Number(c.amount_due),status:'paid',paid_at:new Date().toISOString()}).eq('id',id).eq('worker_id',currentUser.id);
   if(up.error){msg('creditMsg','Payment could not be saved: '+esc(up.error.message),'error');return;}
   if(stock){const next=Math.max(0,Number(stock.credit_outstanding||0)-bal);const su=await db.from('worker_stock_batches').update({credit_outstanding:next,cash_in_hand:Number(stock.capital_amount||0)+Number(stock.sales_revenue||0)-next-Number(stock.purchase_total||0)}).eq('id',stock.id).eq('worker_id',currentUser.id);if(su.error){msg('creditMsg','Payment saved but stock cash summary needs refresh: '+esc(su.error.message),'error');}}
-  msg('creditMsg','Payment recorded. Cash in hand has been updated.','success');await Promise.all([loadStock(),loadCredits()]);
+  msg('creditMsg','Payment recorded. Cash in hand has been updated.','success');await Promise.all([loadStock(),loadCredits()]);calculateStock();
 };
 async function loadMessages(){
   /* Communication is intentionally read-only here.
