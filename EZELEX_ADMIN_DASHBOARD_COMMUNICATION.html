@@ -177,7 +177,7 @@ window.addEventListener("resize",()=>{if(typeof allStockHistory!=="undefined"&&a
 
 function renderAdminStockHistory(){
  const wid=$("historyWorkerFilter")?.value||"",from=$("historyFromDate")?.value||"",to=$("historyToDate")?.value||"";
- const rows=allStockHistory.filter(h=>{const d=dateOnly(h.changed_at);return(!wid||h.worker_id===wid)&&(!from||d>=from)&&(!to||d<=to)});
+ const rows=allStockHistory.filter(h=>{const d=dateOnly(h.changed_at);const isDeletion=/delet/i.test(String(h.action||""));return !isDeletion&&(!wid||h.worker_id===wid)&&(!from||d>=from)&&(!to||d<=to)});
  const daily={};rows.forEach(h=>{const delta=Number(h.sold_delta||0);if(delta<=0)return;const day=dateOnly(h.changed_at),key=day+'|'+h.worker_id+'|'+(h.product_service||'Stock');if(!daily[key])daily[key]={day,worker:h.worker_id,product:h.product_service||'Stock',units:0,value:0};daily[key].units+=delta;daily[key].value+=delta*Number(h.selling_price_per_unit||0)});
  const drows=Object.values(daily).sort((a,b)=>b.day.localeCompare(a.day)||b.units-a.units);
  drawAdminDailyPerformanceChart(drows);
