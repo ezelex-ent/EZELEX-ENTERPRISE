@@ -175,6 +175,23 @@ th,td{padding:11px;border-bottom:1px solid #eee;text-align:left;font-size:14px}t
   </section>
 
   <section id="stock" class="section">
+    <div class="panel" id="weeklyStockPanel">
+      <h2>🗓️ Weekly Stock Book (Monday–Sunday)</h2>
+      <div class="stockNote">All purchases and stock batches you add during this business week are grouped under one weekly book. You can keep adding crates as business grows. The previous weeks stay saved for history and all-time reports; the Profit/Loss calculation is preserved.</div>
+      <div id="weeklyStockMsg"></div>
+      <div class="stockGrid">
+        <div class="stockCard"><small>Current Week</small><strong id="weekRangeLabel">Loading…</strong><div id="weekStatusLabel">Checking weekly book</div></div>
+        <div class="stockCard"><small>Crates Purchased This Week</small><strong id="weekPurchased">0</strong><div>All additions this week</div></div>
+        <div class="stockCard"><small>Crates Sold This Week</small><strong id="weekSold">0</strong><div>Across this week's batches</div></div>
+        <div class="stockCard"><small>Crates Remaining This Week</small><strong id="weekRemaining">0</strong><div>Live weekly stock</div></div>
+      </div>
+      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:12px">
+        <label for="stockWeekPicker" style="margin:0">View week history</label><select id="stockWeekPicker" style="max-width:250px"><option value="">Current week</option></select>
+        <button id="closeStockWeekBtn" type="button" class="danger">Close This Week (Sunday)</button>
+      </div>
+      <p class="stockNote" style="margin-top:10px">Closing a week archives it; it does not delete stock, sales, credit, or profit records. A new Monday automatically gets a fresh weekly book.</p>
+    </div>
+
     <div class="panel">
       <h2>📦 Live Stock & Profit</h2>
       <div class="stockNote"><strong>Live central stock:</strong> saved stock batches are loaded from Ezelex records. The summary below is calculated from the stock records belonging to your worker account.</div>
@@ -325,6 +342,9 @@ let liveStockRows=[];
 let stockHistoryRows=[];
 let editingStockOriginal=null;
 let creditRows=[];
+let currentStockWeek=null;
+let stockWeekRows=[];
+let selectedStockWeekId="";
 
 const $=id=>document.getElementById(id);
 function msg(id,text,type=""){ $(id).innerHTML=text?`<div class="msg ${type}">${text}</div>`:""; }
@@ -344,6 +364,68 @@ function showPortal(){
   $("portal").classList.remove("hidden");
   $("settingsBtn").classList.remove("hidden");
 }
+
+function mondayDateISO(value=today()){
+  const d=new Date(String(value).slice(0,10)+"T12:00:00");
+  const day=d.getDay();
+  d.setDate(d.getDate()-(day===0?6:day-1));
+  return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
+}
+function addDaysISO(value,days){const d=new Date(String(value).slice(0,10)+"T12:00:00");d.setDate(d.getDate()+days);return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");}
+function weekLabel(w){return w?`${dateOnly(w.week_start)} – ${dateOnly(w.week_end)}`:"No weekly book";}
+async function ensureCurrentStockWeek(){
+  const start=mondayDateISO(today()),end=addDaysISO(start,6);
+  // Any still-open previous week is archived automatically when a new Monday begins.
+  const closedOld=await db.from("worker_stock_weeks").update({status:"closed",closed_at:new Date().toISOString()}).eq("worker_id",currentUser.id).lt("week_start",start).eq("status","open");
+  if(closedOld.error) console.warn("Could not auto-close previous weekly books:",closedOld.error.message);
+  let q=await db.from("worker_stock_weeks").select("*").eq("worker_id",currentUser.id).eq("week_start",start).maybeSingle();
+  if(q.error){msg("weeklyStockMsg","Weekly stock setup needs the supplied SQL to be run in Supabase: "+esc(q.error.message),"error");return null;}
+  if(!q.data){q=await db.from("worker_stock_weeks").insert({worker_id:currentUser.id,week_start:start,week_end:end,status:"open"}).select("*").single();}
+  if(q.error){msg("weeklyStockMsg","Could not open this week's stock book: "+esc(q.error.message),"error");return null;}
+  currentStockWeek=q.data;
+  // When a new Monday book is first opened, carry forward each previous batch's unsold physical stock.
+  // Carry-forward rows have zero new purchase quantity/cost and zero profit, so historical purchase/profit totals are not duplicated.
+  const existingWeekRows=await db.from("worker_stock_batches").select("id,stock_type").eq("worker_id",currentUser.id).eq("week_id",currentStockWeek.id).limit(1);
+  if(!existingWeekRows.error&&!(existingWeekRows.data||[]).length){
+    const prevWeek=await db.from("worker_stock_weeks").select("id,week_start").eq("worker_id",currentUser.id).lt("week_start",start).order("week_start",{ascending:false}).limit(1).maybeSingle();
+    if(prevWeek.data){
+      const prevBatches=await db.from("worker_stock_batches").select("*").eq("worker_id",currentUser.id).eq("week_id",prevWeek.data.id).gt("remaining_quantity",0);
+      if(!prevBatches.error&&prevBatches.data?.length){
+        const carryRows=prevBatches.data.map(b=>({worker_id:currentUser.id,week_id:currentStockWeek.id,stock_type:"carry_forward",stock_date:start,product_service:b.product_service||"Opening stock",total_quantity:Number(b.remaining_quantity||0),capital_amount:0,cost_per_unit:Number(b.cost_per_unit||0),selling_price_per_unit:Number(b.selling_price_per_unit||0),sold_quantity:0,damage_quantity:0,loss_quantity:0,sales_revenue:0,sold_cost:0,damage_value:0,loss_value:0,remaining_quantity:Number(b.remaining_quantity||0),remaining_value:Number(b.remaining_quantity||0)*Number(b.cost_per_unit||0),purchase_total:0,cash_in_hand:0,credit_quantity:0,credit_outstanding:0,profit_loss:0,notes:`Opening balance carried forward from week starting ${prevWeek.data.week_start}. Original purchase and profit remain in the previous week's record.`}));
+        const inserted=await db.from("worker_stock_batches").insert(carryRows);
+        if(inserted.error)msg("weeklyStockMsg","Weekly book opened, but previous unsold stock could not be carried forward automatically: "+esc(inserted.error.message)+". Please contact admin before recording sales.","error");
+      }
+    }
+  }
+  renderStockWeekControls();
+  return currentStockWeek;
+}
+function renderStockWeekControls(){
+  if(!currentStockWeek)return;
+  $("weekRangeLabel").textContent=weekLabel(currentStockWeek);
+  const isOpen=currentStockWeek.status==="open";
+  $("weekStatusLabel").textContent=isOpen?"OPEN — add purchases and track sales":"CLOSED — archived and read-only";
+  $("closeStockWeekBtn").disabled=!isOpen;
+  $("closeStockWeekBtn").textContent=isOpen?"Close This Week (Sunday)":"Week Closed";
+  const picker=$("stockWeekPicker");
+  if(picker&&stockWeekRows.length){const old=picker.value;picker.innerHTML='<option value="">Current week</option>'+stockWeekRows.map(w=>`<option value="${esc(w.id)}">${esc(weekLabel(w))} — ${esc(String(w.status||"open").toUpperCase())}</option>`).join("");picker.value=old&&stockWeekRows.some(w=>w.id===old)?old:"";}
+}
+async function loadStockWeeks(){
+  if(!currentUser)return;
+  const r=await db.from("worker_stock_weeks").select("*").eq("worker_id",currentUser.id).order("week_start",{ascending:false}).limit(100);
+  if(r.error){msg("weeklyStockMsg","Weekly stock books could not be loaded. Run the supplied weekly stock SQL first: "+esc(r.error.message),"error");return;}
+  stockWeekRows=r.data||[];renderStockWeekControls();
+}
+async function closeCurrentStockWeek(){
+  if(!currentStockWeek||currentStockWeek.status!=="open")return;
+  if(new Date().getDay()!==0){msg("weeklyStockMsg","You can close the weekly book on Sunday. It will automatically be archived when the next Monday begins.","error");return;}
+  if(!confirm(`Close the stock book for ${weekLabel(currentStockWeek)}? This archives the week without deleting stock or profit history.`))return;
+  const r=await db.from("worker_stock_weeks").update({status:"closed",closed_at:new Date().toISOString()}).eq("id",currentStockWeek.id).eq("worker_id",currentUser.id).eq("status","open");
+  if(r.error){msg("weeklyStockMsg","Could not close this week: "+esc(r.error.message),"error");return;}
+  currentStockWeek.status="closed";renderStockWeekControls();msg("weeklyStockMsg","Weekly stock book closed and archived. Your records and Profit/Loss were kept.","success");await Promise.all([loadStock(),loadStockWeeks()]);
+}
+$("closeStockWeekBtn")?.addEventListener("click",closeCurrentStockWeek);
+$("stockWeekPicker")?.addEventListener("change",async()=>{selectedStockWeekId=$("stockWeekPicker").value||"";await loadStock();});
 
 async function start(){
   const {data:{session}}=await db.auth.getSession();
@@ -394,6 +476,8 @@ async function loadProfile(user){
   $("contractStart").textContent=dateOnly(data.contract_start);
   $("contractEnd").textContent=dateOnly(data.contract_end);
 
+  await ensureCurrentStockWeek();
+  await loadStockWeeks();
   await Promise.all([loadSales(),loadStock(),loadStockHistory(),loadCredits()]);
   await loadMessages();
 }
@@ -470,26 +554,22 @@ function calculateStock(){
 
 async function loadStock(){
   const {data,error}=await db.from("worker_stock_batches").select("*").eq("worker_id",currentUser.id).order("stock_date",{ascending:false});
-  if(error){
-    $("stockBody").innerHTML='<tr><td colspan="11">Stock records could not be loaded.</td></tr>';
-    msg("stockLiveMsg","Could not load live stock: "+error.message,"error");
-    return;
-  }
-  const rows=data||[]; liveStockRows=rows;
-  let units=0,value=0,revenue=0,profit=0,cash=0;
-  rows.forEach(r=>{
-    units+=Number(r.remaining_quantity||0); value+=Number(r.remaining_value||0); revenue+=Number(r.sales_revenue||0); profit+=Number(r.profit_loss||0);
-    const cap=Number(r.capital_amount ?? r.purchase_total ?? 0), pur=Number(r.purchase_total||0); cash+=Number(r.cash_in_hand ?? (cap+Number(r.sales_revenue||0)-Number(r.credit_outstanding||0)-pur));
-  });
-  $("liveUnits").textContent=units.toLocaleString(); $("liveValue").textContent=money(value); $("liveRevenue").textContent=money(revenue); $("liveProfit").textContent=money(profit);
-  $("liveProfitLabel").textContent=profit>=0?"current total profit":"current total loss";
-  if(!rows.length){$("stockBody").innerHTML='<tr><td colspan="11">No stock records yet.</td></tr>';return;}
-  $("stockBody").innerHTML=rows.map(r=>{
-    const cap=Number(r.capital_amount ?? r.purchase_total ?? 0), pur=Number(r.purchase_total||0), ci=Number(r.cash_in_hand ?? (cap+Number(r.sales_revenue||0)-Number(r.credit_outstanding||0)-pur));
-    return `<tr><td>${esc(dateOnly(r.stock_date))}</td><td>${esc(r.product_service||"")}</td><td>${esc(r.total_quantity??0)}</td><td>${esc(r.sold_quantity??0)}</td><td>${esc(r.damage_quantity??0)}</td><td>${esc(r.remaining_quantity??0)}</td><td>${money(cap)}</td><td>${money(pur)}</td><td>${money(ci)}</td><td>${money(r.profit_loss)}</td><td><button type="button" class="primary" onclick="editStock('${esc(r.id)}')">Edit</button></td></tr>`;
-  }).join("");
-  const sel=$("creditStockBatch"); if(sel){const prev=sel.value;sel.innerHTML='<option value="">Choose stock batch</option>'+rows.map(r=>`<option value="${esc(r.id)}">${esc(dateOnly(r.stock_date))} — ${esc(r.product_service||"Stock")} (remaining ${Number(r.remaining_quantity||0)})</option>`).join("");if(rows.some(r=>r.id===prev))sel.value=prev;}
+  if(error){$("stockBody").innerHTML='<tr><td colspan="11">Stock records could not be loaded.</td></tr>';msg("stockLiveMsg","Could not load live stock: "+error.message,"error");return;}
+  const allRows=data||[]; liveStockRows=allRows;
+  const chosenWeekId=selectedStockWeekId||currentStockWeek?.id||"";
+  const rows=chosenWeekId?allRows.filter(r=>String(r.week_id||"")===String(chosenWeekId)):allRows.filter(r=>!r.week_id||String(r.week_id)===String(currentStockWeek?.id||""));
+  let units=0,value=0,revenue=0,profit=0,cash=0,purchased=0,soldWeek=0;
+  rows.forEach(r=>{units+=Number(r.remaining_quantity||0);value+=Number(r.remaining_value||0);revenue+=Number(r.sales_revenue||0);profit+=Number(r.profit_loss||0);if(r.stock_type!=="carry_forward")purchased+=Number(r.total_quantity||0);soldWeek+=Number(r.sold_quantity||0);const cap=Number(r.capital_amount??r.purchase_total??0),pur=Number(r.purchase_total||0);cash+=Number(r.cash_in_hand??(cap+Number(r.sales_revenue||0)-Number(r.credit_outstanding||0)-pur));});
+  $("liveUnits").textContent=units.toLocaleString();$("liveValue").textContent=money(value);$("liveRevenue").textContent=money(revenue);$("liveProfit").textContent=money(profit);$("liveProfitLabel").textContent=profit>=0?"selected week profit":"selected week loss";
+  $("weekPurchased").textContent=purchased.toLocaleString();$("weekSold").textContent=soldWeek.toLocaleString();$("weekRemaining").textContent=units.toLocaleString();
+  const viewingClosed=!!selectedWeekIsClosed();
+  if(currentStockWeek?.status==="closed"&&!selectedStockWeekId){msg("weeklyStockMsg","This week's book is closed. Choose the current week after Monday to continue adding stock.","error");}
+  if(!rows.length){$("stockBody").innerHTML='<tr><td colspan="11">No stock records in this week yet.</td></tr>';}
+  else $("stockBody").innerHTML=rows.map(r=>{const cap=Number(r.capital_amount??r.purchase_total??0),pur=Number(r.purchase_total||0),ci=Number(r.cash_in_hand??(cap+Number(r.sales_revenue||0)-Number(r.credit_outstanding||0)-pur));const editable=!viewingClosed&&currentStockWeek?.status!=="closed"&&String(r.week_id||"")===String(currentStockWeek?.id||"");return `<tr><td>${esc(dateOnly(r.stock_date))}</td><td>${esc(r.product_service||"")}${r.stock_type==="carry_forward"?' <span class="badge">Opening balance</span>':''}</td><td>${esc(r.total_quantity??0)}</td><td>${esc(r.sold_quantity??0)}</td><td>${esc(r.damage_quantity??0)}</td><td>${esc(r.remaining_quantity??0)}</td><td>${money(cap)}</td><td>${money(pur)}</td><td>${money(ci)}</td><td>${money(r.profit_loss)}</td><td>${editable?`<button type="button" class="primary" onclick="editStock('${esc(r.id)}')">Edit</button>`:'<span class="badge">Archived</span>'}</td></tr>`;}).join("");
+  const sel=$("creditStockBatch");if(sel){const prev=sel.value;sel.innerHTML='<option value="">Choose stock batch</option>'+allRows.filter(r=>String(r.week_id||"")===String(currentStockWeek?.id||"")&&Number(r.remaining_quantity||0)>0).map(r=>`<option value="${esc(r.id)}">${esc(dateOnly(r.stock_date))} — ${esc(r.product_service||"Stock")} (remaining ${Number(r.remaining_quantity||0)})</option>`).join("");if(allRows.some(r=>r.id===prev))sel.value=prev;}
+  $("saveStockBtn").disabled=!!currentStockWeek&&currentStockWeek.status!=="open"&&!editingStockId;
 }
+function selectedWeekIsClosed(){const id=selectedStockWeekId||currentStockWeek?.id;const w=stockWeekRows.find(x=>String(x.id)===String(id));return !!w&&w.status==="closed";}
 
 function dateTime(v){if(!v)return "—";const d=new Date(v);return Number.isNaN(d.getTime())?String(v):d.toLocaleString("en-GB",{day:"2-digit",month:"short",year:"numeric",hour:"2-digit",minute:"2-digit",second:"2-digit"});}
 async function loadStockHistory(){
@@ -605,6 +685,10 @@ function startStockEdit(r){
   msg("stockMsg","Editing stock batch. Update quantity, purchase cost per unit, sold or damage quantity, then save. ","success");
 }
 window.editStock=async function(id){
+  const {data:errorWeekData}=await db.from("worker_stock_batches").select("week_id").eq("id",id).eq("worker_id",currentUser.id).maybeSingle();
+  const week=stockWeekRows.find(w=>String(w.id)===String(errorWeekData?.week_id||""));
+  if(week&&week.status==="closed"){msg("stockMsg","This weekly stock book is closed and archived. It is kept for reporting and cannot be edited.","error");return;}
+  if(errorWeekData?.week_id&&String(errorWeekData.week_id)!==String(currentStockWeek?.id||"")){msg("stockMsg","Only the current week's stock can be edited. Older weekly books are archived for reporting.","error");return;}
   const {data,error}=await db.from("worker_stock_batches").select("*").eq("id",id).eq("worker_id",currentUser.id).maybeSingle();
   if(error||!data){msg("stockMsg","Could not open that stock record for editing.","error");return;} startStockEdit(data);
 };
@@ -628,7 +712,9 @@ $("deleteStockBtn").onclick=async()=>{
   await Promise.all([loadStock(),loadStockHistory()]);
 };
 $("saveStockBtn").onclick=async()=>{
-  const total=num("stockTotal"),capital=num("capitalAmount"),unitCost=num("costPerUnit"),purchase=total*unitCost,price=num("sellPrice");
+  if(!editingStockId&&(!currentStockWeek||currentStockWeek.status!=="open")){msg("stockMsg","This weekly stock book is closed. Start or open the new Monday weekly book before adding stock.","error");return;}
+  if(selectedStockWeekId&&selectedStockWeekId!==String(currentStockWeek?.id||"")){msg("stockMsg","You are viewing an archived week. Switch to Current week before adding stock.","error");return;}
+  const total=num("stockTotal"),capital=num("capitalAmount"),unitCost=num("costPerUnit"),price=num("sellPrice"),purchase=(editingStockId&&editingStockOriginal?.stock_type==="carry_forward")?0:total*unitCost;
   const enteredSold=num("stockSold"),enteredDamage=num("stockDamage");
   const old=editingStockOriginal||{};
   const oldSold=Number(old.sold_quantity||0),oldDamage=Number(old.damage_quantity||0);
@@ -644,7 +730,7 @@ $("saveStockBtn").onclick=async()=>{
   const priorProfit=Number(old.profit_loss||0);
   const profit=editingStockId?priorProfit+(addedSold*(price-unitCost))-(addedDamage*unitCost):(revenue-soldCost-damageValue);
   msg("stockMsg","Saving stock record...");
-  const record={worker_id:currentUser.id,credit_quantity:Number(old.credit_quantity||0),credit_outstanding:creditOutstanding,stock_date:$('stockDate').value,product_service:$('stockProduct').value.trim(),total_quantity:total,capital_amount:capital,cash_in_hand:cash,purchase_total:purchase,cost_per_unit:unitCost,selling_price_per_unit:price,sold_quantity:sold,damage_quantity:damage,loss_quantity:0,sales_revenue:revenue,sold_cost:soldCost,damage_value:damageValue,loss_value:0,remaining_quantity:remaining,remaining_value:remainingValue,profit_loss:profit,notes:$('stockNotes').value.trim()||null};
+  const record={worker_id:currentUser.id,week_id:editingStockId?(old.week_id||currentStockWeek?.id||null):(currentStockWeek?.id||null),stock_type:editingStockId?(old.stock_type||"purchase"):"purchase",credit_quantity:Number(old.credit_quantity||0),credit_outstanding:creditOutstanding,stock_date:$('stockDate').value,product_service:$('stockProduct').value.trim(),total_quantity:total,capital_amount:capital,cash_in_hand:cash,purchase_total:purchase,cost_per_unit:unitCost,selling_price_per_unit:price,sold_quantity:sold,damage_quantity:damage,loss_quantity:0,sales_revenue:revenue,sold_cost:soldCost,damage_value:damageValue,loss_value:0,remaining_quantity:remaining,remaining_value:remainingValue,profit_loss:profit,notes:$('stockNotes').value.trim()||null};
   const wasEditing=!!editingStockId;
   let result;
   if(wasEditing){
@@ -668,7 +754,7 @@ $("saveStockBtn").onclick=async()=>{
   }
   const savedStockDate=record.stock_date;
   msg("stockMsg",wasEditing?"Stock updated and date/time history recorded.":"Stock record saved successfully and sent to Ezelex admin.","success");
-  editingStockId=""; editingStockOriginal=null; $("editingStockId").value=""; $("stockForm").reset(); $("stockDate").value=savedStockDate||today(); $("stockSold").value=0; $("stockDamage").value=0; $("saveStockBtn").textContent="Save Stock Record"; $("cancelEditStockBtn").style.display="none"; $("deleteStockBtn").style.display="none"; calculateStock(); await Promise.all([loadStock(),loadStockHistory()]);
+  editingStockId=""; editingStockOriginal=null; $("editingStockId").value=""; $("stockForm").reset(); $("stockDate").value=savedStockDate||today(); $("stockSold").value=0; $("stockDamage").value=0; $("saveStockBtn").textContent="Save Stock Record"; $("cancelEditStockBtn").style.display="none"; $("deleteStockBtn").style.display="none"; calculateStock(); await Promise.all([loadStock(),loadStockHistory(),loadStockWeeks()]);
 };
 
 async function loadCredits(){
