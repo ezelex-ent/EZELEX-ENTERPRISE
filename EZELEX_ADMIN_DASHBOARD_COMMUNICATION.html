@@ -46,14 +46,14 @@ table{width:100%;border-collapse:collapse;min-width:1050px}th,td{padding:11px;bo
 <section id="capital" class="page hidden">
 <div class="section"><h2>🔒 Private Business Capital</h2><p class="muted">Admin-only financial overview. Original investment is kept separate from weekly stock books. Enter the actual cash currently held by the business; stock and outstanding credit are calculated from saved records.</p><div id="capitalMsg"></div>
 <div class="cards" style="grid-template-columns:repeat(3,1fr)">
-<div class="card"><div class="label">Original Business Capital</div><div class="value" id="originalCapitalValue">GH₵20,000.00</div><div class="muted">Initial investment recorded</div></div>
+<div class="card"><div class="label">Original Business Capital</div><div class="value" id="originalCapitalValue">GH₵20,000.00</div><div class="muted">Editable by admin when additional capital is invested</div></div>
 <div class="card"><div class="label">Cash In Hand (admin-confirmed)</div><div class="value" id="currentCashValue">GH₵0.00</div><div class="muted">Enter the actual cash held</div></div>
 <div class="card"><div class="label">Remaining Stock Value</div><div class="value" id="capitalStockValue">GH₵0.00</div><div class="muted">Estimated at recorded unit cost</div></div>
 <div class="card"><div class="label">Outstanding Customer Credit</div><div class="value" id="capitalCreditValue">GH₵0.00</div><div class="muted">Unpaid balances only</div></div>
 <div class="card"><div class="label">Total Current Assets</div><div class="value" id="capitalAssetsValue">GH₵0.00</div><div class="muted">Cash + stock value + outstanding credit</div></div>
 <div class="card"><div class="label">Assets Compared With Original Capital</div><div class="value" id="capitalDifferenceValue">GH₵0.00</div><div class="muted">Current assets minus GH₵20,000; not a profit calculation</div></div>
 </div>
-<div class="section" style="margin-top:16px"><h3>Update actual cash held</h3><p class="muted">Enter the total cash physically available to the business now. This is a cash-count input, not sales revenue, so updating it will not change Profit/Loss.</p><div class="grid2"><div><label>Actual Cash In Hand (GH₵)</label><input id="currentCashInput" type="number" min="0" step="0.01" placeholder="Enter cash currently held"></div><div style="display:flex;align-items:end"><button id="saveCapitalCashBtn" class="primary" type="button">Save Cash Balance</button></div></div></div>
+<div class="section" style="margin-top:16px"><h3>Update business capital</h3><p class="muted">When you add more capital to the business, enter the new total capital invested and save it. This does not change weekly stock or Profit/Loss calculations.</p><div class="grid2"><div><label>Original / Total Capital Invested (GH₵)</label><input id="originalCapitalInput" type="number" min="0" step="0.01" placeholder="Enter total capital invested"></div><div style="display:flex;align-items:end"><button id="saveOriginalCapitalBtn" class="primary" type="button">Save Business Capital</button></div></div></div><div class="section" style="margin-top:16px"><h3>Update actual cash held</h3><p class="muted">Enter the total cash physically available to the business now. This is a cash-count input, not sales revenue, so updating it will not change Profit/Loss.</p><div class="grid2"><div><label>Actual Cash In Hand (GH₵)</label><input id="currentCashInput" type="number" min="0" step="0.01" placeholder="Enter cash currently held"></div><div style="display:flex;align-items:end"><button id="saveCapitalCashBtn" class="primary" type="button">Save Cash Balance</button></div></div></div>
 </div></section>
 
 <section id="overview" class="page">
@@ -172,6 +172,7 @@ async function loadBusinessCapital(){
  $("originalCapitalValue").textContent=money(businessCapitalRow.original_capital);
  $("currentCashValue").textContent=money(businessCapitalRow.current_cash);
  $("currentCashInput").value=Number(businessCapitalRow.current_cash||0).toFixed(2);
+ $("originalCapitalInput").value=Number(businessCapitalRow.original_capital||20000).toFixed(2);
  updateBusinessCapitalSummary();
 }
 function updateBusinessCapitalSummary(){
@@ -182,9 +183,16 @@ function updateBusinessCapitalSummary(){
 }
 async function saveBusinessCash(){
  const cash=Number($("currentCashInput").value);if(!Number.isFinite(cash)||cash<0){msg("capitalMsg","Enter a valid cash balance of zero or more.","error");return}
- const r=await db.from("ezelex_business_capital").upsert({id:1,original_capital:20000,current_cash:cash,updated_at:new Date().toISOString()},{onConflict:"id"}).select("id,original_capital,current_cash").single();
+ const r=await db.from("ezelex_business_capital").upsert({id:1,original_capital:Number(businessCapitalRow?.original_capital??20000),current_cash:cash,updated_at:new Date().toISOString()},{onConflict:"id"}).select("id,original_capital,current_cash").single();
  if(r.error){msg("capitalMsg","Could not save cash balance: "+r.error.message,"error");return}
  businessCapitalRow=r.data;$("currentCashValue").textContent=money(cash);updateBusinessCapitalSummary();msg("capitalMsg","Cash balance saved. Profit/Loss calculations were not changed.","ok");
+}
+async function saveOriginalBusinessCapital(){
+ const capital=Number($("originalCapitalInput").value);if(!Number.isFinite(capital)||capital<0){msg("capitalMsg","Enter a valid total capital of zero or more.","error");return}
+ const cash=Number(businessCapitalRow?.current_cash||0);
+ const r=await db.from("ezelex_business_capital").upsert({id:1,original_capital:capital,current_cash:cash,updated_at:new Date().toISOString()},{onConflict:"id"}).select("id,original_capital,current_cash").single();
+ if(r.error){msg("capitalMsg","Could not save business capital: "+r.error.message,"error");return}
+ businessCapitalRow=r.data;$("originalCapitalValue").textContent=money(capital);updateBusinessCapitalSummary();msg("capitalMsg","Business capital updated. Weekly stock and Profit/Loss calculations were not changed.","ok");
 }
 let allStockHistory=[];
 function historyDateTime(v){if(!v)return "—";const d=new Date(v);return Number.isNaN(d.getTime())?String(v):d.toLocaleString("en-GB",{day:"2-digit",month:"short",year:"numeric",hour:"2-digit",minute:"2-digit",second:"2-digit"});}
@@ -269,7 +277,7 @@ document.querySelectorAll(".nav button").forEach(b=>b.onclick=()=>{document.quer
 $("changePass").onclick=async()=>{const a=$("newPass").value,b=$("confirmPass").value;if(a.length<8){msg("securityMsg","Password must be at least 8 characters.","error");return}if(a!==b){msg("securityMsg","Passwords do not match.","error");return}const r=await db.auth.updateUser({password:a});msg("securityMsg",r.error?r.error.message:"Password changed successfully.",r.error?"error":"ok");if(!r.error){$("newPass").value="";$("confirmPass").value=""}}
 $("csvBtn").onclick=()=>{const rows=[["Date","Worker","Worker ID","Product/Service","Quantity","Amount","Payment","Status","Reason"],...filteredSales.map(s=>{const w=workerInfo(s.worker_id);return[dateOnly(s.sale_date||s.created_at),w.full_name||"",w.worker_id||"",s.product_service||"",s.quantity??"",amount(s).toFixed(2),s.payment_method||"",status(s),s.rejection_reason||""]})];const csv=rows.map(r=>r.map(x=>`"${String(x).replace(/"/g,'""')}"`).join(",")).join("\n");const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([csv],{type:"text/csv"}));a.download="EZELEX-sales.csv";a.click()}
 $("invCsvBtn").onclick=()=>{const rows=[["Date","Worker","Worker ID","Product","Total","Sold","Damaged","Remaining","Purchase","Revenue","Damage Value","Profit/Loss"],...filteredInventory.map(r=>{const c=invCalc(r),w=workerInfo(r.worker_id);return[dateOnly(r.stock_date||r.created_at),w.full_name||"",w.worker_id||"",r.product_service||"",c.total,c.sold,c.damage,c.remaining,c.purchase.toFixed(2),c.revenue.toFixed(2),c.damageValue.toFixed(2),c.profit.toFixed(2)]})];const csv=rows.map(r=>r.map(x=>`"${String(x).replace(/"/g,'""')}"`).join(",")).join("\n");const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([csv],{type:"text/csv"}));a.download="EZELEX-stock-profit-report.csv";a.click()}
-$("saveCapitalCashBtn").onclick=saveBusinessCash;
+$("saveCapitalCashBtn").onclick=saveBusinessCash;$("saveOriginalCapitalBtn").onclick=saveOriginalBusinessCapital;
 adminCheck();
 </script>
 </body>
