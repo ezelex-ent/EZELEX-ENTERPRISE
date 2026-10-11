@@ -53,10 +53,9 @@ th,td{padding:11px;border-bottom:1px solid #eee;text-align:left;font-size:14px}t
 .tricycleStat small{display:block;color:#64748b;font-weight:700;margin-bottom:6px}.tricycleStat strong{font-size:20px}
 @media(max-width:900px){.stats,.stockGrid{grid-template-columns:1fr 1fr}.resultGrid{grid-template-columns:1fr 1fr}}
 @media(max-width:700px){.grid,.cardrow,.tricycleStats{grid-template-columns:1fr}.full{grid-column:auto}.login{margin:30px 15px}.wrap{padding:0 12px}.stats,.stockGrid,.resultGrid{grid-template-columns:1fr}}
-.toast-stack{position:fixed;z-index:9999;right:18px;top:18px;display:flex;flex-direction:column;gap:10px;max-width:min(92vw,380px)}.eze-toast{padding:14px 17px;border-radius:14px;color:white;font-weight:750;box-shadow:0 12px 32px #0f172a2e;animation:toastIn .22s ease}.eze-toast.success{background:linear-gradient(135deg,#059669,#047857)}.eze-toast.error{background:linear-gradient(135deg,#dc2626,#991b1b)}.eze-toast.info{background:linear-gradient(135deg,#2563eb,#4338ca)}@keyframes toastIn{from{transform:translateY(-8px);opacity:0}to{transform:translateY(0);opacity:1}}button,input,select,textarea{max-width:100%}.panel,.infoBox,.tricycleStat{overflow-wrap:anywhere}.section h2{color:#123b72}.primary{font-weight:800;letter-spacing:.1px}.msg.success{border-left:5px solid #059669;background:#ecfdf5;color:#065f46}.msg.error{border-left:5px solid #dc2626;background:#fef2f2;color:#991b1b}@media(max-width:700px){body{font-size:15px}.tabs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;position:sticky;top:0;z-index:30;background:#f5f8fc;padding:8px 0}.tab{width:100%;min-height:44px;padding:10px 8px;font-size:13px;white-space:normal}.panel{padding:14px;margin-bottom:13px;border-radius:16px}.panel h2{font-size:19px}.grid,.cardrow,.tricycleStats,.stats,.stockGrid,.resultGrid{grid-template-columns:1fr!important}.cardrow>*{min-width:0}.tablebox{overflow-x:auto;-webkit-overflow-scrolling:touch}.tablebox table{min-width:680px}.infoBox{padding:13px}.tricycleStat strong{font-size:19px}.toast-stack{right:10px;left:10px;top:10px;max-width:none}.eze-toast{font-size:14px}.full button,form button{width:100%;min-height:46px}input,select,textarea{font-size:16px!important;min-height:42px}}
 </style>
 </head>
-<body><div id="ezeToastStack" class="toast-stack" aria-live="polite" aria-atomic="true"></div>
+<body>
 
 <header>
   <div>
@@ -116,9 +115,10 @@ th,td{padding:11px;border-bottom:1px solid #eee;text-align:left;font-size:14px}t
 
   <div class="tabs">
     <button class="tab active" data-tab="dashboard">Dashboard</button>
-    <button class="tab" data-tab="tricycle">🛺 Tricycle Contract</button>
+    <button class="tab" data-tab="sales" style="display:none!important" aria-hidden="true" tabindex="-1">Record Sale</button>
     <button class="tab" data-tab="stock">Live Stock</button>
     <button class="tab" data-tab="stockHistory">Edit History</button>
+    <button class="tab" data-tab="tricycle">Tricycle Contract</button>
   </div>
 
   <section id="dashboard" class="section active">
@@ -139,7 +139,7 @@ th,td{padding:11px;border-bottom:1px solid #eee;text-align:left;font-size:14px}t
     </div>
   </section>
 
-  <section id="sales" class="section" hidden aria-hidden="true">
+  <section id="sales" class="section" style="display:none!important" aria-hidden="true">
     <div class="panel">
       <h2 id="saleFormTitle">Record a Sale</h2>
       <div id="saleMsg"></div>
@@ -264,7 +264,7 @@ th,td{padding:11px;border-bottom:1px solid #eee;text-align:left;font-size:14px}t
       <div id="tricycleContractDetails" class="hidden">
         <div class="cardrow">
           <div class="infoBox"><strong>Vehicle</strong><br><span id="triVehicle">—</span><br><strong>Registration</strong><br><span id="triRegistration">—</span></div>
-          <div class="infoBox"><strong>Contract period</strong><br><span id="triStart">—</span> to <span id="triEnd">—</span><br><strong>Contract length</strong><br><span id="triDuration">—</span></div>
+          <div class="infoBox"><strong>Contract period</strong><br><span id="triStart">—</span> to <span id="triEnd">—</span><br><strong>Contract duration</strong><br><span id="triDuration">—</span> months</div>
         </div>
         <div class="tricycleStats">
           <div class="tricycleStat"><small>Agreed Contract Amount</small><strong id="triTotal">GH₵0.00</strong></div>
@@ -327,8 +327,7 @@ let tricycleContract=null;
 let tricycleReports=[];
 
 const $=id=>document.getElementById(id);
-function ezeToast(text,type='success'){const stack=$('ezeToastStack');if(!stack||!text)return;const el=document.createElement('div');el.className='eze-toast '+(type==='error'?'error':type==='success'?'success':'info');el.textContent=String(text).replace(/<[^>]*>/g,'');stack.appendChild(el);setTimeout(()=>{el.style.opacity='0';el.style.transform='translateY(-6px)';setTimeout(()=>el.remove(),250)},4200)}
-function msg(id,text,type=""){ $(id).innerHTML=text?`<div class="msg ${type}">${text}</div>`:""; if(text && /successfully|success|saved|recorded|deleted|updated|added|removed|sent/i.test(String(text)) && type!=='error')ezeToast(String(text).replace(/<[^>]*>/g,''),'success'); else if(text&&type==='error')ezeToast(String(text).replace(/<[^>]*>/g,''),'error'); }
+function msg(id,text,type=""){ $(id).innerHTML=text?`<div class="msg ${type}">${text}</div>`:""; }
 function today(){const d=new Date();return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");}
 function esc(v){return String(v??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[m]));}
 function money(v){return "GH₵"+Number(v||0).toLocaleString("en-GH",{minimumFractionDigits:2,maximumFractionDigits:2});}
@@ -435,7 +434,7 @@ async function loadTricycle(){
     $('triRegistration').textContent=tricycleContract.vehicle_registration||'Not provided';
     $('triStart').textContent=prettyDate(tricycleContract.contract_start_date);
     $('triEnd').textContent=prettyDate(tricycleContract.contract_end_date);
-    const sDate=new Date(tricycleContract.contract_start_date+'T00:00:00'),eDate=new Date(tricycleContract.contract_end_date+'T00:00:00');const months=Math.max(0,(eDate.getFullYear()-sDate.getFullYear())*12+eDate.getMonth()-sDate.getMonth());$('triDuration').textContent=months+' months (calculated from dates)';
+    $('triDuration').textContent=tricycleContract.contract_duration_months||'—';
     $('triTotal').textContent=money(tricycleContract.total_contract_amount);
     $('triDailyTarget').textContent=money(tricycleContract.daily_target);
     $('triWeeklyTarget').textContent=money(tricycleContract.weekly_target);
@@ -472,15 +471,22 @@ $('tricycleReportForm').addEventListener('submit',async e=>{
   const overlap=tricycleReports.find(r=>r.status!=='rejected' && start<=r.week_end && end>=r.week_start);
   if(overlap){msg('tricycleMsg',`A report already exists for an overlapping period (${prettyDate(overlap.week_start)}–${prettyDate(overlap.week_end)}). Contact admin if this needs correction.`,'error');return;}
   $('triSubmitBtn').disabled=true;$('triSubmitBtn').textContent='Submitting...';
-  const {error}=await db.from('tricycle_weekly_reports').insert({contract_id:tricycleContract.id,driver_user_id:currentUser.id,week_start:start,week_end:end,sales_reported:sales,payment_amount:payment,payment_reference:$('triPaymentReference').value.trim()||null,driver_notes:$('triDriverNotes').value.trim()||null,status:'pending'});
-  $('triSubmitBtn').disabled=false;$('triSubmitBtn').textContent='Submit Weekly Report';
+  const {data:insertedReport,error}=await db.from('tricycle_weekly_reports').insert({contract_id:tricycleContract.id,driver_user_id:currentUser.id,week_start:start,week_end:end,sales_reported:sales,payment_amount:payment,payment_reference:$('triPaymentReference').value.trim()||null,driver_notes:$('triDriverNotes').value.trim()||null,status:'pending'}).select('id').single();
   if(error){
+    $('triSubmitBtn').disabled=false;$('triSubmitBtn').textContent='Submit Weekly Report';
     let detail=error.message||'Unknown error';
     if(detail.toLowerCase().includes('duplicate')||detail.toLowerCase().includes('unique'))detail='A report already exists with this start date. Please check your report history or contact admin.';
     msg('tricycleMsg','Report could not be submitted: '+detail,'error');return;
   }
+  let emailStatus='';
+  try{
+    const {data:notice,error:noticeError}=await db.functions.invoke('sale-email-notifications',{body:{event:'tricycle_submitted',tricycle_report_id:insertedReport.id}});
+    if(noticeError || notice?.success===false){emailStatus=' The report is saved and pending approval, but the admin notification email failed: '+(notice?.error||noticeError?.message||'Email service did not confirm delivery.')+'.';}
+    else emailStatus=' The admin approval email was sent.';
+  }catch(noticeErr){emailStatus=' The report is saved and pending approval, but the admin email request failed: '+(noticeErr?.message||String(noticeErr))+'.';}
+  $('triSubmitBtn').disabled=false;$('triSubmitBtn').textContent='Submit Weekly Report';
   $('triSalesReported').value='0';$('triPaymentAmount').value='0';$('triPaymentReference').value='';$('triDriverNotes').value='';
-  msg('tricycleMsg','Weekly report submitted successfully and is waiting for admin approval. Your balance has not been reduced.','success');
+  msg('tricycleMsg','Weekly report submitted successfully and is waiting for admin approval. Your balance has not been reduced.'+emailStatus,emailStatus.includes('failed')?'error':'success');
   await loadTricycle();
 });
 
