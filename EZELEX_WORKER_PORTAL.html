@@ -528,9 +528,10 @@ async function loadSales(){
   $("salesBody").innerHTML=rows.map(s=>{
     const st=String(s.status||"pending").toLowerCase();
     const pending=(st==="pending"||!s.status);
+    const deletable=pending||st==="rejected";
     const action=pending
       ? `<span style="display:inline-flex;gap:6px;flex-wrap:wrap;align-items:center"><span class="badge" style="background:#fff3cd;color:#8a5b00">PENDING</span><button type="button" onclick="editSale('${esc(s.id)}')" style="padding:7px 10px">Edit</button><button type="button" onclick="deleteSale('${esc(s.id)}')" style="padding:7px 10px;background:#b42318;color:#fff">Delete</button></span>`
-      : `<span class="badge" style="background:${st==='approved'?'#dcfae6':'#fee4e2'};color:${st==='approved'?'#067647':'#b42318'}">${esc(st.toUpperCase())}</span>`;
+      : `<span class="badge" style="background:${st==='approved'?'#dcfae6':'#fee4e2'};color:${st==='approved'?'#067647':'#b42318'}">${esc(st.toUpperCase())}</span>${deletable?` <button type="button" onclick="deleteSale('${esc(s.id)}')" style="padding:7px 10px;background:#b42318;color:#fff">Delete</button>`:""}`;
     return `<tr>
       <td>${esc(dateOnly(s.sale_date))}</td><td>${esc(s.customer_reference||"")}</td><td>${esc(s.product_service||"")}</td>
       <td>${esc(s.quantity??"")}</td><td>${money(s.sale_amount)}</td><td>${esc(s.payment_method||"")}</td><td>${esc(s.notes||"")}</td><td>${action}</td>
@@ -1177,9 +1178,9 @@ window.deleteSale=async function(id){
   const {data,error}=await db.from("sales").select("id,status").eq("id",id).eq("worker_id",currentUser.id).maybeSingle();
   if(error||!data){msg("saleMsg",error?.message||"Sale not found.","error");return;}
   const st=String(data.status||"pending").toLowerCase();
-  if(st!=="pending"){msg("saleMsg","Only sales waiting for admin approval can be deleted.","error");return;}
-  if(!confirm("Delete this sale? This cannot be undone."))return;
-  const r=await db.from("sales").delete().eq("id",id).eq("worker_id",currentUser.id).eq("status","pending");
+  if(st!=="pending"&&st!=="rejected"){msg("saleMsg","You can delete only pending or rejected sales. Approved sales can be deleted only by admin.","error");return;}
+  if(!confirm(`Delete this ${st} sale? This cannot be undone.`))return;
+  const r=await db.from("sales").delete().eq("id",id).eq("worker_id",currentUser.id).in("status",st==="pending"?["pending"]:["rejected"]);
   if(r.error){msg("saleMsg","Sale could not be deleted: "+r.error.message,"error");return;}
   msg("saleMsg","Sale deleted successfully.","success");
   await loadSales();
