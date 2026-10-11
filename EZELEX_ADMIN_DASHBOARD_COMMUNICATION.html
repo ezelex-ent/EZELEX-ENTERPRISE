@@ -40,8 +40,21 @@ table{width:100%;border-collapse:collapse;min-width:1050px}th,td{padding:11px;bo
 
 <main id="dashboard" class="wrap hidden"><div id="dashMsg"></div>
 <div class="nav">
-<button class="soft active" data-section="overview">Dashboard</button><button class="soft" data-section="sales">Sales</button><button class="soft" data-section="stock">Stock & Profit</button><button class="soft" data-section="credits">On-Credit Sales</button><button class="soft" data-section="stockHistory">Edit History</button><button class="soft" data-section="workers">Workers</button><button class="soft" data-section="communication">Communication Centre</button><button class="soft" data-section="profile">Admin Profile</button><button class="soft" data-section="security">Security</button>
+<button class="soft active" data-section="overview">Dashboard</button><button class="soft" data-section="capital">Business Capital 🔒</button><button class="soft" data-section="sales">Sales</button><button class="soft" data-section="stock">Stock & Profit</button><button class="soft" data-section="credits">On-Credit Sales</button><button class="soft" data-section="stockHistory">Edit History</button><button class="soft" data-section="workers">Workers</button><button class="soft" data-section="communication">Communication Centre</button><button class="soft" data-section="profile">Admin Profile</button><button class="soft" data-section="security">Security</button>
 </div>
+
+<section id="capital" class="page hidden">
+<div class="section"><h2>🔒 Private Business Capital</h2><p class="muted">Admin-only financial overview. Original investment is kept separate from weekly stock books. Enter the actual cash currently held by the business; stock and outstanding credit are calculated from saved records.</p><div id="capitalMsg"></div>
+<div class="cards" style="grid-template-columns:repeat(3,1fr)">
+<div class="card"><div class="label">Original Business Capital</div><div class="value" id="originalCapitalValue">GH₵20,000.00</div><div class="muted">Initial investment recorded</div></div>
+<div class="card"><div class="label">Cash In Hand (admin-confirmed)</div><div class="value" id="currentCashValue">GH₵0.00</div><div class="muted">Enter the actual cash held</div></div>
+<div class="card"><div class="label">Remaining Stock Value</div><div class="value" id="capitalStockValue">GH₵0.00</div><div class="muted">Estimated at recorded unit cost</div></div>
+<div class="card"><div class="label">Outstanding Customer Credit</div><div class="value" id="capitalCreditValue">GH₵0.00</div><div class="muted">Unpaid balances only</div></div>
+<div class="card"><div class="label">Total Current Assets</div><div class="value" id="capitalAssetsValue">GH₵0.00</div><div class="muted">Cash + stock value + outstanding credit</div></div>
+<div class="card"><div class="label">Assets Compared With Original Capital</div><div class="value" id="capitalDifferenceValue">GH₵0.00</div><div class="muted">Current assets minus GH₵20,000; not a profit calculation</div></div>
+</div>
+<div class="section" style="margin-top:16px"><h3>Update actual cash held</h3><p class="muted">Enter the total cash physically available to the business now. This is a cash-count input, not sales revenue, so updating it will not change Profit/Loss.</p><div class="grid2"><div><label>Actual Cash In Hand (GH₵)</label><input id="currentCashInput" type="number" min="0" step="0.01" placeholder="Enter cash currently held"></div><div style="display:flex;align-items:end"><button id="saveCapitalCashBtn" class="primary" type="button">Save Cash Balance</button></div></div></div>
+</div></section>
 
 <section id="overview" class="page">
 <div class="cards">
@@ -116,7 +129,7 @@ async function adminCheck(){
  const {data:{session:s}}=await db.auth.getSession();session=s;if(!s){showLogin();return false}
  let {data}=await db.from("worker_profiles").select("*").eq("user_id",s.user.id).maybeSingle();
  if(!data||data.role!=="admin"||!data.active){await db.auth.signOut();showLogin();msg("loginMsg","This account does not have active EZELEX admin access.","error");return false}
- $("loginSection").classList.add("hidden");$("dashboard").classList.remove("hidden");$("logoutBtn").classList.remove("hidden");$("adminEmail").textContent=s.user.email||"";await loadWorkers();await Promise.all([loadSales(),loadInventory(),loadStockHistory(),loadAdminCredits()]);await loadCommunication();return true
+ $("loginSection").classList.add("hidden");$("dashboard").classList.remove("hidden");$("logoutBtn").classList.remove("hidden");$("adminEmail").textContent=s.user.email||"";await loadWorkers();await Promise.all([loadSales(),loadInventory(),loadStockHistory(),loadAdminCredits(),loadBusinessCapital()]);await loadCommunication();return true
 }
 function showLogin(){$("loginSection").classList.remove("hidden");$("dashboard").classList.add("hidden");$("logoutBtn").classList.add("hidden")}
 async function loadWorkers(){
@@ -139,7 +152,7 @@ function renderSales(){
 }
 window.approveSale=async id=>{if(!confirm("Approve this worker sale?"))return;const r=await db.from("sales").update({status:"approved",rejection_reason:null,approved_at:new Date().toISOString()}).eq("id",id);if(r.error){msg("dashMsg",r.error.message,"error");return}await loadSales()}
 window.rejectSale=async id=>{const reason=prompt("Reason for disapproving this sale:");if(reason===null)return;const r=await db.from("sales").update({status:"rejected",rejection_reason:reason.trim()||"No reason provided",approved_at:null}).eq("id",id);if(r.error){msg("dashMsg",r.error.message,"error");return}await loadSales()}
-async function loadInventory(){const r=await db.from("worker_stock_batches").select("*").order("stock_date",{ascending:false}).order("created_at",{ascending:false});if(r.error){msg("dashMsg","Stock tracker: "+r.error.message,"error");return}allInventory=r.data||[];const wr=await db.from("worker_stock_weeks").select("id,worker_id,week_start,status");allStockWeeks=wr.error?[]:(wr.data||[]);const now=new Date(),day=now.getDay();now.setDate(now.getDate()-(day===0?6:day-1));const monday=now.getFullYear()+"-"+String(now.getMonth()+1).padStart(2,"0")+"-"+String(now.getDate()).padStart(2,"0");currentWeekIds=new Set(allStockWeeks.filter(w=>w.week_start===monday).map(w=>String(w.id)));applyInvFilters();updateInventorySummary()}
+async function loadInventory(){const r=await db.from("worker_stock_batches").select("*").order("stock_date",{ascending:false}).order("created_at",{ascending:false});if(r.error){msg("dashMsg","Stock tracker: "+r.error.message,"error");return}allInventory=r.data||[];const wr=await db.from("worker_stock_weeks").select("id,worker_id,week_start,status");allStockWeeks=wr.error?[]:(wr.data||[]);const now=new Date(),day=now.getDay();now.setDate(now.getDate()-(day===0?6:day-1));const monday=now.getFullYear()+"-"+String(now.getMonth()+1).padStart(2,"0")+"-"+String(now.getDate()).padStart(2,"0");currentWeekIds=new Set(allStockWeeks.filter(w=>w.week_start===monday).map(w=>String(w.id)));applyInvFilters();updateInventorySummary();if(businessCapitalRow)updateBusinessCapitalSummary()}
 function applyInvFilters(){const wid=$("invWorkerFilter").value,from=$("invFromDate").value,to=$("invToDate").value;filteredInventory=allInventory.filter(r=>{let d=dateOnly(r.stock_date||r.created_at);return(!wid||r.worker_id===wid)&&(!from||d>=from)&&(!to||d<=to)});renderInventory();updateInventorySummary()}
 function renderInventory(){
  $("inventoryBody").innerHTML=filteredInventory.length?filteredInventory.map(r=>{const c=invCalc(r),w=workerInfo(r.worker_id),pc=c.profit<0?"loss":"profit";return `<tr><td>${esc(dateOnly(r.stock_date||r.created_at))}</td><td>${esc(w.full_name||"")}</td><td>${esc(w.worker_id||r.worker_id||"")}</td><td>${esc(r.product_service||"")}</td><td>${c.total}</td><td>${c.sold}</td><td>${c.damage}</td><td><b>${c.remaining}</b></td><td>${money(c.purchase)}</td><td>${money(c.revenue)}</td><td>${money(c.damageValue)}</td><td class="${pc}">${money(c.profit)}</td></tr>`}).join(""):'<tr><td colspan="12" class="empty">No stock records found.</td></tr>'
@@ -151,6 +164,28 @@ function updateInventorySummary(){
  const all=allInventory.reduce((x,r)=>{const c=invCalc(r);if(r.stock_type!=="carry_forward")x.purchase+=c.total;x.sold+=c.sold;x.profit+=c.profit;return x},{purchase:0,sold:0,profit:0});
  if($("reviewPurchase"))$("reviewPurchase").textContent=Number(all.purchase.toFixed(2)).toLocaleString();if($("reviewSold"))$("reviewSold").textContent=Number(all.sold.toFixed(2)).toLocaleString();if($("reviewProfit")){$("reviewProfit").textContent=money(all.profit);$("reviewProfit").className="value "+(all.profit<0?"loss":"profit");}
 }
+let businessCapitalRow=null;
+async function loadBusinessCapital(){
+ const r=await db.from("ezelex_business_capital").select("id,original_capital,current_cash").eq("id",1).maybeSingle();
+ if(r.error){msg("capitalMsg","Capital data unavailable. Run the supplied EZELEX business capital SQL in Supabase. "+r.error.message,"error");return}
+ businessCapitalRow=r.data||{id:1,original_capital:20000,current_cash:0};
+ $("originalCapitalValue").textContent=money(businessCapitalRow.original_capital);
+ $("currentCashValue").textContent=money(businessCapitalRow.current_cash);
+ $("currentCashInput").value=Number(businessCapitalRow.current_cash||0).toFixed(2);
+ updateBusinessCapitalSummary();
+}
+function updateBusinessCapitalSummary(){
+ const stockValue=allInventory.reduce((n,r)=>{const c=invCalc(r);return n+Math.max(0,c.remaining)*Math.max(0,c.unit)},0);
+ const credit=adminCreditRows.reduce((n,c)=>n+Math.max(0,Number(c.amount_due||0)-Number(c.amount_paid||0)),0);
+ const cash=Number(businessCapitalRow?.current_cash||0),original=Number(businessCapitalRow?.original_capital||20000),assets=cash+stockValue+credit,diff=assets-original;
+ $("capitalStockValue").textContent=money(stockValue);$("capitalCreditValue").textContent=money(credit);$("capitalAssetsValue").textContent=money(assets);$("capitalDifferenceValue").textContent=money(diff);$("capitalDifferenceValue").className="value "+(diff<0?"loss":diff>0?"profit":"");
+}
+async function saveBusinessCash(){
+ const cash=Number($("currentCashInput").value);if(!Number.isFinite(cash)||cash<0){msg("capitalMsg","Enter a valid cash balance of zero or more.","error");return}
+ const r=await db.from("ezelex_business_capital").upsert({id:1,original_capital:20000,current_cash:cash,updated_at:new Date().toISOString()},{onConflict:"id"}).select("id,original_capital,current_cash").single();
+ if(r.error){msg("capitalMsg","Could not save cash balance: "+r.error.message,"error");return}
+ businessCapitalRow=r.data;$("currentCashValue").textContent=money(cash);updateBusinessCapitalSummary();msg("capitalMsg","Cash balance saved. Profit/Loss calculations were not changed.","ok");
+}
 let allStockHistory=[];
 function historyDateTime(v){if(!v)return "—";const d=new Date(v);return Number.isNaN(d.getTime())?String(v):d.toLocaleString("en-GB",{day:"2-digit",month:"short",year:"numeric",hour:"2-digit",minute:"2-digit",second:"2-digit"});}
 let adminCreditRows=[];
@@ -159,7 +194,7 @@ async function loadAdminCredits(){
  if(r.error){$('adminCreditBody').innerHTML='<tr><td colspan="10" class="empty">Credit records unavailable. Run the supplied stock and credit SQL.</td></tr>';return;}
  adminCreditRows=r.data||[];const open=adminCreditRows.filter(c=>Number(c.amount_due||0)>Number(c.amount_paid||0));
  $('adminCreditAmount').textContent=money(open.reduce((n,c)=>n+Number(c.amount_due||0)-Number(c.amount_paid||0),0));$('adminCreditUnits').textContent=open.reduce((n,c)=>n+Number(c.quantity||0),0).toLocaleString();$('adminCreditCustomers').textContent=new Set(open.map(c=>String(c.customer_name||'').trim().toLowerCase())).size;
- $('adminCreditBody').innerHTML=adminCreditRows.length?adminCreditRows.map(c=>{const w=workerInfo(c.worker_id),bal=Math.max(0,Number(c.amount_due||0)-Number(c.amount_paid||0));return `<tr><td>${esc(dateOnly(c.credit_date))}</td><td>${esc(w.full_name||'')}</td><td>${esc(w.worker_id||c.worker_id||'')}</td><td>${esc(c.customer_name||'')}</td><td>${esc(c.product_service||'Eggs')}</td><td>${Number(c.quantity||0)}</td><td>${money(c.amount_due)}</td><td>${money(c.amount_paid)}</td><td><b>${money(bal)}</b></td><td>${bal<=0?'<span class="badge approved">PAID</span>':'<span class="badge pending">OUTSTANDING</span>'}</td></tr>`}).join(''):'<tr><td colspan="10" class="empty">No on-credit sales recorded.</td></tr>';
+ $('adminCreditBody').innerHTML=adminCreditRows.length?adminCreditRows.map(c=>{const w=workerInfo(c.worker_id),bal=Math.max(0,Number(c.amount_due||0)-Number(c.amount_paid||0));return `<tr><td>${esc(dateOnly(c.credit_date))}</td><td>${esc(w.full_name||'')}</td><td>${esc(w.worker_id||c.worker_id||'')}</td><td>${esc(c.customer_name||'')}</td><td>${esc(c.product_service||'Eggs')}</td><td>${Number(c.quantity||0)}</td><td>${money(c.amount_due)}</td><td>${money(c.amount_paid)}</td><td><b>${money(bal)}</b></td><td>${bal<=0?'<span class="badge approved">PAID</span>':'<span class="badge pending">OUTSTANDING</span>'}</td></tr>`}).join(''):'<tr><td colspan="10" class="empty">No on-credit sales recorded.</td></tr>';if(businessCapitalRow)updateBusinessCapitalSummary();
 }
 async function loadStockHistory(){
  const r=await db.from("worker_stock_edit_history").select("*").order("changed_at",{ascending:false}).limit(2000);
@@ -228,12 +263,13 @@ $("createWorkerBtn").onclick=async()=>{const p={worker_id:$("wId").value.trim(),
 $("loginBtn").onclick=async()=>{msg("loginMsg","Signing in...");const r=await db.auth.signInWithPassword({email:$("email").value.trim(),password:$("password").value});if(r.error){msg("loginMsg",r.error.message,"error");return}await adminCheck()}
 $("forgotBtn").onclick=async()=>{const email=$("email").value.trim();if(!email){msg("loginMsg","Enter your admin email first.","error");return}const r=await db.auth.resetPasswordForEmail(email,{redirectTo:location.href});msg("loginMsg",r.error?r.error.message:"Password recovery email sent. Check your inbox.",r.error?"error":"ok")}
 $("logoutBtn").onclick=async()=>{await db.auth.signOut();showLogin()}
-$("refreshBtn").onclick=async()=>{await loadWorkers();await Promise.all([loadSales(),loadInventory(),loadStockHistory(),loadAdminCredits()])}
+$("refreshBtn").onclick=async()=>{await loadWorkers();await Promise.all([loadSales(),loadInventory(),loadStockHistory(),loadAdminCredits(),loadBusinessCapital()])}
 $("refreshWorkers").onclick=loadWorkers;$("applyFilters").onclick=applyFilters;$("statusFilter").onchange=applyFilters;$("workerFilter").onchange=applyFilters;$("refreshInventory").onclick=loadInventory;$("applyInvFilters").onclick=applyInvFilters;$("invWorkerFilter").onchange=applyInvFilters
 document.querySelectorAll(".nav button").forEach(b=>b.onclick=()=>{document.querySelectorAll(".nav button").forEach(x=>x.classList.remove("active"));b.classList.add("active");document.querySelectorAll(".page").forEach(p=>p.classList.add("hidden"));$(b.dataset.section).classList.remove("hidden")})
 $("changePass").onclick=async()=>{const a=$("newPass").value,b=$("confirmPass").value;if(a.length<8){msg("securityMsg","Password must be at least 8 characters.","error");return}if(a!==b){msg("securityMsg","Passwords do not match.","error");return}const r=await db.auth.updateUser({password:a});msg("securityMsg",r.error?r.error.message:"Password changed successfully.",r.error?"error":"ok");if(!r.error){$("newPass").value="";$("confirmPass").value=""}}
 $("csvBtn").onclick=()=>{const rows=[["Date","Worker","Worker ID","Product/Service","Quantity","Amount","Payment","Status","Reason"],...filteredSales.map(s=>{const w=workerInfo(s.worker_id);return[dateOnly(s.sale_date||s.created_at),w.full_name||"",w.worker_id||"",s.product_service||"",s.quantity??"",amount(s).toFixed(2),s.payment_method||"",status(s),s.rejection_reason||""]})];const csv=rows.map(r=>r.map(x=>`"${String(x).replace(/"/g,'""')}"`).join(",")).join("\n");const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([csv],{type:"text/csv"}));a.download="EZELEX-sales.csv";a.click()}
 $("invCsvBtn").onclick=()=>{const rows=[["Date","Worker","Worker ID","Product","Total","Sold","Damaged","Remaining","Purchase","Revenue","Damage Value","Profit/Loss"],...filteredInventory.map(r=>{const c=invCalc(r),w=workerInfo(r.worker_id);return[dateOnly(r.stock_date||r.created_at),w.full_name||"",w.worker_id||"",r.product_service||"",c.total,c.sold,c.damage,c.remaining,c.purchase.toFixed(2),c.revenue.toFixed(2),c.damageValue.toFixed(2),c.profit.toFixed(2)]})];const csv=rows.map(r=>r.map(x=>`"${String(x).replace(/"/g,'""')}"`).join(",")).join("\n");const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([csv],{type:"text/csv"}));a.download="EZELEX-stock-profit-report.csv";a.click()}
+$("saveCapitalCashBtn").onclick=saveBusinessCash;
 adminCheck();
 </script>
 </body>
