@@ -797,7 +797,56 @@ async function loadCredits(){
   if(!$('creditBody'))return;
   const r=await db.from('worker_stock_credit_sales').select('*').eq('worker_id',currentUser.id).order('credit_date',{ascending:false}).order('created_at',{ascending:false});
   if(r.error){$('creditBody').innerHTML='<tr><td colspan="9">Credit records unavailable. Check the supplied credit SQL and policies.</td></tr>';msg('creditMsg','Could not load credit records: '+esc(r.error.message),'error');return;}
-  creditRows=r.data||[];renderCredits();if(typeof calculateStock==="function")calculateStock();updateStockFormCreditSummary(editingStockId);
+  creditRows=r.data||[];
+  const stockSnapshot=await db.from('worker_stock_batches').select('*').eq('worker_id',currentUser.id);
+  if(!stockSnapshot.error)liveStockRows=stockSnapshot.data||[];
+  // Reconcile legacy credit records that exist in the credit ledger but were not applied
+  // to their stock batch. The batch's credit_quantity is the idempotency marker: only
+  // the missing quantity is applied, so refreshing the portal cannot count it twice.
+  const byBatch=new Map();
+  for(const c of creditRows){
+    const id=String(c.stock_batch_id||""); if(!id)continue;
+    const a=byBatch.get(id)||{qty:0,amount:0,outstanding:0};
+    a.qty+=Math.max(0,Number(c.quantity||0));
+    a.amount+=Math.max(0,Number(c.amount_due||0));
+    a.outstanding+=Math.max(0,Number(c.amount_due||0)-Number(c.amount_paid||0));
+    byBatch.set(id,a);
+  }
+  for(const [batchId,ledger] of byBatch){
+    const batch=liveStockRows.find(x=>String(x.id)===batchId);
+    if(!batch)continue;
+    const already= Math.max(0,Number(batch.credit_quantity||0));
+    const missingQty=Math.max(0,ledger.qty-already);
+    const oldOutstanding=Math.max(0,Number(batch.credit_outstanding||0));
+    const patch={credit_outstanding:ledger.outstanding};
+    if(missingQty>0){
+      const ratio=ledger.qty>0?missingQty/ledger.qty:0;
+      const missingRevenue=ledger.amount*ratio;
+      const unit=Number(batch.cost_per_unit||0);
+      const nextSold=Number(batch.sold_quantity||0)+missingQty;
+      const nextRemaining=Math.max(0,Number(batch.total_quantity||0)-nextSold-Number(batch.damage_quantity||0));
+      patch.sold_quantity=nextSold;
+      patch.sales_revenue=Number(batch.sales_revenue||0)+missingRevenue;
+      patch.sold_cost=Number(batch.sold_cost||0)+missingQty*unit;
+      patch.remaining_quantity=nextRemaining;
+      patch.remaining_value=nextRemaining*unit;
+      patch.profit_loss=Number(batch.profit_loss||0)+missingRevenue-missingQty*unit;
+      patch.credit_quantity=ledger.qty;
+    }
+    if(Math.abs(oldOutstanding-ledger.outstanding)>0.005 || missingQty>0){
+      patch.cash_in_hand=Number(batch.capital_amount||0)+Number(patch.sales_revenue??batch.sales_revenue??0)-ledger.outstanding-Number(batch.purchase_total||0);
+      const fixed=await db.from('worker_stock_batches').update(patch).eq('id',batchId).eq('worker_id',currentUser.id);
+      if(!fixed.error)Object.assign(batch,patch);
+      else console.warn('Credit reconciliation could not update stock batch',batchId,fixed.error.message);
+    }
+  }
+  // Refresh rows after any reconciliation so the weekly dashboard and live stock agree.
+  if(byBatch.size){
+    const fresh=await db.from('worker_stock_batches').select('*').eq('worker_id',currentUser.id).order('stock_date',{ascending:false});
+    if(!fresh.error)liveStockRows=fresh.data||[];
+  }
+  renderCredits();if(typeof calculateStock==="function")calculateStock();updateStockFormCreditSummary(editingStockId);
+  if(typeof loadStock==="function")await loadStock();
 }
 function renderCredits(){
   const open=creditRows.filter(c=>Number(c.amount_due||0)>Number(c.amount_paid||0));
