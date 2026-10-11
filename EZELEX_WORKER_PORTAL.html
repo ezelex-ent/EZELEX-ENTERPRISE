@@ -1,1 +1,1259 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ezelex Enterprise — Worker Dashboard</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+*{box-sizing:border-box}
+body{margin:0;font-family:Arial,sans-serif;background:#f4f6f8;color:#17202a}
+header{background:#111827;color:#fff;padding:18px 5%;display:flex;justify-content:space-between;align-items:center;gap:15px;position:sticky;top:0;z-index:10}
+header h1{margin:0;font-size:22px}
+header small{display:block;color:#cbd5e1;margin-top:4px}
+button{border:0;border-radius:8px;padding:11px 16px;cursor:pointer;font-weight:700}
+.primary{background:#111827;color:#fff}.danger{background:#b42318;color:#fff}.secondary{background:#e5e7eb;color:#111827}
+.wrap{max-width:1150px;margin:25px auto;padding:0 16px}
+.login{max-width:430px;margin:60px auto;background:#fff;padding:30px;border-radius:14px;box-shadow:0 8px 30px #0001}
+.panel{background:#fff;padding:21px;border-radius:12px;margin-bottom:18px;box-shadow:0 3px 15px #0000000d}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:15px}
+label{font-weight:700;font-size:14px;display:block}
+input,select,textarea{width:100%;padding:12px;margin:7px 0 14px;border:1px solid #d5dbe1;border-radius:8px;font-size:15px}
+textarea{min-height:90px;resize:vertical}
+.full{grid-column:1/-1}
+.msg{padding:10px;border-radius:8px;margin:10px 0;background:#fef3c7}
+.error{background:#fee4e2;color:#912018}.success{background:#dcfae6;color:#067647}
+.hidden{display:none!important}
+.workerInfo{font-size:14px;line-height:1.7}
+.tabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:18px}
+.tab{background:#e5e7eb;color:#111827}.tab.active{background:#111827;color:#fff}
+.section{display:none}.section.active{display:block}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:18px}
+.stat{background:#f8fafc;border:1px solid #e5e7eb;border-radius:12px;padding:15px}
+.stat small{display:block;color:#64748b;font-weight:700;margin-bottom:6px}.stat strong{font-size:21px}
+.stockGrid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px;margin:15px 0}
+.stockCard{background:#f8fafc;border:1px solid #e5e7eb;border-radius:12px;padding:15px}
+.stockCard small{display:block;color:#64748b;font-weight:700;margin-bottom:6px}.stockCard strong{font-size:20px}
+.resultGrid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:15px}
+.resultCard{border-radius:12px;padding:16px;border:1px solid #e5e7eb;background:#fff}
+.resultCard h3{margin:0 0 7px;font-size:14px;color:#475569}.resultCard strong{font-size:21px}
+.profit{background:#ecfdf3;border-color:#a7f3d0}.loss{background:#fff1f2;border-color:#fecdd3}
+.live{font-size:13px;color:#475569;margin-top:8px}
+.stockNote{background:#fffbeb;border:1px solid #fde68a;padding:12px;border-radius:10px;font-size:13px;line-height:1.5}
+.tablebox{overflow:auto}table{width:100%;border-collapse:collapse;min-width:700px}
+th,td{padding:11px;border-bottom:1px solid #eee;text-align:left;font-size:14px}th{background:#f8fafc}
+.badge{display:inline-block;padding:5px 9px;border-radius:99px;background:#dcfae6;color:#067647;font-size:12px;font-weight:700}
+.cardrow{display:grid;grid-template-columns:repeat(2,1fr);gap:15px}
+.infoBox{background:#f8fafc;border-radius:10px;padding:14px;line-height:1.7}
+.message{padding:13px;border:1px solid #e5e7eb;border-radius:10px;margin-bottom:10px}
+.message h4{margin:0 0 5px}.message small{color:#64748b}
 
+.dailyChartPanel{border:1px solid #e5e7eb;border-radius:12px;padding:14px;background:#fff;overflow:hidden}
+#dailyPerformanceChart{display:block;width:100%;height:320px}
+.dailyChartLegend{display:flex;gap:18px;flex-wrap:wrap;margin-top:10px;font-size:13px;color:#475569}
+.dailyChartLegend span{display:inline-flex;align-items:center;gap:7px}
+.dailyChartLegend i{display:inline-block;width:12px;height:12px;border-radius:3px}
+.legendUnits{background:#2563eb}.legendValue{background:#16a34a}
+.dailyChartAccessible{font-size:13px;color:#475569;margin-top:8px;line-height:1.5}
+@media(max-width:700px){#dailyPerformanceChart{height:270px}.dailyChartPanel{padding:8px}}
+
+@media(max-width:900px){.stats,.stockGrid{grid-template-columns:1fr 1fr}.resultGrid{grid-template-columns:1fr 1fr}}
+@media(max-width:700px){.grid,.cardrow{grid-template-columns:1fr}.full{grid-column:auto}.login{margin:30px 15px}.wrap{padding:0 12px}.stats,.stockGrid,.resultGrid{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>Ezelex Enterprise</h1>
+    <small>Worker Dashboard</small>
+  </div>
+  <a id="settingsBtn" class="secondary hidden" href="https://ezelexenterprise.com/worker-profile.html" style="text-decoration:none">Settings</a>
+</header>
+
+<section id="loginSection" class="login">
+  <h2>Worker Login</h2>
+  <p>Sign in with your Ezelex Enterprise worker account.</p>
+  <div id="loginMsg"></div>
+  <label>Email</label>
+  <input id="email" type="email" placeholder="Worker email">
+  <label>Password</label>
+  <input id="password" type="password" placeholder="Password">
+  <button id="loginBtn" class="primary" style="width:100%">Sign in</button>
+  <button id="forgotBtn" class="secondary" type="button" style="width:100%;margin-top:10px">Forgot password?</button>
+  <div id="forgotBox" class="hidden" style="margin-top:18px">
+    <hr>
+    <h3>Reset your password</h3>
+    <p>Enter your worker email and Ezelex Enterprise will send you a password reset link.</p>
+    <input id="resetEmail" type="email" placeholder="Worker email">
+    <button id="sendResetBtn" class="primary" type="button" style="width:100%">Send Reset Link</button>
+    <button id="backLoginBtn" class="secondary" type="button" style="width:100%;margin-top:8px">Back to Sign In</button>
+    <div id="resetMsg"></div>
+  </div>
+</section>
+
+<section id="passwordRecovery" class="login hidden">
+  <h2>Set New Password</h2>
+  <p>Choose a new password for your Ezelex Enterprise worker account.</p>
+  <div id="recoveryMsg"></div>
+  <label>New Password</label>
+  <input id="newPassword" type="password" placeholder="New password" minlength="6">
+  <label>Confirm Password</label>
+  <input id="confirmPassword" type="password" placeholder="Confirm password" minlength="6">
+  <button id="updatePasswordBtn" class="primary" type="button" style="width:100%">Update Password</button>
+</section>
+
+<main id="portal" class="wrap hidden">
+  <div class="panel">
+    <h2>Welcome, <span id="workerName">Worker</span> 👋</h2>
+    <div class="workerInfo">
+      <strong>Worker ID:</strong> <span id="workerId">—</span> &nbsp; | &nbsp;
+      <strong>Role:</strong> <span id="workerRole">—</span> &nbsp; | &nbsp;
+      <strong>Status:</strong> <span id="workerStatus" class="badge">—</span>
+    </div>
+    <div class="stats">
+      <div class="stat"><small>Today Sale</small><strong id="todaySales">GH₵0.00</strong></div>
+      <div class="stat"><small>This Week</small><strong id="weekSales">GH₵0.00</strong></div>
+      <div class="stat"><small>This Month</small><strong id="monthSales">GH₵0.00</strong></div>
+      <div class="stat"><small>All Time</small><strong id="allSales">GH₵0.00</strong></div>
+    </div>
+  </div>
+
+  <div class="tabs">
+    <button class="tab active" data-tab="dashboard">Dashboard</button>
+    <button class="tab" data-tab="sales">Record Sale</button>
+    <button class="tab" data-tab="stock">Live Stock</button>
+    <button class="tab" data-tab="stockHistory">Edit History</button>
+    <button class="tab" data-tab="credit">On-Credit</button>
+  </div>
+
+  <section id="dashboard" class="section active">
+    <div class="panel">
+      <h2>Worker Overview</h2>
+      <p>Your sales are sent to the central Ezelex Enterprise admin dashboard. Stock records are also saved centrally.</p>
+      <div class="cardrow">
+        <div class="infoBox"><strong>Worker account</strong><br><span id="dashEmail">—</span><br><span id="dashPhone">—</span></div>
+        <div class="infoBox"><strong>Last activity</strong><br><span id="lastActivity">Loading...</span></div>
+      </div>
+  </div>
+    <div class="panel">
+      <h2>Recent Sales</h2>
+      <div class="tablebox">
+        <table><thead><tr><th>Date</th><th>Customer</th><th>Product/Service</th><th>Qty</th><th>Amount</th><th>Payment</th></tr></thead>
+        <tbody id="recentSalesBody"><tr><td colspan="6">Loading...</td></tr></tbody></table>
+      </div>
+    </div>
+  </section>
+
+  <section id="sales" class="section">
+    <div class="panel">
+      <h2 id="saleFormTitle">Record a Sale</h2>
+      <div id="saleMsg"></div>
+      <form id="saleForm" class="grid">
+        <input id="editingSaleId" type="hidden" value="">
+        <div><label>Sale Date</label><input id="saleDate" type="date" required></div>
+        <div><label>Customer / Reference</label><input id="customer" type="text" placeholder="Customer name or reference"></div>
+        <div><label>Product / Service</label><input id="product" type="text" placeholder="What was sold?" required></div>
+        <div><label>Quantity</label><input id="quantity" type="number" min="1" step="1" value="1" required></div>
+        <div><label>Sale Amount (GHS)</label><input id="amount" type="number" min="0" step="0.01" placeholder="0.00" required></div>
+        <div><label>Payment Method</label><select id="payment" required><option value="">Select payment method</option><option>Cash</option><option>Mobile Money</option><option>Bank Transfer</option><option>Card</option><option>Other</option></select></div>
+        <div class="full"><label>Notes</label><textarea id="notes" placeholder="Optional notes"></textarea></div>
+        <div class="full" style="display:flex;gap:10px;flex-wrap:wrap"><button id="saveSaleBtn" class="primary" type="submit">Record Sale</button><button id="cancelSaleEditBtn" type="button" style="display:none">Cancel Edit</button></div>
+      </form>
+    </div>
+    <div class="panel">
+      <h2>My Sales History</h2>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin:0 0 15px">
+        <button id="pdfReportBtn" class="primary" type="button">📄 Download PDF Report</button>
+        <button id="shareReportBtn" type="button">📤 Share Report</button>
+      </div>
+      <div id="reportMsg"></div>
+      <div class="tablebox"><table><thead><tr><th>Date</th><th>Customer</th><th>Product/Service</th><th>Qty</th><th>Amount (GHS)</th><th>Payment</th><th>Notes</th><th>Status / Action</th></tr></thead>
+      <tbody id="salesBody"><tr><td colspan="11">Loading...</td></tr></tbody></table></div>
+    </div>
+  </section>
+
+  <section id="stock" class="section">
+    <div class="panel" id="weeklyStockPanel">
+      <h2>🗓️ Weekly Stock Book (Monday–Sunday)</h2>
+      <div class="stockNote">All purchases and stock batches you add during this business week are grouped under one weekly book. You can keep adding crates as business grows. The previous weeks stay saved for history and all-time reports; the Profit/Loss calculation is preserved.</div>
+      <div id="weeklyStockMsg"></div>
+      <div class="stockGrid">
+        <div class="stockCard"><small>Current Week</small><strong id="weekRangeLabel">Loading…</strong><div id="weekStatusLabel">Checking weekly book</div></div>
+        <div class="stockCard"><small>Crates Purchased This Week</small><strong id="weekPurchased">0</strong><div>All additions this week</div></div>
+        <div class="stockCard"><small>Crates Sold This Week</small><strong id="weekSold">0</strong><div>Across this week's batches</div></div>
+        <div class="stockCard"><small>Crates Remaining This Week</small><strong id="weekRemaining">0</strong><div>Live weekly stock</div></div>
+        <div class="stockCard" id="weekProfitCard"><small>Profit/Loss This Week</small><strong id="weekProfit">GH₵0.00</strong><div id="weekProfitLabel">Weekly result</div></div>
+      </div>
+      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:12px">
+        <label for="stockWeekPicker" style="margin:0">View week history</label><select id="stockWeekPicker" style="max-width:250px"><option value="">Current week</option></select>
+        <button id="closeStockWeekBtn" type="button" class="danger">Close This Week (Sunday)</button>
+      </div>
+      <p class="stockNote" style="margin-top:10px">Closing a week archives it; it does not delete stock, sales, credit, or profit records. A new Monday automatically gets a fresh weekly book.</p>
+    </div>
+
+    <div class="panel">
+      <h2>📦 Live Stock & Profit</h2>
+      <div class="stockNote"><strong>Live central stock:</strong> saved stock batches are loaded from Ezelex records. The summary below is calculated from the stock records belonging to your worker account.</div>
+      <div id="stockLiveMsg"></div>
+      <div class="stockGrid">
+        <div class="stockCard"><small>Current Units</small><strong id="liveUnits">0</strong><div id="liveUnitsLabel">remaining</div></div>
+        <div class="stockCard"><small>Stock Value</small><strong id="liveValue">GH₵0.00</strong><div>remaining value</div></div>
+        <div class="stockCard"><small>Sales Revenue</small><strong id="liveRevenue">GH₵0.00</strong><div>from stock records</div></div>
+        <div class="stockCard"><small>Profit / Loss</small><strong id="liveProfit">GH₵0.00</strong><div id="liveProfitLabel">current total</div></div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2>Add / Edit Stock Record</h2>
+      <div id="stockMsg"></div>
+      <input type="hidden" id="editingStockId" value="">
+      <form id="stockForm" class="grid">
+        <div><label>Stock Date (you can backdate stock)</label><input id="stockDate" type="date" required></div>
+        <div><label>Product / Stock Item</label><input id="stockProduct" type="text" placeholder="e.g. Eggs - 30 crate" required></div>
+        <div><label>Total Quantity Bought</label><input id="stockTotal" type="number" min="0" step="1" placeholder="100" required></div>
+        <div><label>Starting Capital (GHS)</label><input id="capitalAmount" type="number" min="0" step="0.01" placeholder="5000" required></div>
+        <div><label>Purchase Cost per Unit (GHS)</label><input id="costPerUnit" type="number" min="0" step="0.01" placeholder="50" required></div>
+        <div><label>Selling Price Per Unit (GHS)</label><input id="sellPrice" type="number" min="0" step="0.01" placeholder="50" required></div>
+        <div><label>Sold Quantity</label><input id="stockSold" type="number" min="0" step="1" value="0"></div>
+        <div><label>Damage Quantity</label><input id="stockDamage" type="number" min="0" step="1" value="0"></div>
+        <div class="full infoBox" style="margin-top:4px">
+          <strong>On-Credit for this stock</strong>
+          <div>Outstanding credit: <strong id="stockFormCreditAmount">GH₵0.00</strong> · Crates on credit: <strong id="stockFormCreditQuantity">0</strong></div>
+          <small>Record a customer's unpaid sale using the On-Credit section. This keeps the customer, amount owed, crates sold and profit linked to this stock batch.</small>
+          <div style="margin-top:10px"><button id="openStockCreditBtn" type="button">Record On-Credit Sale for This Stock</button></div>
+          <div id="stockFormCreditMsg" class="stockNote" style="margin-top:6px"></div>
+        </div>
+        <div class="full"><label>Stock Notes</label><textarea id="stockNotes" placeholder="Optional notes about this stock batch"></textarea></div>
+      </form>
+      <div class="stockGrid">
+        <div class="stockCard"><small>Total Quantity / Purchase Cost</small><strong id="calcTotal">0 units</strong><div id="calcTotalValue">GH₵0.00 calculated</div></div>
+        <div class="stockCard"><small>Sold</small><strong id="calcSold">0 units</strong><div id="calcRevenue">GH₵0.00 revenue</div></div>
+        <div class="stockCard"><small>Remaining</small><strong id="calcRemaining">0 units</strong><div id="calcRemainingValue">GH₵0.00 stock value</div></div>
+        <div class="stockCard"><small>Unit Cost</small><strong id="calcUnitCost">GH₵0.00</strong><div>Cost per unit</div></div>
+      </div>
+      <div class="resultGrid">
+        <div class="resultCard"><h3>Cost of Sold Stock</h3><strong id="calcSoldCost">GH₵0.00</strong></div>
+        <div class="resultCard"><h3>Damage Value</h3><strong id="calcDamageValue">GH₵0.00</strong></div>
+        <div class="resultCard"><h3>Starting Capital</h3><strong id="calcCapital">GH₵0.00</strong></div>
+        <div class="resultCard"><h3>Outstanding Credit</h3><strong id="calcCreditCapital">GH₵0.00</strong><div>Money customers still owe</div></div>
+        <div class="resultCard"><h3>Total Business Capital</h3><strong id="calcTotalCapital">GH₵0.00</strong><div>Starting capital + outstanding credit</div></div>
+        <div class="resultCard"><h3>Cash In Hand</h3><strong id="calcCashInHand">GH₵0.00</strong><div>Starting capital + sales − purchase cost</div></div>
+        <div class="resultCard"><h3>Sales Revenue</h3><strong id="calcSalesRevenue">GH₵0.00</strong></div>
+        <div class="resultCard" id="profitCard"><h3>Current Profit / Loss</h3><strong id="calcProfit">GH₵0.00</strong><div id="profitLabel" class="live">No sales/loss yet</div></div>
+        <div class="resultCard"><h3>Total Stock Accounted For</h3><strong id="calcAccounted">0 units</strong><div id="calcAccountedNote" class="live">Sold + damage</div></div>
+      </div>
+      <div style="margin-top:15px"><button id="saveStockBtn" class="primary" type="button">Save Stock Record</button> <button id="cancelEditStockBtn" type="button" style="display:none">Cancel Edit</button> <button id="deleteStockBtn" type="button" class="danger" style="display:none">Delete Stock Record</button></div>
+    </div>
+
+    <div class="panel">
+      <h2>My Stock Records</h2><div class="stockNote">Enter your starting capital and purchase cost per unit. Total purchase cost is calculated automatically as quantity × unit cost. <strong>Cash In Hand = Starting Capital + Sales Revenue − Total Purchase Cost</strong>. Damage is tracked separately and is not treated as cash spent.</div>
+      <div class="tablebox"><table><thead><tr><th>Date</th><th>Product</th><th>Total</th><th>Sold</th><th>Damage</th><th>Remaining</th><th>Capital</th><th>Purchase</th><th>Cash In Hand</th><th>Profit/Loss</th><th>Actions</th></tr></thead>
+      <tbody id="stockBody"><tr><td colspan="11">Loading...</td></tr></tbody></table></div>
+    </div>
+
+  </section>
+
+  <section id="credit" class="section">
+    <div class="panel" id="creditPanel">
+      <h2>🧾 On-Credit Egg Sales</h2>
+      <p class="stockNote">Record crates given to a customer who has not paid yet. Credit sales count as sold and earned profit, but unpaid money is excluded from Cash In Hand until the customer pays. Ezelex admin can see outstanding credit.</p>
+      <div id="creditMsg"></div>
+      <form id="creditForm" class="grid">
+        <div><label>Stock Batch</label><select id="creditStockBatch" required><option value="">Choose stock batch</option></select></div>
+        <div><label>Customer Name / Reference</label><input id="creditCustomer" required placeholder="Customer name or phone"></div>
+        <div><label>Credit Date</label><input id="creditDate" type="date" required></div>
+        <div><label>Crates on Credit</label><input id="creditQuantity" type="number" min="1" step="1" required></div>
+        <div><label>Amount Due (GH₵)</label><input id="creditAmount" type="number" min="0.01" step="0.01" required></div>
+        <div class="full"><label>Notes</label><textarea id="creditNotes" placeholder="Optional payment promise or notes"></textarea></div>
+      </form>
+      <button id="saveCreditBtn" class="primary" type="button">Record On-Credit Sale</button>
+      <div class="stockGrid" style="margin-top:16px"><div class="stockCard"><small>Outstanding Credit</small><strong id="creditOutstanding">GH₵0.00</strong></div><div class="stockCard"><small>Crates on Credit</small><strong id="creditUnits">0</strong></div></div>
+      <h3>My Credit Records</h3><div class="tablebox"><table><thead><tr><th>Date</th><th>Customer</th><th>Stock</th><th>Crates</th><th>Amount Due</th><th>Paid</th><th>Balance</th><th>Status</th><th>Action</th></tr></thead><tbody id="creditBody"><tr><td colspan="9">Loading credit records...</td></tr></tbody></table></div>
+    </div>
+  </section>
+
+  <section id="stockHistory" class="section">
+    <div class="panel">
+      <h2>📅 Stock Edit & Daily Sales History</h2>
+      <p>Each stock batch keeps one record. Every time you update its sold or damaged quantity, the date, time and quantity change are recorded here for you and Ezelex admin.</p>
+      <div id="stockHistoryMsg"></div>
+      <div class="stockGrid">
+        <div class="stockCard"><small>Days With Sales</small><strong id="historyDaysCount">0</strong></div>
+        <div class="stockCard"><small>Units Sold From Updates</small><strong id="historyUnitsSold">0</strong></div>
+        <div class="stockCard"><small>Best Sales Day</small><strong id="historyBestDay">—</strong></div>
+        <div class="stockCard"><small>Recorded Sales Value</small><strong id="historySalesValue">GH₵0.00</strong></div>
+      </div>
+      <h3>Daily Performance</h3>
+      <p class="live">Daily units sold and estimated sales value from your recorded stock updates.</p>
+      <div class="dailyChartPanel">
+        <div id="dailyChartEmpty" class="msg hidden">No stock sales have been recorded through stock edits yet.</div>
+        <canvas id="dailyPerformanceChart" role="img" aria-label="Daily stock sales performance chart"></canvas>
+        <div id="dailyChartLegend" class="dailyChartLegend">
+          <span><i class="legendUnits"></i> Units sold</span>
+          <span><i class="legendValue"></i> Estimated sales value (GH₵)</span>
+        </div>
+        <div id="dailyChartAccessible" class="dailyChartAccessible" aria-live="polite"></div>
+      </div>
+      <h3 style="margin-top:22px">Full Edit History</h3>
+      <div class="tablebox"><table><thead><tr><th>Date & Time Edited</th><th>Stock Item</th><th>Action</th><th>Sold Change</th><th>Sold Total</th><th>Damage Total</th><th>Remaining</th><th>Notes</th></tr></thead><tbody id="stockHistoryBody"><tr><td colspan="8">Loading...</td></tr></tbody></table></div>
+    </div>
+  </section>
+
+  <section id="profile" class="section">
+    <div class="panel">
+      <h2>My Profile</h2>
+      <div class="infoBox">
+        <strong>Worker ID:</strong> <span id="profileWorkerId">—</span><br>
+        <strong>Full Name:</strong> <span id="profileFullName">—</span><br>
+        <strong>Phone:</strong> <span id="profilePhone">—</span><br>
+        <strong>Role:</strong> <span id="profileRole">—</span><br>
+        <strong>Status:</strong> <span id="profileActive">—</span><br>
+        <strong>Contract Start:</strong> <span id="profileStart">—</span><br>
+        <strong>Contract End:</strong> <span id="profileEnd">—</span><br>
+        <strong>Login Email:</strong> <span id="profileEmail">—</span>
+      </div>
+    </div>
+  </section>
+
+  <section id="communication" class="section">
+    <div class="panel">
+      <h2>📩 Communication</h2>
+      <p>Messages and announcements from Ezelex Enterprise will appear here when the communication records are available.</p>
+      <div id="messagesBody"><div class="message">No messages yet.</div></div>
+    </div>
+  </section>
+
+  <section id="contract" class="section">
+    <div class="panel">
+      <h2>📄 My Contract</h2>
+      <div class="infoBox">
+        <strong>Contract Start:</strong> <span id="contractStart">—</span><br>
+        <strong>Contract End:</strong> <span id="contractEnd">—</span>
+      </div>
+      <p style="margin-top:16px">Your contract details are linked to your worker profile. If Ezelex Enterprise has provided a contract document or link, it can be added here later without changing your worker login.</p>
+    </div>
+  </section>
+</main>
+
+<script>
+const SUPABASE_URL="https://hweczhwoggmsrwhkktrx.supabase.co";
+const SUPABASE_PUBLISHABLE_KEY="sb_publishable_q52vf7tvpI4ho9FkGfZhvw_xdUv_bni";
+const {createClient}=supabase;
+const db=createClient(SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY);
+let profile=null;
+let currentUser=null;
+let reportSalesRows=[];
+let liveStockRows=[];
+let stockHistoryRows=[];
+let editingStockOriginal=null;
+let creditRows=[];
+let currentStockWeek=null;
+let stockWeekRows=[];
+let selectedStockWeekId="";
+
+const $=id=>document.getElementById(id);
+function msg(id,text,type=""){ $(id).innerHTML=text?`<div class="msg ${type}">${text}</div>`:""; }
+function today(){const d=new Date();return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");}
+function esc(v){return String(v??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[m]));}
+function money(v){return "GH₵"+Number(v||0).toLocaleString("en-GH",{minimumFractionDigits:2,maximumFractionDigits:2});}
+function num(id){const n=Number($(id).value);return Number.isFinite(n)&&n>=0?n:0;}
+function dateOnly(v){return v?String(v).slice(0,10):"—";}
+
+function showLogin(){
+  $("loginSection").classList.remove("hidden");
+  $("portal").classList.add("hidden");
+  $("settingsBtn").classList.add("hidden");
+}
+function showPortal(){
+  $("loginSection").classList.add("hidden");
+  $("portal").classList.remove("hidden");
+  $("settingsBtn").classList.remove("hidden");
+}
+
+function mondayDateISO(value=today()){
+  const d=new Date(String(value).slice(0,10)+"T12:00:00");
+  const day=d.getDay();
+  d.setDate(d.getDate()-(day===0?6:day-1));
+  return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
+}
+function addDaysISO(value,days){const d=new Date(String(value).slice(0,10)+"T12:00:00");d.setDate(d.getDate()+days);return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");}
+function weekLabel(w){return w?`${dateOnly(w.week_start)} – ${dateOnly(w.week_end)}`:"No weekly book";}
+async function ensureCurrentStockWeek(){
+  const start=mondayDateISO(today()),end=addDaysISO(start,6);
+  // Any still-open previous week is archived automatically when a new Monday begins.
+  const closedOld=await db.from("worker_stock_weeks").update({status:"closed",closed_at:new Date().toISOString()}).eq("worker_id",currentUser.id).lt("week_start",start).eq("status","open");
+  if(closedOld.error) console.warn("Could not auto-close previous weekly books:",closedOld.error.message);
+  let q=await db.from("worker_stock_weeks").select("*").eq("worker_id",currentUser.id).eq("week_start",start).maybeSingle();
+  if(q.error){msg("weeklyStockMsg","Weekly stock setup needs the supplied SQL to be run in Supabase: "+esc(q.error.message),"error");return null;}
+  if(!q.data){q=await db.from("worker_stock_weeks").insert({worker_id:currentUser.id,week_start:start,week_end:end,status:"open"}).select("*").single();}
+  if(q.error){msg("weeklyStockMsg","Could not open this week's stock book: "+esc(q.error.message),"error");return null;}
+  currentStockWeek=q.data;
+  // When a new Monday book is first opened, carry forward each previous batch's unsold physical stock.
+  // Carry-forward rows have zero new purchase quantity/cost and zero profit, so historical purchase/profit totals are not duplicated.
+  const existingWeekRows=await db.from("worker_stock_batches").select("id,stock_type").eq("worker_id",currentUser.id).eq("week_id",currentStockWeek.id).limit(1);
+  if(!existingWeekRows.error&&!(existingWeekRows.data||[]).length){
+    const prevWeek=await db.from("worker_stock_weeks").select("id,week_start").eq("worker_id",currentUser.id).lt("week_start",start).order("week_start",{ascending:false}).limit(1).maybeSingle();
+    if(prevWeek.data){
+      const prevBatches=await db.from("worker_stock_batches").select("*").eq("worker_id",currentUser.id).eq("week_id",prevWeek.data.id).gt("remaining_quantity",0);
+      if(!prevBatches.error&&prevBatches.data?.length){
+        const carryRows=prevBatches.data.map(b=>({worker_id:currentUser.id,week_id:currentStockWeek.id,stock_type:"carry_forward",stock_date:start,product_service:b.product_service||"Opening stock",total_quantity:Number(b.remaining_quantity||0),capital_amount:0,cost_per_unit:Number(b.cost_per_unit||0),selling_price_per_unit:Number(b.selling_price_per_unit||0),sold_quantity:0,damage_quantity:0,loss_quantity:0,sales_revenue:0,sold_cost:0,damage_value:0,loss_value:0,remaining_quantity:Number(b.remaining_quantity||0),remaining_value:Number(b.remaining_quantity||0)*Number(b.cost_per_unit||0),purchase_total:0,cash_in_hand:0,credit_quantity:0,credit_outstanding:0,profit_loss:0,notes:`Opening balance carried forward from week starting ${prevWeek.data.week_start}. Original purchase and profit remain in the previous week's record.`}));
+        const inserted=await db.from("worker_stock_batches").insert(carryRows);
+        if(inserted.error)msg("weeklyStockMsg","Weekly book opened, but previous unsold stock could not be carried forward automatically: "+esc(inserted.error.message)+". Please contact admin before recording sales.","error");
+      }
+    }
+  }
+  renderStockWeekControls();
+  return currentStockWeek;
+}
+function renderStockWeekControls(){
+  if(!currentStockWeek)return;
+  $("weekRangeLabel").textContent=weekLabel(currentStockWeek);
+  const isOpen=currentStockWeek.status==="open";
+  $("weekStatusLabel").textContent=isOpen?"OPEN — add purchases and track sales":"CLOSED — archived and read-only";
+  $("closeStockWeekBtn").disabled=!isOpen;
+  $("closeStockWeekBtn").textContent=isOpen?"Close This Week (Sunday)":"Week Closed";
+  const picker=$("stockWeekPicker");
+  if(picker&&stockWeekRows.length){const old=picker.value;picker.innerHTML='<option value="">Current week</option>'+stockWeekRows.map(w=>`<option value="${esc(w.id)}">${esc(weekLabel(w))} — ${esc(String(w.status||"open").toUpperCase())}</option>`).join("");picker.value=old&&stockWeekRows.some(w=>w.id===old)?old:"";}
+}
+async function loadStockWeeks(){
+  if(!currentUser)return;
+  const r=await db.from("worker_stock_weeks").select("*").eq("worker_id",currentUser.id).order("week_start",{ascending:false}).limit(100);
+  if(r.error){msg("weeklyStockMsg","Weekly stock books could not be loaded. Run the supplied weekly stock SQL first: "+esc(r.error.message),"error");return;}
+  stockWeekRows=r.data||[];renderStockWeekControls();
+}
+async function closeCurrentStockWeek(){
+  if(!currentStockWeek||currentStockWeek.status!=="open")return;
+  if(new Date().getDay()!==0){msg("weeklyStockMsg","You can close the weekly book on Sunday. It will automatically be archived when the next Monday begins.","error");return;}
+  if(!confirm(`Close the stock book for ${weekLabel(currentStockWeek)}? This archives the week without deleting stock or profit history.`))return;
+  const r=await db.from("worker_stock_weeks").update({status:"closed",closed_at:new Date().toISOString()}).eq("id",currentStockWeek.id).eq("worker_id",currentUser.id).eq("status","open");
+  if(r.error){msg("weeklyStockMsg","Could not close this week: "+esc(r.error.message),"error");return;}
+  currentStockWeek.status="closed";renderStockWeekControls();msg("weeklyStockMsg","Weekly stock book closed and archived. Your records and Profit/Loss were kept.","success");await Promise.all([loadStock(),loadStockWeeks()]);
+}
+$("closeStockWeekBtn")?.addEventListener("click",closeCurrentStockWeek);
+$("stockWeekPicker")?.addEventListener("change",async()=>{selectedStockWeekId=$("stockWeekPicker").value||"";await loadStock();});
+
+async function start(){
+  const {data:{session}}=await db.auth.getSession();
+  if(!session){showLogin();return;}
+  await loadProfile(session.user);
+}
+
+async function loadProfile(user){
+  currentUser=user;
+  const {data,error}=await db.from("worker_profiles")
+    .select("user_id,worker_id,full_name,phone,role,active,activated_at,contract_start,contract_end")
+    .eq("user_id",user.id).maybeSingle();
+
+  if(error||!data||String(data.role||"").toLowerCase()==="admin"){
+    await db.auth.signOut();
+    showLogin();
+    msg("loginMsg","This account is not a worker account.","error");
+    return;
+  }
+  if(!data.activated_at){
+    const activation=await db.from("worker_profiles").update({active:true,activated_at:new Date().toISOString()}).eq("user_id",user.id).is("activated_at",null).select("user_id,active,activated_at").maybeSingle();
+    if(activation.error||!activation.data){await db.auth.signOut();showLogin();msg("loginMsg","Your worker account could not be activated. Please contact Ezelex Enterprise admin.","error");return;}
+    data.active=true; data.activated_at=activation.data.activated_at;
+  }else if(!data.active){
+    await db.auth.signOut(); showLogin(); msg("loginMsg","Your worker account is inactive. Please contact Ezelex Enterprise admin.","error"); return;
+  }
+  profile=data;
+  showPortal();
+
+  $("workerName").textContent=data.full_name||"Worker";
+  $("workerId").textContent=data.worker_id||"—";
+  $("workerRole").textContent=data.role||"worker";
+  $("workerStatus").textContent=data.active?"Active":"Inactive";
+  $("saleDate").value=today();
+  $("stockDate").value=today();
+  if($("creditDate"))$("creditDate").value=today();
+
+  $("dashEmail").textContent=user.email||"—";
+  $("dashPhone").textContent=data.phone||"—";
+  $("profileWorkerId").textContent=data.worker_id||"—";
+  $("profileFullName").textContent=data.full_name||"—";
+  $("profilePhone").textContent=data.phone||"—";
+  $("profileRole").textContent=data.role||"—";
+  $("profileActive").textContent=data.active?"Active":"Inactive";
+  $("profileStart").textContent=dateOnly(data.contract_start);
+  $("profileEnd").textContent=dateOnly(data.contract_end);
+  $("profileEmail").textContent=user.email||"—";
+  $("contractStart").textContent=dateOnly(data.contract_start);
+  $("contractEnd").textContent=dateOnly(data.contract_end);
+
+  await ensureCurrentStockWeek();
+  await loadStockWeeks();
+  await Promise.all([loadSales(),loadStock(),loadStockHistory(),loadCredits()]);
+  await loadMessages();
+}
+
+function salesForWorker(){
+  return db.from("sales").select("*").eq("worker_id",currentUser.id).order("sale_date",{ascending:false});
+}
+async function loadSales(){
+  const {data,error}=await salesForWorker();
+  if(error){
+    msg("saleMsg","Could not load your sales: "+error.message,"error");
+    $("salesBody").innerHTML='<tr><td colspan="8">Could not load sales.</td></tr>';
+    return;
+  }
+  const rows=data||[];
+  liveStockRows = rows;
+  reportSalesRows=rows;
+  const now=new Date();
+  const startDay=new Date(now.getFullYear(),now.getMonth(),now.getDate());
+  const weekStart=new Date(startDay); weekStart.setDate(startDay.getDate()-startDay.getDay());
+  const monthStart=new Date(now.getFullYear(),now.getMonth(),1);
+  let todayTotal=0,weekTotal=0,monthTotal=0,allTotal=0;
+  rows.forEach(s=>{
+    const amount=Number(s.sale_amount||0); allTotal+=amount;
+    const d=new Date(String(s.sale_date||"").slice(0,10)+"T00:00:00");
+    if(d>=startDay)todayTotal+=amount;
+    if(d>=weekStart)weekTotal+=amount;
+    if(d>=monthStart)monthTotal+=amount;
+  });
+  $("todaySales").textContent=money(todayTotal);
+  $("weekSales").textContent=money(weekTotal);
+  $("monthSales").textContent=money(monthTotal);
+  $("allSales").textContent=money(allTotal);
+  $("lastActivity").textContent=rows.length?dateOnly(rows[0].sale_date):"No sales recorded yet.";
+
+  if(!rows.length){
+    $("salesBody").innerHTML='<tr><td colspan="8">No sales recorded yet.</td></tr>';
+    $("recentSalesBody").innerHTML='<tr><td colspan="6">No sales recorded yet.</td></tr>';
+    return;
+  }
+  $("salesBody").innerHTML=rows.map(s=>{
+    const st=String(s.status||"pending").toLowerCase();
+    const pending=(st==="pending"||!s.status);
+    const action=pending
+      ? `<span style="display:inline-flex;gap:6px;flex-wrap:wrap;align-items:center"><span class="badge" style="background:#fff3cd;color:#8a5b00">PENDING</span><button type="button" onclick="editSale('${esc(s.id)}')" style="padding:7px 10px">Edit</button><button type="button" onclick="deleteSale('${esc(s.id)}')" style="padding:7px 10px;background:#b42318;color:#fff">Delete</button></span>`
+      : `<span class="badge" style="background:${st==='approved'?'#dcfae6':'#fee4e2'};color:${st==='approved'?'#067647':'#b42318'}">${esc(st.toUpperCase())}</span>`;
+    return `<tr>
+      <td>${esc(dateOnly(s.sale_date))}</td><td>${esc(s.customer_reference||"")}</td><td>${esc(s.product_service||"")}</td>
+      <td>${esc(s.quantity??"")}</td><td>${money(s.sale_amount)}</td><td>${esc(s.payment_method||"")}</td><td>${esc(s.notes||"")}</td><td>${action}</td>
+    </tr>`;
+  }).join("");
+  $("recentSalesBody").innerHTML=rows.slice(0,5).map(s=>`<tr>
+    <td>${esc(dateOnly(s.sale_date))}</td><td>${esc(s.customer_reference||"")}</td><td>${esc(s.product_service||"")}</td>
+    <td>${esc(s.quantity??"")}</td><td>${money(s.sale_amount)}</td><td>${esc(s.payment_method||"")}</td>
+  </tr>`).join("");
+}
+
+function calculateStock(){
+  const total=num("stockTotal"),capital=num("capitalAmount"),unitCost=num("costPerUnit"),purchase=total*unitCost,price=num("sellPrice"),sold=num("stockSold"),damage=num("stockDamage");
+  const remaining=Math.max(0,total-sold-damage),revenue=sold*price,soldCost=sold*unitCost,damageValue=damage*unitCost,remainingValue=remaining*unitCost,profit=revenue-soldCost-damageValue,accounted=sold+damage,cash=capital+revenue-Number(editingStockOriginal?.credit_outstanding||0)-purchase;
+  const outstandingCredit=(creditRows||[]).reduce((sum,c)=>sum+Math.max(0,Number(c.amount_due||0)-Number(c.amount_paid||0)),0);
+  $("calcTotal").textContent=total+" units";$("calcTotalValue").textContent=money(purchase);
+  $("calcSold").textContent=sold+" units";$("calcRevenue").textContent=money(revenue)+" revenue";
+  $("calcRemaining").textContent=remaining+" units";$("calcRemainingValue").textContent=money(remainingValue)+" stock value";
+  $("calcUnitCost").textContent=money(unitCost);$("calcSoldCost").textContent=money(soldCost);
+  $("calcDamageValue").textContent=money(damageValue);$("calcCapital").textContent=money(capital);$("calcCreditCapital").textContent=money(outstandingCredit);$("calcTotalCapital").textContent=money(capital+outstandingCredit);$("calcCashInHand").textContent=money(cash);$("calcSalesRevenue").textContent=money(revenue);
+  $("calcProfit").textContent=money(profit);$("calcAccounted").textContent=accounted+" units";
+  const card=$("profitCard");card.classList.toggle("profit",profit>=0);card.classList.toggle("loss",profit<0);
+  $("profitLabel").textContent=profit>0?"You are making a profit":profit<0?"You are currently making a loss":"Break-even";
+  const over=accounted>total || cash<0;
+  $("calcAccountedNote").textContent=accounted>total?"Too many units accounted for — check your numbers.":cash<0?"Purchase cost exceeds starting capital plus recorded sales — check your figures.":"Sold + damage";
+  $("saveStockBtn").disabled=total<=0||accounted>total||cash<0;
+}
+
+async function loadStock(){
+  const {data,error}=await db.from("worker_stock_batches").select("*").eq("worker_id",currentUser.id).order("stock_date",{ascending:false});
+  if(error){$("stockBody").innerHTML='<tr><td colspan="11">Stock records could not be loaded.</td></tr>';msg("stockLiveMsg","Could not load live stock: "+error.message,"error");return;}
+  const allRows=data||[]; liveStockRows=allRows;
+  const chosenWeekId=selectedStockWeekId||currentStockWeek?.id||"";
+  const rows=chosenWeekId?allRows.filter(r=>String(r.week_id||"")===String(chosenWeekId)):allRows.filter(r=>!r.week_id||String(r.week_id)===String(currentStockWeek?.id||""));
+  let units=0,value=0,revenue=0,profit=0,cash=0,purchased=0,soldWeek=0;
+  rows.forEach(r=>{units+=Number(r.remaining_quantity||0);value+=Number(r.remaining_value||0);revenue+=Number(r.sales_revenue||0);profit+=Number(r.profit_loss||0);if(r.stock_type!=="carry_forward")purchased+=Number(r.total_quantity||0);soldWeek+=Number(r.sold_quantity||0);const cap=Number(r.capital_amount??r.purchase_total??0),pur=Number(r.purchase_total||0);cash+=Number(r.cash_in_hand??(cap+Number(r.sales_revenue||0)-Number(r.credit_outstanding||0)-pur));});
+  $("liveUnits").textContent=units.toLocaleString();$("liveValue").textContent=money(value);$("liveRevenue").textContent=money(revenue);$("liveProfit").textContent=money(profit);$("liveProfitLabel").textContent=profit>=0?"selected week profit":"selected week loss";
+  $("weekPurchased").textContent=purchased.toLocaleString();$("weekSold").textContent=soldWeek.toLocaleString();$("weekRemaining").textContent=units.toLocaleString();
+  // Reuse the existing stock-batch Profit/Loss values without changing their calculation.
+  const weekProfitCard=$("weekProfitCard");
+  $("weekProfit").textContent=money(profit);
+  weekProfitCard.classList.toggle("profit",profit>0);
+  weekProfitCard.classList.toggle("loss",profit<0);
+  $("weekProfitLabel").textContent=profit>0?"You're gaining this week":profit<0?"You're losing money this week":"Break-even so far";
+  const viewingClosed=!!selectedWeekIsClosed();
+  if(currentStockWeek?.status==="closed"&&!selectedStockWeekId){msg("weeklyStockMsg","This week's book is closed. Choose the current week after Monday to continue adding stock.","error");}
+  if(!rows.length){$("stockBody").innerHTML='<tr><td colspan="11">No stock records in this week yet.</td></tr>';}
+  else $("stockBody").innerHTML=rows.map(r=>{const cap=Number(r.capital_amount??r.purchase_total??0),pur=Number(r.purchase_total||0),ci=Number(r.cash_in_hand??(cap+Number(r.sales_revenue||0)-Number(r.credit_outstanding||0)-pur));const editable=!viewingClosed&&currentStockWeek?.status!=="closed"&&String(r.week_id||"")===String(currentStockWeek?.id||"");return `<tr><td>${esc(dateOnly(r.stock_date))}</td><td>${esc(r.product_service||"")}${r.stock_type==="carry_forward"?' <span class="badge">Opening balance</span>':''}</td><td>${esc(r.total_quantity??0)}</td><td>${esc(r.sold_quantity??0)}</td><td>${esc(r.damage_quantity??0)}</td><td>${esc(r.remaining_quantity??0)}</td><td>${money(cap)}</td><td>${money(pur)}</td><td>${money(ci)}</td><td>${money(r.profit_loss)}</td><td>${editable?`<button type="button" class="primary" onclick="editStock('${esc(r.id)}')">Edit</button>`:'<span class="badge">Archived</span>'}</td></tr>`;}).join("");
+  const sel=$("creditStockBatch");if(sel){const prev=sel.value;sel.innerHTML='<option value="">Choose stock batch</option>'+allRows.filter(r=>String(r.week_id||"")===String(currentStockWeek?.id||"")&&Number(r.remaining_quantity||0)>0).map(r=>`<option value="${esc(r.id)}">${esc(dateOnly(r.stock_date))} — ${esc(r.product_service||"Stock")} (remaining ${Number(r.remaining_quantity||0)})</option>`).join("");if(allRows.some(r=>r.id===prev))sel.value=prev;}
+  $("saveStockBtn").disabled=!!currentStockWeek&&currentStockWeek.status!=="open"&&!editingStockId;
+}
+function selectedWeekIsClosed(){const id=selectedStockWeekId||currentStockWeek?.id;const w=stockWeekRows.find(x=>String(x.id)===String(id));return !!w&&w.status==="closed";}
+
+function dateTime(v){if(!v)return "—";const d=new Date(v);return Number.isNaN(d.getTime())?String(v):d.toLocaleString("en-GB",{day:"2-digit",month:"short",year:"numeric",hour:"2-digit",minute:"2-digit",second:"2-digit"});}
+async function loadStockHistory(){
+  const {data,error}=await db.from("worker_stock_edit_history").select("*").eq("worker_id",currentUser.id).order("changed_at",{ascending:false}).limit(1000);
+  if(error){$("stockHistoryBody").innerHTML='<tr><td colspan="8">History unavailable. Please run the supplied stock history SQL in Supabase.</td></tr>';$("stockDailyBody").innerHTML='<tr><td colspan="4">History unavailable.</td></tr>';msg("stockHistoryMsg","Could not load stock history: "+esc(error.message),"error");return;}
+  // Hide historical deletion entries from the worker Edit History; keep normal stock edits visible.
+  stockHistoryRows=(data||[]).filter(h=>!String(h.action||"").toLowerCase().includes("delet"));renderStockHistory();
+}
+function drawDailyPerformanceChart(daily){
+  const canvas=$("dailyPerformanceChart");
+  const empty=$("dailyChartEmpty");
+  const legend=$("dailyChartLegend");
+  const accessible=$("dailyChartAccessible");
+  if(!canvas)return;
+  const ctx=canvas.getContext("2d");
+  if(!ctx)return;
+
+  if(!daily.length){
+    canvas.classList.add("hidden");
+    legend.classList.add("hidden");
+    empty.classList.remove("hidden");
+    accessible.textContent="";
+    return;
+  }
+  canvas.classList.remove("hidden");
+  legend.classList.remove("hidden");
+  empty.classList.add("hidden");
+
+  // Display up to the latest 14 days in chronological order.
+  const points=daily.slice().sort((a,b)=>a.day.localeCompare(b.day)).slice(-14);
+  const rect=canvas.getBoundingClientRect();
+  const width=Math.max(300,Math.floor(rect.width||600));
+  const height=Math.max(250,Math.floor(rect.height||320));
+  const ratio=window.devicePixelRatio||1;
+  canvas.width=Math.floor(width*ratio);
+  canvas.height=Math.floor(height*ratio);
+  ctx.setTransform(ratio,0,0,ratio,0,0);
+  ctx.clearRect(0,0,width,height);
+
+  const pad={left:48,right:16,top:18,bottom:52};
+  const plotW=width-pad.left-pad.right;
+  const plotH=height-pad.top-pad.bottom;
+  const maxUnits=Math.max(1,...points.map(p=>Number(p.units)||0));
+  const maxValue=Math.max(1,...points.map(p=>Number(p.value)||0));
+  const slot=plotW/points.length;
+  const barW=Math.max(5,Math.min(22,slot*0.28));
+
+  ctx.font="11px Arial";
+  ctx.textBaseline="middle";
+  // Horizontal grid and left-axis unit labels.
+  for(let i=0;i<=4;i++){
+    const y=pad.top+plotH-(plotH*i/4);
+    ctx.beginPath();ctx.moveTo(pad.left,y);ctx.lineTo(width-pad.right,y);
+    ctx.strokeStyle="#e5e7eb";ctx.lineWidth=1;ctx.stroke();
+    ctx.fillStyle="#64748b";
+    ctx.textAlign="right";
+    ctx.fillText(String(Math.round(maxUnits*i/4)),pad.left-8,y);
+  }
+
+  points.forEach((p,i)=>{
+    const cx=pad.left+slot*i+slot/2;
+    const unitH=(Number(p.units)||0)/maxUnits*plotH;
+    const valueH=(Number(p.value)||0)/maxValue*plotH;
+    ctx.fillStyle="#2563eb";
+    ctx.fillRect(cx-barW-2,pad.top+plotH-unitH,barW,unitH);
+    ctx.fillStyle="#16a34a";
+    ctx.fillRect(cx+2,pad.top+plotH-valueH,barW,valueH);
+
+    ctx.save();
+    ctx.translate(cx,height-pad.bottom+9);
+    ctx.rotate(-Math.PI/5);
+    ctx.fillStyle="#475569";
+    ctx.textAlign="right";
+    ctx.fillText(String(p.day).slice(5),0,0);
+    ctx.restore();
+  });
+
+  ctx.fillStyle="#475569";
+  ctx.textAlign="left";
+  ctx.fillText("Units sold",pad.left,10);
+  ctx.textAlign="right";
+  ctx.fillText("Bars compare each measure against its own scale",width-pad.right,height-8);
+  accessible.textContent="Chart showing the latest "+points.length+" days. "+
+    points.map(p=>p.day+": "+p.units+" units sold, estimated sales value "+money(p.value)).join("; ")+".";
+} 
+
+function renderStockHistory(){
+  const byDay={};let soldTotal=0,valueTotal=0;
+  stockHistoryRows.forEach(h=>{const delta=Number(h.sold_delta||0);if(delta>0){const day=dateOnly(h.changed_at);const key=day+"|"+(h.product_service||"Stock");if(!byDay[key])byDay[key]={day,product:h.product_service||"Stock",units:0,value:0};byDay[key].units+=delta;byDay[key].value+=delta*Number(h.selling_price_per_unit||0);soldTotal+=delta;valueTotal+=delta*Number(h.selling_price_per_unit||0);}});
+  const daily=Object.values(byDay).sort((a,b)=>b.day.localeCompare(a.day)||b.units-a.units);
+  const dayTotals={};daily.forEach(x=>{if(!dayTotals[x.day])dayTotals[x.day]={units:0,value:0};dayTotals[x.day].units+=x.units;dayTotals[x.day].value+=x.value;});
+  const days=Object.entries(dayTotals).sort((a,b)=>b[0].localeCompare(a[0]));
+  const best=days.slice().sort((a,b)=>b[1].value-a[1].value)[0];
+  $("historyDaysCount").textContent=days.length;$("historyUnitsSold").textContent=soldTotal.toLocaleString();$("historyBestDay").textContent=best?best[0]+" ("+money(best[1].value)+")":"—";$("historySalesValue").textContent=money(valueTotal);
+  drawDailyPerformanceChart(daily);
+  $("stockHistoryBody").innerHTML=stockHistoryRows.length?stockHistoryRows.map(h=>`<tr><td>${esc(dateTime(h.changed_at))}</td><td>${esc(h.product_service||"")}</td><td>${esc(h.action||"Edited")}</td><td>${Number(h.sold_delta||0)>0?"+":""}${Number(h.sold_delta||0)}</td><td>${esc(h.sold_after??"—")}</td><td>${esc(h.damage_after??"—")}</td><td>${esc(h.remaining_after??"—")}</td><td>${esc(h.notes||"")}</td></tr>`).join(""):'<tr><td colspan="8">No stock edits recorded yet.</td></tr>';
+}
+async function writeStockHistory(before,after,action){
+  const soldBefore=Number(before?.sold_quantity||0),soldAfter=Number(after?.sold_quantity||0),damageBefore=Number(before?.damage_quantity||0),damageAfter=Number(after?.damage_quantity||0);
+  const row={stock_batch_id:String(after.id||before?.id||""),worker_id:currentUser.id,stock_date:after.stock_date||before?.stock_date||today(),product_service:after.product_service||before?.product_service||"Stock",action,sold_before:soldBefore,sold_after:soldAfter,sold_delta:soldAfter-soldBefore,damage_before:damageBefore,damage_after:damageAfter,remaining_after:Number(after.remaining_quantity||0),selling_price_per_unit:Number(after.selling_price_per_unit||before?.selling_price_per_unit||0),notes:after.notes||null,changed_at:new Date().toISOString()};
+  const {error}=await db.from("worker_stock_edit_history").insert(row);return error;
+}
+
+["stockTotal","capitalAmount","costPerUnit","sellPrice","stockSold","stockDamage"].forEach(id=>$(id).addEventListener("input",calculateStock));
+
+let editingStockId="";
+function updateStockFormCreditSummary(batchId){
+  const rows=(creditRows||[]).filter(c=>String(c.stock_batch_id||"")===String(batchId||""));
+  const outstanding=rows.reduce((sum,c)=>sum+Math.max(0,Number(c.amount_due||0)-Number(c.amount_paid||0)),0);
+  const qty=rows.reduce((sum,c)=>sum+(Number(c.quantity||0)),0);
+  if($("stockFormCreditAmount"))$("stockFormCreditAmount").textContent=money(outstanding);
+  if($("stockFormCreditQuantity"))$("stockFormCreditQuantity").textContent=String(qty);
+}
+$("openStockCreditBtn")?.addEventListener("click",()=>{
+  if(!editingStockId){
+    msg("stockFormCreditMsg","Save the stock record first, then choose Edit on that record and use this button to record credit against it.","error");
+    return;
+  }
+  const batch=liveStockRows.find(r=>String(r.id)===String(editingStockId));
+  if(!batch){msg("stockFormCreditMsg","This stock batch is not loaded yet. Save the stock, then try again.","error");return;}
+  const selector=$("creditStockBatch");
+  if(selector)selector.value=editingStockId;
+  document.querySelectorAll(".tab").forEach(b=>b.classList.remove("active"));
+  document.querySelectorAll(".section").forEach(sec=>sec.classList.remove("active"));
+  document.querySelector('.tab[data-tab="credit"]')?.classList.add("active");
+  $("credit").classList.add("active");
+  $("creditCustomer")?.focus();
+  msg("creditMsg","Recording credit against: "+esc(batch.product_service||"Stock")+". Enter the customer and quantity below.","success");
+});
+function startStockEdit(r){
+  editingStockId=r.id||""; editingStockOriginal={...r}; $("editingStockId").value=editingStockId; $("deleteStockBtn").style.display="inline-block";
+  $("stockDate").value=dateOnly(r.stock_date)||today(); $("stockProduct").value=r.product_service||"";
+  $("stockTotal").value=Number(r.total_quantity||0); $("capitalAmount").value=Number(r.capital_amount ?? r.purchase_total ?? 0); $("costPerUnit").value=Number(r.cost_per_unit ?? (Number(r.total_quantity||0)>0?Number(r.purchase_total||0)/Number(r.total_quantity||0):0));
+  $("sellPrice").value=Number(r.selling_price_per_unit||0); $("stockSold").value=Number(r.sold_quantity||0); $("stockDamage").value=Number(r.damage_quantity||0); $("stockNotes").value=r.notes||"";
+  $("saveStockBtn").textContent="Update Stock Record"; $("cancelEditStockBtn").style.display="inline-block"; updateStockFormCreditSummary(r.id); calculateStock(); document.getElementById("stockForm").scrollIntoView({behavior:"smooth",block:"center"});
+  msg("stockMsg","Editing stock batch. Update quantity, purchase cost per unit, sold or damage quantity, then save. ","success");
+}
+window.editStock=async function(id){
+  const {data:errorWeekData}=await db.from("worker_stock_batches").select("week_id").eq("id",id).eq("worker_id",currentUser.id).maybeSingle();
+  const week=stockWeekRows.find(w=>String(w.id)===String(errorWeekData?.week_id||""));
+  if(week&&week.status==="closed"){msg("stockMsg","This weekly stock book is closed and archived. It is kept for reporting and cannot be edited.","error");return;}
+  if(errorWeekData?.week_id&&String(errorWeekData.week_id)!==String(currentStockWeek?.id||"")){msg("stockMsg","Only the current week's stock can be edited. Older weekly books are archived for reporting.","error");return;}
+  const {data,error}=await db.from("worker_stock_batches").select("*").eq("id",id).eq("worker_id",currentUser.id).maybeSingle();
+  if(error||!data){msg("stockMsg","Could not open that stock record for editing.","error");return;} startStockEdit(data);
+};
+function cancelStockEdit(){
+  editingStockId=""; editingStockOriginal=null; $("editingStockId").value=""; $("stockForm").reset(); $("stockDate").value=today(); $("stockSold").value=0; $("stockDamage").value=0; $("saveStockBtn").textContent="Save Stock Record"; $("cancelEditStockBtn").style.display="none"; $("deleteStockBtn").style.display="none"; updateStockFormCreditSummary(""); calculateStock(); msg("stockMsg","Edit cancelled","");
+}
+$("cancelEditStockBtn").onclick=cancelStockEdit;
+$("deleteStockBtn").onclick=async()=>{
+  if(!editingStockId){msg("stockMsg","Open a stock record with Edit before deleting it.","error");return;}
+  const product=$("stockProduct").value.trim()||"this stock record";
+  if(!confirm(`Delete the stock record for "${product}"? This will remove it from your stock records and the admin dashboard too. This action cannot be undone.`))return;
+  $("deleteStockBtn").disabled=true;
+  msg("stockMsg","Deleting stock record...");
+  // Deletions are intentionally not added to the shared edit-history table.
+  const {error}=await db.from("worker_stock_batches").delete().eq("id",editingStockId).eq("worker_id",currentUser.id);
+  $("deleteStockBtn").disabled=false;
+  if(error){msg("stockMsg","Stock record could not be deleted: "+error.message,"error");return;}
+  editingStockId=""; editingStockOriginal=null; $("editingStockId").value=""; $("stockForm").reset(); $("stockDate").value=today(); $("stockSold").value=0; $("stockDamage").value=0;
+  $("saveStockBtn").textContent="Save Stock Record"; $("cancelEditStockBtn").style.display="none"; $("deleteStockBtn").style.display="none"; calculateStock();
+  msg("stockMsg","Stock record deleted successfully. It has also been removed from the admin stock view.","success");
+  await Promise.all([loadStock(),loadStockHistory()]);
+};
+$("saveStockBtn").onclick=async()=>{
+  if(!editingStockId&&(!currentStockWeek||currentStockWeek.status!=="open")){msg("stockMsg","This weekly stock book is closed. Start or open the new Monday weekly book before adding stock.","error");return;}
+  if(selectedStockWeekId&&selectedStockWeekId!==String(currentStockWeek?.id||"")){msg("stockMsg","You are viewing an archived week. Switch to Current week before adding stock.","error");return;}
+  const total=num("stockTotal"),capital=num("capitalAmount"),unitCost=num("costPerUnit"),price=num("sellPrice"),purchase=(editingStockId&&editingStockOriginal?.stock_type==="carry_forward")?0:total*unitCost;
+  const enteredSold=num("stockSold"),enteredDamage=num("stockDamage");
+  const old=editingStockOriginal||{};
+  const oldSold=Number(old.sold_quantity||0),oldDamage=Number(old.damage_quantity||0);
+  // On edit, a lower quantity is treated as the additional quantity sold/damaged today;
+  // an equal or higher value is treated as the cumulative quantity for this stock batch.
+  const sold=editingStockId&&enteredSold<oldSold?oldSold+enteredSold:enteredSold;
+  const damage=editingStockId&&enteredDamage<oldDamage?oldDamage+enteredDamage:enteredDamage;
+  const revenue=sold*price,creditOutstanding=Number(old.credit_outstanding||0),cash=capital+revenue-creditOutstanding-purchase;
+  if(!$('stockDate').value||!$('stockProduct').value.trim()||total<=0||capital<0||unitCost<0||price<0||cash<0||sold+damage>total){msg("stockMsg","Please check the stock quantities and costs. Available cash (starting capital plus recorded sales) cannot be negative, and sold + damage cannot be greater than total stock.","error");return;}
+  const soldCost=sold*unitCost,damageValue=damage*unitCost,remaining=total-sold-damage,remainingValue=remaining*unitCost;
+  // Keep already-earned profit and add only the profit/loss from quantities newly recorded.
+  const addedSold=Math.max(0,sold-oldSold),addedDamage=Math.max(0,damage-oldDamage);
+  const priorProfit=Number(old.profit_loss||0);
+  const profit=editingStockId?priorProfit+(addedSold*(price-unitCost))-(addedDamage*unitCost):(revenue-soldCost-damageValue);
+  msg("stockMsg","Saving stock record...");
+  const record={worker_id:currentUser.id,week_id:editingStockId?(old.week_id||currentStockWeek?.id||null):(currentStockWeek?.id||null),stock_type:editingStockId?(old.stock_type||"purchase"):"purchase",credit_quantity:Number(old.credit_quantity||0),credit_outstanding:creditOutstanding,stock_date:$('stockDate').value,product_service:$('stockProduct').value.trim(),total_quantity:total,capital_amount:capital,cash_in_hand:cash,purchase_total:purchase,cost_per_unit:unitCost,selling_price_per_unit:price,sold_quantity:sold,damage_quantity:damage,loss_quantity:0,sales_revenue:revenue,sold_cost:soldCost,damage_value:damageValue,loss_value:0,remaining_quantity:remaining,remaining_value:remainingValue,profit_loss:profit,notes:$('stockNotes').value.trim()||null};
+  const wasEditing=!!editingStockId;
+  let result;
+  if(wasEditing){
+    const beforeTotal=Number(editingStockOriginal?.total_quantity||0),beforeUnit=Number(editingStockOriginal?.cost_per_unit ?? (beforeTotal>0?Number(editingStockOriginal?.purchase_total||0)/beforeTotal:0));
+    const purchaseChanged=beforeTotal!==total||Math.abs(beforeUnit-unitCost)>0.0001;
+    const historyAction=purchaseChanged?"Stock updated — purchase quantity/unit cost changed":"Stock updated";
+    let historyRecord=record;
+    if(purchaseChanged){
+      const audit=`Purchase quantity: ${beforeTotal} → ${total}; unit cost: ${money(beforeUnit)} → ${money(unitCost)}; calculated purchase total: ${money(Number(editingStockOriginal?.purchase_total||0))} → ${money(purchase)}.`;
+      historyRecord={...record,notes:[audit,String(record.notes||"")].filter(Boolean).join(" ")||null};
+    }
+    const historyError=await writeStockHistory(editingStockOriginal,historyRecord,historyAction);
+    if(historyError){msg("stockMsg","History could not be saved, so the stock was not changed. Please run the supplied stock history SQL in Supabase. "+historyError.message,"error");return;}
+    result=await db.from("worker_stock_batches").update(record).eq("id",editingStockId).eq("worker_id",currentUser.id);
+    if(result.error){msg("stockMsg","Stock update failed: "+result.error.message+". A history entry was retained for audit.","error");return;}
+  }else{
+    result=await db.from("worker_stock_batches").insert(record).select("*").single();
+    if(result.error){msg("stockMsg","Stock record could not be saved: "+result.error.message,"error");return;}
+    const historyError=await writeStockHistory(null,result.data,"Stock intake created");
+    if(historyError){msg("stockMsg","Stock was saved, but its history entry could not be saved. Please check the stock history SQL/policies: "+historyError.message,"error");}
+  }
+  const savedStockDate=record.stock_date;
+  msg("stockMsg",wasEditing?"Stock updated and date/time history recorded.":"Stock record saved successfully and sent to Ezelex admin.","success");
+  editingStockId=""; editingStockOriginal=null; $("editingStockId").value=""; $("stockForm").reset(); $("stockDate").value=savedStockDate||today(); $("stockSold").value=0; $("stockDamage").value=0; $("saveStockBtn").textContent="Save Stock Record"; $("cancelEditStockBtn").style.display="none"; $("deleteStockBtn").style.display="none"; updateStockFormCreditSummary(""); calculateStock(); await Promise.all([loadStock(),loadStockHistory(),loadStockWeeks()]);
+};
+
+async function loadCredits(){
+  if(!$('creditBody'))return;
+  const r=await db.from('worker_stock_credit_sales').select('*').eq('worker_id',currentUser.id).order('credit_date',{ascending:false}).order('created_at',{ascending:false});
+  if(r.error){$('creditBody').innerHTML='<tr><td colspan="9">Credit records unavailable. Check the supplied credit SQL and policies.</td></tr>';msg('creditMsg','Could not load credit records: '+esc(r.error.message),'error');return;}
+  creditRows=r.data||[];renderCredits();if(typeof calculateStock==="function")calculateStock();updateStockFormCreditSummary(editingStockId);
+}
+function renderCredits(){
+  const open=creditRows.filter(c=>Number(c.amount_due||0)>Number(c.amount_paid||0));
+  $('creditOutstanding').textContent=money(open.reduce((n,c)=>n+Number(c.amount_due||0)-Number(c.amount_paid||0),0));
+  $('creditUnits').textContent=open.reduce((n,c)=>n+Number(c.quantity||0),0).toLocaleString();
+  $('creditBody').innerHTML=creditRows.length?creditRows.map(c=>{const bal=Math.max(0,Number(c.amount_due||0)-Number(c.amount_paid||0));return `<tr><td>${esc(dateOnly(c.credit_date))}</td><td>${esc(c.customer_name||'')}</td><td>${esc(c.product_service||'Eggs')}</td><td>${Number(c.quantity||0)}</td><td>${money(c.amount_due)}</td><td>${money(c.amount_paid)}</td><td><b>${money(bal)}</b></td><td>${bal<=0?'<span class="badge approved">PAID</span>':'<span class="badge pending">OUTSTANDING</span>'}</td><td>${bal>0?`<button class="primary" onclick="markCreditPaid('${esc(c.id)}')">Mark fully paid</button>`:'—'}</td></tr>`}).join(''):'<tr><td colspan="9">No credit sales recorded.</td></tr>';
+}
+$('creditQuantity')?.addEventListener('input',()=>{const r=liveStockRows.find(x=>x.id===$('creditStockBatch').value);if(r&&Number($('creditQuantity').value)>0)$('creditAmount').value=(Number($('creditQuantity').value)*Number(r.selling_price_per_unit||0)).toFixed(2);});
+$('creditStockBatch')?.addEventListener('change',()=>{const r=liveStockRows.find(x=>x.id===$('creditStockBatch').value);if(r&&Number($('creditQuantity').value)>0)$('creditAmount').value=(Number($('creditQuantity').value)*Number(r.selling_price_per_unit||0)).toFixed(2);});
+$('saveCreditBtn')?.addEventListener('click',async()=>{
+  const batchId=$('creditStockBatch').value,stock=liveStockRows.find(x=>x.id===batchId),customer=$('creditCustomer').value.trim(),qty=Number($('creditQuantity').value),amount=Number($('creditAmount').value),date=$('creditDate').value;
+  if(!stock||!customer||!date||!Number.isInteger(qty)||qty<=0||!Number.isFinite(amount)||amount<=0){msg('creditMsg','Choose a stock batch and enter customer, date, crate quantity and amount due.','error');return;}
+  if(qty>Number(stock.remaining_quantity||0)){msg('creditMsg','There are not enough remaining crates in this stock batch.','error');return;}
+  const unit=Number(stock.cost_per_unit||0),oldSold=Number(stock.sold_quantity||0),oldRevenue=Number(stock.sales_revenue||0),newSold=oldSold+qty,newRevenue=oldRevenue+amount,newRemaining=Number(stock.total_quantity||0)-newSold-Number(stock.damage_quantity||0),oldCredit=Number(stock.credit_outstanding||0),newCredit=oldCredit+amount;
+  const credit={stock_batch_id:stock.id,worker_id:currentUser.id,customer_name:customer,product_service:stock.product_service||'Eggs',quantity:qty,amount_due:amount,amount_paid:0,credit_date:date,notes:$('creditNotes').value.trim()||null,status:'unpaid'};
+  msg('creditMsg','Saving credit sale...');
+  const ins=await db.from('worker_stock_credit_sales').insert(credit).select('*').single();if(ins.error){msg('creditMsg','Credit sale could not be saved: '+esc(ins.error.message),'error');return;}
+  const upd=await db.from('worker_stock_batches').update({sold_quantity:newSold,sales_revenue:newRevenue,sold_cost:newSold*unit,remaining_quantity:newRemaining,remaining_value:newRemaining*unit,profit_loss:Number(stock.profit_loss||0)+(amount-qty*unit),credit_quantity:Number(stock.credit_quantity||0)+qty,credit_outstanding:newCredit,cash_in_hand:Number(stock.capital_amount||0)+newRevenue-newCredit-Number(stock.purchase_total||0)}).eq('id',stock.id).eq('worker_id',currentUser.id);
+  if(upd.error){await db.from('worker_stock_credit_sales').delete().eq('id',ins.data.id).eq('worker_id',currentUser.id);msg('creditMsg','Credit record was not applied to stock: '+esc(upd.error.message),'error');return;}
+  $('creditForm').reset();$('creditDate').value=today();msg('creditMsg','On-credit sale recorded. Stock, profit and outstanding balance updated; unpaid credit is included in total business capital but not cash in hand until paid.','success');await Promise.all([loadStock(),loadStockHistory(),loadCredits()]);calculateStock();
+});
+window.markCreditPaid=async id=>{
+  const c=creditRows.find(x=>x.id===id);if(!c||Number(c.amount_due||0)<=Number(c.amount_paid||0))return;
+  if(!confirm(`Confirm that ${money(Number(c.amount_due)-Number(c.amount_paid))} has been received from ${c.customer_name}?`))return;
+  const bal=Number(c.amount_due||0)-Number(c.amount_paid||0);const stock=liveStockRows.find(x=>x.id===c.stock_batch_id);
+  const up=await db.from('worker_stock_credit_sales').update({amount_paid:Number(c.amount_due),status:'paid',paid_at:new Date().toISOString()}).eq('id',id).eq('worker_id',currentUser.id);
+  if(up.error){msg('creditMsg','Payment could not be saved: '+esc(up.error.message),'error');return;}
+  if(stock){const next=Math.max(0,Number(stock.credit_outstanding||0)-bal);const su=await db.from('worker_stock_batches').update({credit_outstanding:next,cash_in_hand:Number(stock.capital_amount||0)+Number(stock.sales_revenue||0)-next-Number(stock.purchase_total||0)}).eq('id',stock.id).eq('worker_id',currentUser.id);if(su.error){msg('creditMsg','Payment saved but stock cash summary needs refresh: '+esc(su.error.message),'error');}}
+  msg('creditMsg','Payment recorded. Cash in hand has been updated.','success');await Promise.all([loadStock(),loadCredits()]);calculateStock();
+};
+async function loadMessages(){
+  /* Communication is intentionally read-only here.
+     If a communication table exists, this section can be connected without changing worker login/profile. */
+  $("messagesBody").innerHTML='<div class="message"><strong>Ezelex Enterprise</strong><br>Your worker communication area is ready.</div>';
+}
+
+function stockMoney(v){
+  return "GHS "+Number(v||0).toFixed(2);
+}
+
+function buildLiveStockReportText(){
+  const rows=liveStockRows||[];
+  const totalRemaining=rows.reduce((n,s)=>n+Number(s.remaining_quantity||0),0);
+  const totalValue=rows.reduce((n,s)=>n+Number(s.remaining_value||0),0);
+  const totalProfit=rows.reduce((n,s)=>n+Number(s.profit_loss||0),0);
+
+  const lines=[
+    "Ezelex Enterprise - Live Stock Report",
+    "Worker: "+(profile?.full_name||"Worker"),
+    "Worker ID: "+(profile?.worker_id||"—"),
+    "Report Date: "+reportTitleDate(),
+    "",
+    "Live Stock Summary",
+    "Products/Batches: "+rows.length,
+    "Remaining Quantity: "+totalRemaining,
+    "Remaining Stock Value: "+stockMoney(totalValue),
+    "Profit/Loss: "+stockMoney(totalProfit),
+    "",
+    "Stock Details"
+  ];
+
+  rows.forEach((s,i)=>{
+    lines.push(
+      (i+1)+". "+(s.product_service||"—")+
+      " | Total: "+(s.total_quantity??0)+
+      " | Sold: "+(s.sold_quantity??0)+
+      " | Damage: "+(s.damage_quantity??0)+
+      " | Remaining: "+(s.remaining_quantity??0)+
+      " | Capital: "+stockMoney(s.capital_amount ?? s.purchase_total)+
+      " | Purchase: "+stockMoney(s.purchase_total)+
+      " | Cash In Hand: "+stockMoney(s.cash_in_hand ?? ((s.capital_amount ?? s.purchase_total)+Number(s.sales_revenue||0)-Number(s.purchase_total||0)))+
+      " | Remaining Value: "+stockMoney(s.remaining_value)+
+      " | Profit/Loss: "+stockMoney(s.profit_loss)
+    );
+  });
+  return lines.join("\n");
+}
+
+function downloadLiveStockPDF(){
+  if(!window.jspdf?.jsPDF){
+    msg("stockReportMsg","PDF library could not be loaded. Please refresh the page and try again.","error");
+    return;
+  }
+
+  const rows=liveStockRows||[];
+  const totalQty=rows.reduce((n,s)=>n+Number(s.total_quantity||0),0);
+  const totalSold=rows.reduce((n,s)=>n+Number(s.sold_quantity||0),0);
+  const totalDamage=rows.reduce((n,s)=>n+Number(s.damage_quantity||0),0);
+  const totalRemaining=rows.reduce((n,s)=>n+Number(s.remaining_quantity||0),0);
+  const totalValue=rows.reduce((n,s)=>n+Number(s.remaining_value||0),0);
+  const totalCapital=rows.reduce((n,s)=>n+Number(s.capital_amount ?? s.purchase_total ?? 0),0);
+  const totalPurchase=rows.reduce((n,s)=>n+Number(s.purchase_total||0),0);
+  const totalCash=rows.reduce((n,s)=>n+Number(s.cash_in_hand ?? ((s.capital_amount ?? s.purchase_total)+Number(s.sales_revenue||0)-Number(s.purchase_total||0))),0);
+  const totalProfit=rows.reduce((n,s)=>n+Number(s.profit_loss||0),0);
+
+  const {jsPDF}=window.jspdf;
+  const doc=new jsPDF({orientation:"landscape"});
+  let y=15;
+
+  doc.setFontSize(18);
+  doc.text("Ezelex Enterprise",14,y); y+=8;
+  doc.setFontSize(14);
+  doc.text("Live Stock Report",14,y); y+=8;
+
+  doc.setFontSize(9);
+  doc.text("Worker: "+(profile?.full_name||"Worker")+"   Worker ID: "+(profile?.worker_id||"—")+"   Date: "+reportTitleDate(),14,y); y+=8;
+
+  doc.setFontSize(11);
+  doc.text("Summary",14,y); y+=6;
+  doc.setFontSize(9);
+  doc.text("Batches: "+rows.length,14,y);
+  doc.text("Total Qty: "+totalQty,55,y);
+  doc.text("Sold: "+totalSold,92,y);
+  doc.text("Damage: "+totalDamage,125,y);
+  doc.text("Remaining: "+totalRemaining,160,y);
+  doc.text("Capital: "+stockMoney(totalCapital),195,y);
+  doc.text("Purchase: "+stockMoney(totalPurchase),238,y);
+  doc.text("Cash In Hand: "+stockMoney(totalCash),14,y+6);
+  doc.text("Remaining Value: "+stockMoney(totalValue),70,y+6);
+  doc.text("Profit/Loss: "+stockMoney(totalProfit),160,y+6);
+  y+=14;
+
+  const headers=["Product / Service","Total","Sold","Damage","Remaining","Capital","Purchase","Cash In Hand","Profit/Loss"];
+  const x=[10,72,92,111,132,153,182,211,250];
+
+  function header(){
+    doc.setFontSize(8);
+    headers.forEach((h,i)=>doc.text(h,x[i],y));
+    y+=5;
+  }
+  header();
+
+  rows.forEach((s)=>{
+    if(y>195){
+      doc.addPage();
+      y=15;
+      doc.setFontSize(12);
+      doc.text("Ezelex Enterprise - Live Stock Report (continued)",14,y);
+      y+=8;
+      header();
+    }
+
+    doc.setFontSize(7.5);
+    doc.text(String(s.product_service||"—").slice(0,34),x[0],y);
+    doc.text(String(s.total_quantity??0),x[1],y);
+    doc.text(String(s.sold_quantity??0),x[2],y);
+    doc.text(String(s.damage_quantity??0),x[3],y);
+    doc.text(String(s.remaining_quantity??0),x[4],y);
+    doc.text(stockMoney(s.capital_amount ?? s.purchase_total),x[5],y);
+    doc.text(stockMoney(s.purchase_total),x[6],y);
+    doc.text(stockMoney(s.cash_in_hand ?? ((s.capital_amount ?? s.purchase_total)+Number(s.sales_revenue||0)-Number(s.purchase_total||0))),x[7],y);
+    doc.text(stockMoney(s.profit_loss),x[8],y);
+    y+=5;
+  });
+
+  if(!rows.length) doc.text("No live stock records found.",14,y);
+
+  doc.setFontSize(8);
+  doc.text("Generated by Ezelex Enterprise Worker Portal",14,202);
+  doc.save("Ezelex-Live-Stock-Report-"+(profile?.worker_id||"Worker")+"-"+reportTitleDate()+".pdf");
+  msg("stockReportMsg","Live stock PDF created successfully.","success");
+}
+
+async function shareLiveStockReport(){
+  const text=buildLiveStockReportText();
+  try{
+    if(navigator.share){
+      await navigator.share({
+        title:"Ezelex Enterprise Live Stock Report",
+        text:text
+      });
+      msg("stockReportMsg","Live stock report shared successfully.","success");
+      return;
+    }
+    await navigator.clipboard.writeText(text);
+    msg("stockReportMsg","Sharing is not available on this device/browser, so the live stock report was copied to your clipboard.","success");
+  }catch(err){
+    if(err?.name==="AbortError") return;
+    try{
+      await navigator.clipboard.writeText(text);
+      msg("stockReportMsg","The share window was unavailable, so the live stock report was copied to your clipboard.","success");
+    }catch(copyErr){
+      msg("stockReportMsg","Could not share or copy the live stock report. Please try again.","error");
+    }
+  }
+}
+
+document.getElementById("stockPdfReportBtn")?.addEventListener("click",downloadLiveStockPDF);
+document.getElementById("stockShareReportBtn")?.addEventListener("click",shareLiveStockReport);
+
+function reportTitleDate(){
+  const d=new Date();
+  return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
+}
+
+function buildReportText(){
+  const rows=reportSalesRows||[];
+  const total=rows.reduce((sum,s)=>sum+Number(s.sale_amount||0),0);
+  const lines=[
+    "Ezelex Enterprise - Worker Sales Report",
+    "Worker: "+(profile?.full_name||"Worker"),
+    "Worker ID: "+(profile?.worker_id||"—"),
+    "Report Date: "+reportTitleDate(),
+    "",
+    "Sales Summary",
+    "Transactions: "+rows.length,
+    "Total Sales: "+money(total),
+    "",
+    "Sales Details"
+  ];
+  rows.forEach((s,i)=>{
+    lines.push(
+      (i+1)+". "+dateOnly(s.sale_date)+" | "+
+      (s.product_service||"—")+" | Qty: "+(s.quantity??0)+" | "+
+      money(s.sale_amount)+" | "+(s.payment_method||"—")
+    );
+  });
+  return lines.join("\n");
+}
+
+function downloadSalesPDF(){
+  if(!window.jspdf?.jsPDF){
+    msg("reportMsg","PDF library could not be loaded. Please refresh the page and try again.","error");
+    return;
+  }
+  const rows=reportSalesRows||[];
+  const total=rows.reduce((sum,s)=>sum+Number(s.sale_amount||0),0);
+  const {jsPDF}=window.jspdf;
+  const doc=new jsPDF();
+  let y=18;
+
+  doc.setFontSize(18);
+  doc.text("Ezelex Enterprise",14,y); y+=9;
+  doc.setFontSize(14);
+  doc.text("Worker Sales Report",14,y); y+=9;
+
+  doc.setFontSize(10);
+  doc.text("Worker: "+(profile?.full_name||"Worker"),14,y); y+=6;
+  doc.text("Worker ID: "+(profile?.worker_id||"—"),14,y); y+=6;
+  doc.text("Report Date: "+reportTitleDate(),14,y); y+=9;
+
+  doc.setFontSize(12);
+  doc.text("Summary",14,y); y+=7;
+  doc.setFontSize(10);
+  doc.text("Transactions: "+rows.length,14,y); y+=6;
+  doc.text("Total Sales: "+money(total),14,y); y+=10;
+
+  doc.setFontSize(12);
+  doc.text("Sales Details",14,y); y+=7;
+  doc.setFontSize(8);
+
+  const headers=["Date","Product / Service","Qty","Amount","Payment"];
+  const x=[14,43,126,146,174];
+  headers.forEach((h,i)=>doc.text(h,x[i],y));
+  y+=5;
+
+  rows.forEach((s)=>{
+    if(y>278){doc.addPage(); y=18; headers.forEach((h,i)=>doc.text(h,x[i],y)); y+=5;}
+    const product=String(s.product_service||"—").slice(0,42);
+    const payment=String(s.payment_method||"—").slice(0,18);
+    doc.text(dateOnly(s.sale_date),x[0],y);
+    doc.text(product,x[1],y);
+    doc.text(String(s.quantity??0),x[2],y);
+    doc.text(money(s.sale_amount),x[3],y);
+    doc.text(payment,x[4],y);
+    y+=5;
+  });
+
+  if(!rows.length){
+    doc.text("No sales recorded yet.",14,y);
+  }
+
+  doc.setFontSize(8);
+  doc.text("Generated by Ezelex Enterprise Worker Portal",14,289);
+  doc.save("Ezelex-Worker-Sales-Report-"+(profile?.worker_id||"Worker")+"-"+reportTitleDate()+".pdf");
+  msg("reportMsg","PDF report created successfully.","success");
+}
+
+async function shareSalesReport(){
+  const text=buildReportText();
+  const shareData={
+    title:"Ezelex Enterprise Worker Sales Report",
+    text:text
+  };
+
+  try{
+    if(navigator.share){
+      await navigator.share(shareData);
+      msg("reportMsg","Report shared successfully.","success");
+      return;
+    }
+    await navigator.clipboard.writeText(text);
+    msg("reportMsg","Sharing is not available on this device/browser, so the report text was copied to your clipboard. You can paste it into WhatsApp, email, or another app.","success");
+  }catch(err){
+    if(err?.name==="AbortError") return;
+    try{
+      await navigator.clipboard.writeText(text);
+      msg("reportMsg","The share window was unavailable, so the report text was copied to your clipboard.","success");
+    }catch(copyErr){
+      msg("reportMsg","Could not open sharing or copy the report. Please try again.","error");
+    }
+  }
+}
+
+$("pdfReportBtn").onclick=downloadSalesPDF;
+$("shareReportBtn").onclick=shareSalesReport;
+
+window.editSale=async function(id){
+  const {data,error}=await db.from("sales").select("*").eq("id",id).eq("worker_id",currentUser.id).maybeSingle();
+  if(error||!data){msg("saleMsg",error?.message||"Sale not found.","error");return;}
+  const st=String(data.status||"pending").toLowerCase();
+  if(st!=="pending"){msg("saleMsg","Only sales waiting for admin approval can be edited.","error");return;}
+  $("editingSaleId").value=data.id;
+  $("saleDate").value=dateOnly(data.sale_date);
+  $("customer").value=data.customer_reference||"";
+  $("product").value=data.product_service||"";
+  $("quantity").value=data.quantity??1;
+  $("amount").value=data.sale_amount??0;
+  $("payment").value=data.payment_method||"";
+  $("notes").value=data.notes||"";
+  $("saleFormTitle").textContent="Edit Sale";
+  $("saveSaleBtn").textContent="Update Sale";
+  $("cancelSaleEditBtn").style.display="inline-block";
+  window.scrollTo({top:$("sales").offsetTop||0,behavior:"smooth"});
+};
+
+window.deleteSale=async function(id){
+  const {data,error}=await db.from("sales").select("id,status").eq("id",id).eq("worker_id",currentUser.id).maybeSingle();
+  if(error||!data){msg("saleMsg",error?.message||"Sale not found.","error");return;}
+  const st=String(data.status||"pending").toLowerCase();
+  if(st!=="pending"){msg("saleMsg","Only sales waiting for admin approval can be deleted.","error");return;}
+  if(!confirm("Delete this sale? This cannot be undone."))return;
+  const r=await db.from("sales").delete().eq("id",id).eq("worker_id",currentUser.id).eq("status","pending");
+  if(r.error){msg("saleMsg","Sale could not be deleted: "+r.error.message,"error");return;}
+  msg("saleMsg","Sale deleted successfully.","success");
+  await loadSales();
+};
+
+function cancelSaleEdit(){
+  $("editingSaleId").value="";
+  $("saleForm").reset();
+  $("saleDate").value=today();
+  $("quantity").value=1;
+  $("saleFormTitle").textContent="Record a Sale";
+  $("saveSaleBtn").textContent="Record Sale";
+  $("cancelSaleEditBtn").style.display="none";
+  msg("saleMsg","");
+}
+
+$("cancelSaleEditBtn").onclick=cancelSaleEdit;
+
+$("saleForm").onsubmit=async(e)=>{
+  e.preventDefault();
+  msg("saleMsg","Saving sale...");
+  const sale={
+    worker_id:currentUser.id,sale_date:$("saleDate").value,
+    customer_reference:$("customer").value.trim()||null,product_service:$("product").value.trim(),
+    quantity:Number($("quantity").value),sale_amount:Number($("amount").value),
+    payment_method:$("payment").value,notes:$("notes").value.trim()||null
+  };
+  if(!sale.sale_date||!sale.product_service||sale.quantity<1||sale.sale_amount<0||!sale.payment_method){
+    msg("saleMsg","Please complete the required fields.","error");return;
+  }
+  const editingId=$("editingSaleId").value.trim();
+  let error;
+  if(editingId){
+    const r=await db.from("sales").update({
+      sale_date:sale.sale_date,customer_reference:sale.customer_reference,product_service:sale.product_service,
+      quantity:sale.quantity,sale_amount:sale.sale_amount,payment_method:sale.payment_method,notes:sale.notes
+    }).eq("id",editingId).eq("worker_id",currentUser.id).eq("status","pending");
+    error=r.error;
+    if(!error && !r.data && r.count===0){}
+  }else{
+    const r=await db.from("sales").insert(sale);
+    error=r.error;
+  }
+  if(error){msg("saleMsg","Sale could not be saved: "+error.message,"error");return;}
+  msg("saleMsg",editingId?"Sale updated successfully and remains pending admin approval.":"Sale recorded successfully.","success");
+  cancelSaleEdit();
+  await loadSales();
+};
+
+$("loginBtn").onclick=async()=>{
+  msg("loginMsg","Signing in...");
+  const email=$("email").value.trim();
+  const password=$("password").value;
+  if(!email||!password){msg("loginMsg","Enter your email and password.","error");return;}
+  const {data,error}=await db.auth.signInWithPassword({email,password});
+  if(error){
+    const detail=(error.message||"").toLowerCase();
+    if(detail.includes("invalid api key")){
+      msg("loginMsg","The Supabase API key used by this website is no longer valid. The login code is correct, but the project key needs to be updated in this file.","error");
+    }else{
+      msg("loginMsg",error.message,"error");
+    }
+    return;
+  }
+  await loadProfile(data.user);
+};
+
+$("forgotBtn").onclick=()=>{
+  $("forgotBox").classList.remove("hidden");
+  $("resetEmail").value=$("email").value.trim();
+  $("resetEmail").focus();
+};
+$("backLoginBtn").onclick=()=>{$("forgotBox").classList.add("hidden");$("resetMsg").innerHTML="";};
+$("sendResetBtn").onclick=async()=>{
+  const email=$("resetEmail").value.trim();
+  if(!email){msg("resetMsg","Enter your worker email.","error");return;}
+  msg("resetMsg","Sending reset link...");
+  const {error}=await db.auth.resetPasswordForEmail(email,{redirectTo:"https://ezelexenterprise.com/EZELEX_SET_PASSWORD.html"});
+  if(error){msg("resetMsg",error.message,"error");return;}
+  msg("resetMsg","Password reset link sent. Check your email and follow the link.","success");
+};
+
+$("updatePasswordBtn").onclick=async()=>{
+  const p=$("newPassword").value;
+  const c=$("confirmPassword").value;
+  if(p.length<6){msg("recoveryMsg","Password must be at least 6 characters.","error");return;}
+  if(p!==c){msg("recoveryMsg","The passwords do not match.","error");return;}
+  msg("recoveryMsg","Updating password...");
+  const {error}=await db.auth.updateUser({password:p});
+  if(error){msg("recoveryMsg",error.message,"error");return;}
+  msg("recoveryMsg","Password updated successfully. You can now sign in.","success");
+  setTimeout(async()=>{await db.auth.signOut();$("passwordRecovery").classList.add("hidden");showLogin();$("loginMsg").innerHTML='<div class="msg success">Password updated. Please sign in with your new password.</div>';},900);
+};
+
+db.auth.onAuthStateChange((event,session)=>{
+  if(event==="PASSWORD_RECOVERY"){
+    $("loginSection").classList.add("hidden");
+    $("portal").classList.add("hidden");
+    $("settingsBtn").classList.add("hidden");
+    $("passwordRecovery").classList.remove("hidden");
+  }
+});
+
+
+
+document.querySelectorAll(".tab").forEach(btn=>{
+  btn.addEventListener("click",()=>{
+    document.querySelectorAll(".tab").forEach(b=>b.classList.remove("active"));
+    document.querySelectorAll(".section").forEach(s=>s.classList.remove("active"));
+    btn.classList.add("active");$(btn.dataset.tab).classList.add("active");
+  });
+});
+
+let dailyChartResizeTimer;
+window.addEventListener("resize",()=>{
+  clearTimeout(dailyChartResizeTimer);
+  dailyChartResizeTimer=setTimeout(()=>{
+    if(typeof stockHistoryRows!=="undefined" && stockHistoryRows.length)renderStockHistory();
+  },120);
+});
+
+calculateStock();
+start();
+</script>
+</body>
+</html>
