@@ -32,7 +32,7 @@ textarea{min-height:90px;resize:vertical}
 .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:18px}
 .stat{background:#f8fafc;border:1px solid #e5e7eb;border-radius:12px;padding:15px}
 .stat small{display:block;color:#64748b;font-weight:700;margin-bottom:6px}.stat strong{font-size:21px}
-.stockGrid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:15px 0}
+.stockGrid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px;margin:15px 0}
 .stockCard{background:#f8fafc;border:1px solid #e5e7eb;border-radius:12px;padding:15px}
 .stockCard small{display:block;color:#64748b;font-weight:700;margin-bottom:6px}.stockCard strong{font-size:20px}
 .resultGrid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:15px}
@@ -184,6 +184,7 @@ th,td{padding:11px;border-bottom:1px solid #eee;text-align:left;font-size:14px}t
         <div class="stockCard"><small>Crates Purchased This Week</small><strong id="weekPurchased">0</strong><div>All additions this week</div></div>
         <div class="stockCard"><small>Crates Sold This Week</small><strong id="weekSold">0</strong><div>Across this week's batches</div></div>
         <div class="stockCard"><small>Crates Remaining This Week</small><strong id="weekRemaining">0</strong><div>Live weekly stock</div></div>
+        <div class="stockCard" id="weekProfitCard"><small>Profit/Loss This Week</small><strong id="weekProfit">GH₵0.00</strong><div id="weekProfitLabel">Weekly result</div></div>
       </div>
       <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:12px">
         <label for="stockWeekPicker" style="margin:0">View week history</label><select id="stockWeekPicker" style="max-width:250px"><option value="">Current week</option></select>
@@ -562,6 +563,12 @@ async function loadStock(){
   rows.forEach(r=>{units+=Number(r.remaining_quantity||0);value+=Number(r.remaining_value||0);revenue+=Number(r.sales_revenue||0);profit+=Number(r.profit_loss||0);if(r.stock_type!=="carry_forward")purchased+=Number(r.total_quantity||0);soldWeek+=Number(r.sold_quantity||0);const cap=Number(r.capital_amount??r.purchase_total??0),pur=Number(r.purchase_total||0);cash+=Number(r.cash_in_hand??(cap+Number(r.sales_revenue||0)-Number(r.credit_outstanding||0)-pur));});
   $("liveUnits").textContent=units.toLocaleString();$("liveValue").textContent=money(value);$("liveRevenue").textContent=money(revenue);$("liveProfit").textContent=money(profit);$("liveProfitLabel").textContent=profit>=0?"selected week profit":"selected week loss";
   $("weekPurchased").textContent=purchased.toLocaleString();$("weekSold").textContent=soldWeek.toLocaleString();$("weekRemaining").textContent=units.toLocaleString();
+  // Reuse the existing stock-batch Profit/Loss values without changing their calculation.
+  const weekProfitCard=$("weekProfitCard");
+  $("weekProfit").textContent=money(profit);
+  weekProfitCard.classList.toggle("profit",profit>0);
+  weekProfitCard.classList.toggle("loss",profit<0);
+  $("weekProfitLabel").textContent=profit>0?"You're gaining this week":profit<0?"You're losing money this week":"Break-even so far";
   const viewingClosed=!!selectedWeekIsClosed();
   if(currentStockWeek?.status==="closed"&&!selectedStockWeekId){msg("weeklyStockMsg","This week's book is closed. Choose the current week after Monday to continue adding stock.","error");}
   if(!rows.length){$("stockBody").innerHTML='<tr><td colspan="11">No stock records in this week yet.</td></tr>';}
