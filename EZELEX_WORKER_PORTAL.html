@@ -48,8 +48,11 @@ th,td{padding:11px;border-bottom:1px solid #eee;text-align:left;font-size:14px}t
 .infoBox{background:#f8fafc;border-radius:10px;padding:14px;line-height:1.7}
 .message{padding:13px;border:1px solid #e5e7eb;border-radius:10px;margin-bottom:10px}
 .message h4{margin:0 0 5px}.message small{color:#64748b}
+.tricycleStats{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:15px 0}
+.tricycleStat{background:#f8fafc;border:1px solid #e5e7eb;border-radius:12px;padding:15px}
+.tricycleStat small{display:block;color:#64748b;font-weight:700;margin-bottom:6px}.tricycleStat strong{font-size:20px}
 @media(max-width:900px){.stats,.stockGrid{grid-template-columns:1fr 1fr}.resultGrid{grid-template-columns:1fr 1fr}}
-@media(max-width:700px){.grid,.cardrow{grid-template-columns:1fr}.full{grid-column:auto}.login{margin:30px 15px}.wrap{padding:0 12px}.stats,.stockGrid,.resultGrid{grid-template-columns:1fr}}
+@media(max-width:700px){.grid,.cardrow,.tricycleStats{grid-template-columns:1fr}.full{grid-column:auto}.login{margin:30px 15px}.wrap{padding:0 12px}.stats,.stockGrid,.resultGrid{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
@@ -115,6 +118,7 @@ th,td{padding:11px;border-bottom:1px solid #eee;text-align:left;font-size:14px}t
     <button class="tab" data-tab="sales">Record Sale</button>
     <button class="tab" data-tab="stock">Live Stock</button>
     <button class="tab" data-tab="stockHistory">Edit History</button>
+    <button class="tab" data-tab="tricycle">Tricycle Contract</button>
   </div>
 
   <section id="dashboard" class="section active">
@@ -251,6 +255,43 @@ th,td{padding:11px;border-bottom:1px solid #eee;text-align:left;font-size:14px}t
     </div>
   </section>
 
+  <section id="tricycle" class="section">
+    <div class="panel">
+      <h2>🛺 My Tricycle Contract</h2>
+      <p>View your individually agreed contract amount, remaining balance and contract time. Your balance only reduces after Ezelex admin approves a weekly report.</p>
+      <div id="tricycleMsg"></div>
+      <div id="tricycleNoContract" class="msg hidden">No tricycle contract has been assigned to your worker account yet. Please contact Ezelex Enterprise admin.</div>
+      <div id="tricycleContractDetails" class="hidden">
+        <div class="cardrow">
+          <div class="infoBox"><strong>Vehicle</strong><br><span id="triVehicle">—</span><br><strong>Registration</strong><br><span id="triRegistration">—</span></div>
+          <div class="infoBox"><strong>Contract period</strong><br><span id="triStart">—</span> to <span id="triEnd">—</span><br><strong>Contract duration</strong><br><span id="triDuration">—</span> months</div>
+        </div>
+        <div class="tricycleStats">
+          <div class="tricycleStat"><small>Agreed Contract Amount</small><strong id="triTotal">GH₵0.00</strong></div>
+          <div class="tricycleStat"><small>Confirmed Payments</small><strong id="triPaid">GH₵0.00</strong></div>
+          <div class="tricycleStat"><small>Remaining Balance</small><strong id="triBalance">GH₵0.00</strong></div>
+        </div>
+        <div class="infoBox" style="margin-bottom:18px"><strong>Time remaining:</strong> <span id="triTimeRemaining">—</span><br><strong>Daily target:</strong> <span id="triDailyTarget">GH₵200.00</span> &nbsp; | &nbsp; <strong>Weekly target:</strong> <span id="triWeeklyTarget">GH₵1,400.00</span></div>
+        <h3>Submit Weekly Report</h3>
+        <p>Select the exact reporting period. Both dates are saved with your report. Submitting a report does not reduce your balance until admin approves it.</p>
+        <form id="tricycleReportForm" class="grid">
+          <div><label for="triWeekStart">Report Start Date</label><input id="triWeekStart" type="date" required></div>
+          <div><label for="triWeekEnd">Report End Date</label><input id="triWeekEnd" type="date" required></div>
+          <div><label for="triSalesReported">Sales Reported (GH₵)</label><input id="triSalesReported" type="number" min="0" step="0.01" value="0" required></div>
+          <div><label for="triPaymentAmount">Payment Amount (GH₵)</label><input id="triPaymentAmount" type="number" min="0" step="0.01" value="0" required></div>
+          <div><label for="triPaymentReference">Payment Reference (optional)</label><input id="triPaymentReference" type="text" placeholder="Mobile Money / receipt reference"></div>
+          <div><label for="triDriverNotes">Notes (optional)</label><input id="triDriverNotes" type="text" placeholder="Any details for admin"></div>
+          <div class="full"><button id="triSubmitBtn" class="primary" type="submit">Submit Weekly Report</button></div>
+        </form>
+      </div>
+    </div>
+    <div class="panel">
+      <h2>My Weekly Reports & Payment History</h2>
+      <p>Pending reports do not affect your balance. Approved reports are recorded once as confirmed payments. Rejected reports show the admin's reason.</p>
+      <div class="tablebox"><table><thead><tr><th>Period Start</th><th>Period End</th><th>Sales Reported</th><th>Payment</th><th>Status</th><th>Admin Reason</th><th>Submitted</th></tr></thead><tbody id="tricycleReportsBody"><tr><td colspan="7">Loading...</td></tr></tbody></table></div>
+    </div>
+  </section>
+
   <section id="communication" class="section">
     <div class="panel">
       <h2>📩 Communication</h2>
@@ -282,6 +323,8 @@ let reportSalesRows=[];
 let liveStockRows=[];
 let stockHistoryRows=[];
 let editingStockOriginal=null;
+let tricycleContract=null;
+let tricycleReports=[];
 
 const $=id=>document.getElementById(id);
 function msg(id,text,type=""){ $(id).innerHTML=text?`<div class="msg ${type}">${text}</div>`:""; }
@@ -351,8 +394,94 @@ async function loadProfile(user){
   $("contractEnd").textContent=dateOnly(data.contract_end);
 
   await Promise.all([loadSales(),loadStock(),loadStockHistory()]);
-  await loadMessages();
+  await Promise.all([loadMessages(),loadTricycle()]);
 }
+
+function daysRemaining(endDate){
+  if(!endDate)return '—';
+  const end=new Date(String(endDate).slice(0,10)+'T23:59:59');
+  const now=new Date();
+  const days=Math.max(0,Math.ceil((end-now)/86400000));
+  if(end<now)return 'Contract end date has passed';
+  const months=Math.floor(days/30), weeks=Math.floor((days%30)/7), rem=days%7;
+  return `${months} months, ${weeks} weeks and ${rem} days (${days} days total)`;
+}
+function prettyDate(v){
+  if(!v)return '—';
+  const d=new Date(String(v).slice(0,10)+'T12:00:00');
+  return Number.isNaN(d.getTime())?String(v):d.toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'});
+}
+async function loadTricycle(){
+  const body=$('tricycleReportsBody');
+  body.innerHTML='<tr><td colspan="7">Loading...</td></tr>';
+  const {data:contracts,error}=await db.from('tricycle_contracts').select('*').eq('driver_user_id',currentUser.id).order('created_at',{ascending:false});
+  if(error){
+    $('tricycleNoContract').classList.remove('hidden');
+    $('tricycleNoContract').textContent='Could not load your tricycle contract: '+error.message+'. Please contact admin.';
+    $('tricycleContractDetails').classList.add('hidden');
+    msg('tricycleMsg','The tricycle tables may not be ready or access has not been granted. Existing sales and stock features are separate.','error');
+    body.innerHTML='<tr><td colspan="7">Unable to load reports.</td></tr>';
+    return;
+  }
+  tricycleContract=(contracts||[]).find(c=>c.status==='active')||(contracts||[])[0]||null;
+  if(!tricycleContract){
+    $('tricycleNoContract').classList.remove('hidden');
+    $('tricycleContractDetails').classList.add('hidden');
+  }else{
+    $('tricycleNoContract').classList.add('hidden');
+    $('tricycleContractDetails').classList.remove('hidden');
+    $('triVehicle').textContent=tricycleContract.vehicle_id||'—';
+    $('triRegistration').textContent=tricycleContract.vehicle_registration||'Not provided';
+    $('triStart').textContent=prettyDate(tricycleContract.contract_start_date);
+    $('triEnd').textContent=prettyDate(tricycleContract.contract_end_date);
+    $('triDuration').textContent=tricycleContract.contract_duration_months||'—';
+    $('triTotal').textContent=money(tricycleContract.total_contract_amount);
+    $('triDailyTarget').textContent=money(tricycleContract.daily_target);
+    $('triWeeklyTarget').textContent=money(tricycleContract.weekly_target);
+    $('triTimeRemaining').textContent=daysRemaining(tricycleContract.contract_end_date);
+    const {data:balance,error:balanceError}=await db.rpc('ezelex_tricycle_balance',{p_contract_id:tricycleContract.id});
+    const total=Number(tricycleContract.total_contract_amount||0);
+    const {data:payments,error:paymentError}=await db.from('tricycle_contract_payments').select('amount').eq('contract_id',tricycleContract.id);
+    const paid=Number(tricycleContract.opening_paid_amount||0)+(payments||[]).reduce((sum,p)=>sum+Number(p.amount||0),0);
+    $('triPaid').textContent=money(paid);
+    $('triBalance').textContent=balanceError?money(Math.max(0,total-paid)):money(balance);
+    if(balanceError||paymentError)msg('tricycleMsg','Some payment totals could not be refreshed. Please contact admin if the figures look incorrect.','error');
+    else msg('tricycleMsg','Your contract balance updates only after admin approval of a report.','success');
+    const defaultStart=today();
+    if(!$('triWeekStart').value)$('triWeekStart').value=defaultStart;
+    if(!$('triWeekEnd').value)$('triWeekEnd').value=defaultStart;
+  }
+  const {data:reports, error:reportsError}=await db.from('tricycle_weekly_reports').select('*').eq('driver_user_id',currentUser.id).order('week_start',{ascending:false});
+  if(reportsError){body.innerHTML='<tr><td colspan="7">Could not load reports: '+esc(reportsError.message)+'</td></tr>';return;}
+  tricycleReports=reports||[];
+  body.innerHTML=tricycleReports.length?tricycleReports.map(r=>{
+    const status=String(r.status||'pending');
+    const badge=status==='approved'?'badge':status==='rejected'?'badge' : 'badge';
+    const color=status==='rejected'?'background:#fee4e2;color:#912018':status==='pending'?'background:#fef3c7;color:#92400e':'background:#dcfae6;color:#067647';
+    return `<tr><td>${esc(prettyDate(r.week_start))}</td><td>${esc(prettyDate(r.week_end))}</td><td>${money(r.sales_reported)}</td><td>${money(r.payment_amount)}</td><td><span class="${badge}" style="${color}">${esc(status.toUpperCase())}</span></td><td>${esc(r.rejection_reason||'—')}</td><td>${esc(prettyDate(r.submitted_at))}</td></tr>`;
+  }).join(''):'<tr><td colspan="7">No weekly reports submitted yet.</td></tr>';
+}
+$('tricycleReportForm').addEventListener('submit',async e=>{
+  e.preventDefault();
+  if(!tricycleContract||tricycleContract.status!=='active'){msg('tricycleMsg','There is no active tricycle contract assigned to you.','error');return;}
+  const start=$('triWeekStart').value, end=$('triWeekEnd').value;
+  const sales=Number($('triSalesReported').value), payment=Number($('triPaymentAmount').value);
+  if(!start||!end||end<start){msg('tricycleMsg','Please choose valid dates. The end date must be on or after the start date.','error');return;}
+  if(!Number.isFinite(sales)||sales<0||!Number.isFinite(payment)||payment<0){msg('tricycleMsg','Sales and payment amounts cannot be negative.','error');return;}
+  const overlap=tricycleReports.find(r=>r.status!=='rejected' && start<=r.week_end && end>=r.week_start);
+  if(overlap){msg('tricycleMsg',`A report already exists for an overlapping period (${prettyDate(overlap.week_start)}–${prettyDate(overlap.week_end)}). Contact admin if this needs correction.`,'error');return;}
+  $('triSubmitBtn').disabled=true;$('triSubmitBtn').textContent='Submitting...';
+  const {error}=await db.from('tricycle_weekly_reports').insert({contract_id:tricycleContract.id,driver_user_id:currentUser.id,week_start:start,week_end:end,sales_reported:sales,payment_amount:payment,payment_reference:$('triPaymentReference').value.trim()||null,driver_notes:$('triDriverNotes').value.trim()||null,status:'pending'});
+  $('triSubmitBtn').disabled=false;$('triSubmitBtn').textContent='Submit Weekly Report';
+  if(error){
+    let detail=error.message||'Unknown error';
+    if(detail.toLowerCase().includes('duplicate')||detail.toLowerCase().includes('unique'))detail='A report already exists with this start date. Please check your report history or contact admin.';
+    msg('tricycleMsg','Report could not be submitted: '+detail,'error');return;
+  }
+  $('triSalesReported').value='0';$('triPaymentAmount').value='0';$('triPaymentReference').value='';$('triDriverNotes').value='';
+  msg('tricycleMsg','Weekly report submitted successfully and is waiting for admin approval. Your balance has not been reduced.','success');
+  await loadTricycle();
+});
 
 function salesForWorker(){
   return db.from("sales").select("*").eq("worker_id",currentUser.id).order("sale_date",{ascending:false});
@@ -962,6 +1091,7 @@ document.querySelectorAll(".tab").forEach(btn=>{
     document.querySelectorAll(".tab").forEach(b=>b.classList.remove("active"));
     document.querySelectorAll(".section").forEach(s=>s.classList.remove("active"));
     btn.classList.add("active");$(btn.dataset.tab).classList.add("active");
+    if(btn.dataset.tab==="tricycle"&&currentUser)loadTricycle();
   });
 });
 
