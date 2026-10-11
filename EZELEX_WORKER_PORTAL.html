@@ -130,7 +130,7 @@ th,td{padding:11px;border-bottom:1px solid #eee;text-align:left;font-size:14px}t
         <div class="infoBox"><strong>Last activity</strong><br><span id="lastActivity">Loading...</span></div>
       </div>
   </div>
-    <div class="panel">
+    <div class="panel" id="legacyRecentSales" style="display:none!important" aria-hidden="true">
       <h2>Recent Sales</h2>
       <div class="tablebox">
         <table><thead><tr><th>Date</th><th>Customer</th><th>Product/Service</th><th>Qty</th><th>Amount</th><th>Payment</th></tr></thead>
@@ -471,22 +471,15 @@ $('tricycleReportForm').addEventListener('submit',async e=>{
   const overlap=tricycleReports.find(r=>r.status!=='rejected' && start<=r.week_end && end>=r.week_start);
   if(overlap){msg('tricycleMsg',`A report already exists for an overlapping period (${prettyDate(overlap.week_start)}–${prettyDate(overlap.week_end)}). Contact admin if this needs correction.`,'error');return;}
   $('triSubmitBtn').disabled=true;$('triSubmitBtn').textContent='Submitting...';
-  const {data:insertedReport,error}=await db.from('tricycle_weekly_reports').insert({contract_id:tricycleContract.id,driver_user_id:currentUser.id,week_start:start,week_end:end,sales_reported:sales,payment_amount:payment,payment_reference:$('triPaymentReference').value.trim()||null,driver_notes:$('triDriverNotes').value.trim()||null,status:'pending'}).select('id').single();
+  const {error}=await db.from('tricycle_weekly_reports').insert({contract_id:tricycleContract.id,driver_user_id:currentUser.id,week_start:start,week_end:end,sales_reported:sales,payment_amount:payment,payment_reference:$('triPaymentReference').value.trim()||null,driver_notes:$('triDriverNotes').value.trim()||null,status:'pending'});
+  $('triSubmitBtn').disabled=false;$('triSubmitBtn').textContent='Submit Weekly Report';
   if(error){
-    $('triSubmitBtn').disabled=false;$('triSubmitBtn').textContent='Submit Weekly Report';
     let detail=error.message||'Unknown error';
     if(detail.toLowerCase().includes('duplicate')||detail.toLowerCase().includes('unique'))detail='A report already exists with this start date. Please check your report history or contact admin.';
     msg('tricycleMsg','Report could not be submitted: '+detail,'error');return;
   }
-  let emailStatus='';
-  try{
-    const {data:notice,error:noticeError}=await db.functions.invoke('sale-email-notifications',{body:{event:'tricycle_submitted',tricycle_report_id:insertedReport.id}});
-    if(noticeError || notice?.success===false){emailStatus=' The report is saved and pending approval, but the admin notification email failed: '+(notice?.error||noticeError?.message||'Email service did not confirm delivery.')+'.';}
-    else emailStatus=' The admin approval email was sent.';
-  }catch(noticeErr){emailStatus=' The report is saved and pending approval, but the admin email request failed: '+(noticeErr?.message||String(noticeErr))+'.';}
-  $('triSubmitBtn').disabled=false;$('triSubmitBtn').textContent='Submit Weekly Report';
   $('triSalesReported').value='0';$('triPaymentAmount').value='0';$('triPaymentReference').value='';$('triDriverNotes').value='';
-  msg('tricycleMsg','Weekly report submitted successfully and is waiting for admin approval. Your balance has not been reduced.'+emailStatus,emailStatus.includes('failed')?'error':'success');
+  msg('tricycleMsg','Weekly report submitted successfully and is waiting for admin approval. Your balance has not been reduced.','success');
   await loadTricycle();
 });
 
@@ -515,10 +508,11 @@ async function loadSales(){
     if(d>=weekStart)weekTotal+=amount;
     if(d>=monthStart)monthTotal+=amount;
   });
-  $("todaySales").textContent=money(todayTotal);
-  $("weekSales").textContent=money(weekTotal);
-  $("monthSales").textContent=money(monthTotal);
-  $("allSales").textContent=money(allTotal);
+  // Legacy sales are retired from the worker-facing dashboard; tricycle reports are handled separately.
+  $("todaySales").textContent=money(0);
+  $("weekSales").textContent=money(0);
+  $("monthSales").textContent=money(0);
+  $("allSales").textContent=money(0);
   $("lastActivity").textContent=rows.length?dateOnly(rows[0].sale_date):"No sales recorded yet.";
 
   if(!rows.length){
