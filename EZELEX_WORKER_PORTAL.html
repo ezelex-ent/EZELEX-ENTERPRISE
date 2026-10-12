@@ -60,6 +60,13 @@ th,td{padding:11px;border-bottom:1px solid #eee;text-align:left;font-size:14px}t
 
 @media(max-width:900px){.stats,.stockGrid{grid-template-columns:1fr 1fr}.resultGrid{grid-template-columns:1fr 1fr}}
 @media(max-width:700px){.grid,.cardrow{grid-template-columns:1fr}.full{grid-column:auto}.login{margin:30px 15px}.wrap{padding:0 12px}.stats,.stockGrid,.resultGrid{grid-template-columns:1fr}}
+
+/* Mobile-friendly navigation and driver identity/contract panels */
+.tabs{position:relative}
+.tabs .tab{min-height:44px}
+.photoPreview{width:104px;height:104px;border-radius:50%;object-fit:cover;background:#e5e7eb;border:3px solid #e5e7eb;display:block;margin:10px 0}
+.driverContractCard{border:1px solid #e5e7eb;border-radius:12px;padding:16px;margin:12px 0;background:#f8fafc}
+@media(max-width:600px){header{padding:14px 12px;align-items:flex-start}header h1{font-size:19px}.tabs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}.tab{padding:10px 8px;font-size:13px}.panel{padding:15px}.workerInfo{overflow-wrap:anywhere}.photoPreview{width:88px;height:88px}}
 </style>
 </head>
 <body>
@@ -122,10 +129,13 @@ th,td{padding:11px;border-bottom:1px solid #eee;text-align:left;font-size:14px}t
 
   <div class="tabs">
     <button class="tab active" data-tab="dashboard">Dashboard</button>
-    <button class="tab" data-tab="tricycle">🛺 Tricycle Contract</button>
+    <button class="tab" data-tab="sales">Record Sale</button>
     <button class="tab" data-tab="stock">Live Stock</button>
     <button class="tab" data-tab="stockHistory">Edit History</button>
     <button class="tab" data-tab="credit">On-Credit</button>
+    <button class="tab" data-tab="contract" id="driverContractTab">Tricycle Contract</button>
+    <button class="tab" data-tab="profile">My Profile</button>
+    <button class="tab" data-tab="communication">Communication</button>
   </div>
 
   <section id="dashboard" class="section active">
@@ -146,43 +156,7 @@ th,td{padding:11px;border-bottom:1px solid #eee;text-align:left;font-size:14px}t
     </div>
   </section>
 
-  <section id="tricycle" class="section">
-    <div class="panel">
-      <h2>🛺 My Tricycle Contract</h2>
-      <p class="stockNote">View your assigned tricycle contract, outstanding balance and weekly reporting. Submit one report for each Monday–Sunday week. Your payment is only added to the contract ledger after admin approval.</p>
-      <div id="tricycleMsg"></div>
-      <div class="stockGrid" style="grid-template-columns:repeat(auto-fit,minmax(180px,1fr))">
-        <div class="stockCard"><small>Vehicle ID</small><strong id="triVehicleLabel">—</strong></div>
-        <div class="stockCard"><small>Contract Period</small><strong id="triPeriodLabel" style="font-size:15px">—</strong></div>
-        <div class="stockCard"><small>Agreed Contract Amount</small><strong id="triTotalLabel">GH₵0.00</strong></div>
-        <div class="stockCard"><small>Paid to Date</small><strong id="triPaidLabel">GH₵0.00</strong></div>
-        <div class="stockCard"><small>Outstanding Balance</small><strong id="triBalanceLabel">GH₵0.00</strong></div>
-      </div>
-      <div id="triNoContract" class="msg hidden">No active tricycle contract is linked to your worker account yet. Please contact Ezelex Enterprise admin.</div>
-    </div>
-    <div class="panel">
-      <h2>Submit Weekly Tricycle Report</h2>
-      <p>Week: <strong id="triWeekLabel">—</strong></p>
-      <form id="triReportForm" class="grid">
-        <div><label>Sales reported (GH₵)</label><input id="triSalesReported" type="number" min="0" step="0.01" required placeholder="0.00"></div>
-        <div><label>Payment made this week (GH₵)</label><input id="triPaymentAmount" type="number" min="0" step="0.01" required placeholder="0.00"></div>
-        <div class="full"><label>Payment reference (optional)</label><input id="triPaymentReference" maxlength="200" placeholder="Mobile Money reference or receipt number"></div>
-        <div class="full"><label>Notes (optional)</label><textarea id="triDriverNotes" maxlength="2000" placeholder="Add any explanation for this week's report"></textarea></div>
-        <div class="full"><button id="triSubmitBtn" class="primary" type="submit">Submit Weekly Report for Admin Approval</button></div>
-      </form>
-      <p class="live">Reports are saved as pending until reviewed. Do not submit the same week's report twice.</p>
-    </div>
-    <div class="panel">
-      <h2>My Weekly Reports</h2>
-      <div class="tablebox"><table><thead><tr><th>Week</th><th>Sales Reported</th><th>Payment Reported</th><th>Reference</th><th>Status</th><th>Admin Reason</th></tr></thead><tbody id="triReportsBody"><tr><td colspan="6">Loading reports…</td></tr></tbody></table></div>
-    </div>
-    <div class="panel">
-      <h2>Contract Payment History</h2>
-      <div class="tablebox"><table><thead><tr><th>Date</th><th>Amount</th><th>Method</th><th>Reference</th><th>Notes</th></tr></thead><tbody id="triPaymentsBody"><tr><td colspan="5">Loading payments…</td></tr></tbody></table></div>
-    </div>
-  </section>
-
-  <section id="sales" class="section hidden">
+  <section id="sales" class="section">
     <div class="panel">
       <h2 id="saleFormTitle">Record a Sale</h2>
       <div id="saleMsg"></div>
@@ -340,6 +314,14 @@ th,td{padding:11px;border-bottom:1px solid #eee;text-align:left;font-size:14px}t
   <section id="profile" class="section">
     <div class="panel">
       <h2>My Profile</h2>
+      <div class="infoBox" style="margin-bottom:14px">
+        <strong>Profile Photo</strong>
+        <img id="profilePhotoPreview" class="photoPreview" alt="Your profile photo" src="" style="display:none">
+        <p class="live">Upload a clear photo of yourself for identification by Ezelex Enterprise admin.</p>
+        <input id="profilePhotoInput" type="file" accept="image/*" capture="user">
+        <button id="uploadProfilePhotoBtn" type="button" class="primary">Upload / Update Photo</button>
+        <div id="profilePhotoMsg" aria-live="polite"></div>
+      </div>
       <div class="infoBox">
         <strong>Worker ID:</strong> <span id="profileWorkerId">—</span><br>
         <strong>Full Name:</strong> <span id="profileFullName">—</span><br>
@@ -363,12 +345,10 @@ th,td{padding:11px;border-bottom:1px solid #eee;text-align:left;font-size:14px}t
 
   <section id="contract" class="section">
     <div class="panel">
-      <h2>📄 My Contract</h2>
-      <div class="infoBox">
-        <strong>Contract Start:</strong> <span id="contractStart">—</span><br>
-        <strong>Contract End:</strong> <span id="contractEnd">—</span>
-      </div>
-      <p style="margin-top:16px">Your contract details are linked to your worker profile. If Ezelex Enterprise has provided a contract document or link, it can be added here later without changing your worker login.</p>
+      <h2>🛺 My Tricycle Contract</h2>
+      <p class="stockNote">Your tricycle contract details and payment progress appear here when linked by Ezelex Enterprise admin.</p>
+      <div id="driverContractMsg" aria-live="polite"></div>
+      <div id="driverContractDetails"><div class="driverContractCard">Loading your contract details…</div></div>
     </div>
   </section>
 </main>
@@ -476,6 +456,97 @@ async function start(){
   await loadProfile(session.user);
 }
 
+const isDriverRole = value => String(value||"").trim().toLowerCase().replace(/[ _-]/g,"")==="driver";
+function applyRoleNavigation(role){
+  const driver=isDriverRole(role);
+  const driverOnly=new Set(["contract"]);
+  const workerOnly=new Set(["sales","stock","stockHistory","credit"]);
+  document.querySelectorAll(".tab[data-tab]").forEach(btn=>{
+    const tab=btn.dataset.tab;
+    btn.classList.toggle("hidden",driver?workerOnly.has(tab):driverOnly.has(tab));
+  });
+  // Profile and communication remain available to both roles.
+  if(driver){
+    document.querySelectorAll(".section").forEach(sec=>{
+      if(workerOnly.has(sec.id)){sec.classList.remove("active");}
+    });
+    document.querySelectorAll(".tab").forEach(b=>b.classList.remove("active"));
+    document.querySelectorAll(".section").forEach(sec=>sec.classList.remove("active"));
+    document.querySelector('.tab[data-tab="dashboard"]')?.classList.add("active");
+    $("dashboard")?.classList.add("active");
+  }
+}
+async function loadDriverContract(){
+  const host=$("driverContractDetails"); if(!host||!currentUser)return;
+  host.innerHTML='<div class="driverContractCard">Loading your contract details…</div>';
+  const r=await db.from("tricycle_contracts").select("*").eq("driver_user_id",currentUser.id).order("created_at",{ascending:false}).limit(10);
+  if(r.error){
+    host.innerHTML='<div class="msg error">Your contract could not be loaded. Please contact Ezelex Enterprise admin.</div>';
+    console.warn("Tricycle contract query failed:",r.error.message);return;
+  }
+  const rows=r.data||[];
+  if(!rows.length){host.innerHTML='<div class="driverContractCard">No tricycle contract has been linked to your account yet. Please contact Ezelex Enterprise admin.</div>';return;}
+  host.innerHTML=rows.map(c=>{
+    const moneyVal=v=>"GH₵"+Number(v||0).toLocaleString("en-GH",{minimumFractionDigits:2,maximumFractionDigits:2});
+    const status=String(c.status||"pending").replace(/[_-]/g," ");
+    const total=Number(c.total_amount||0),paid=Number(c.opening_paid_amount||0);
+    return `<div class="driverContractCard">
+      <h3>${esc(c.vehicle_registration||c.vehicle_id||"Tricycle contract")}</h3>
+      <p><strong>Status:</strong> ${esc(status)}</p>
+      <p><strong>Contract period:</strong> ${esc(dateOnly(c.contract_start))} – ${esc(dateOnly(c.contract_end))}</p>
+      <p><strong>Contract amount:</strong> ${moneyVal(total)}</p>
+      <p><strong>Opening amount paid:</strong> ${moneyVal(paid)}</p>
+      <p><strong>Weekly target:</strong> ${moneyVal(c.weekly_target??1400)}</p>
+      <p><strong>Daily target:</strong> ${moneyVal(c.daily_target??200)}</p>
+      ${c.admin_notes?`<p><strong>Admin notes:</strong> ${esc(c.admin_notes)}</p>`:""}
+    </div>`;
+  }).join("");
+}
+async function loadProfilePhoto(){
+  if(!currentUser)return;
+  const path=currentUser.user_metadata?.profile_photo_path;
+  const img=$("profilePhotoPreview");
+  if(!path||!img)return;
+  const r=await db.storage.from("worker-profile-photos").createSignedUrl(path,900);
+  if(!r.error&&r.data?.signedUrl){img.src=r.data.signedUrl;img.style.display="block";}
+}
+$("uploadProfilePhotoBtn")?.addEventListener("click",async()=>{
+  const file=$("profilePhotoInput")?.files?.[0];
+  if(!file){msg("profilePhotoMsg","Choose a photo or take one with your device camera first.","error");return;}
+  if(!file.type.startsWith("image/")){msg("profilePhotoMsg","Please select an image file.","error");return;}
+  if(file.size>5*1024*1024){msg("profilePhotoMsg","Please choose an image smaller than 5 MB.","error");return;}
+  const ext=({"image/jpeg":"jpg","image/png":"png","image/webp":"webp","image/heic":"heic"})[file.type]||"jpg";
+  const path=`${currentUser.id}/profile-${Date.now()}.${ext}`;
+  msg("profilePhotoMsg","Uploading your profile photo…");
+  const up=await db.storage.from("worker-profile-photos").upload(path,file,{contentType:file.type,upsert:true});
+  if(up.error){msg("profilePhotoMsg","Photo upload failed. The private worker-profile-photos bucket and its storage policies must be configured in Supabase. "+esc(up.error.message),"error");return;}
+  const meta=await db.auth.updateUser({data:{profile_photo_path:path}});
+  if(meta.error){msg("profilePhotoMsg","Photo uploaded but profile linking failed. Please contact admin. "+esc(meta.error.message),"error");return;}
+  currentUser.user_metadata={...(currentUser.user_metadata||{}),profile_photo_path:path};
+  await loadProfilePhoto();
+  // For drivers, send the separate onboarding/contract email only after they have
+  // successfully signed in (password set) and uploaded their profile photo.
+  if(String(profile?.role||"").toLowerCase()==="driver"){
+    msg("profilePhotoMsg","Photo saved. Sending your driver contract and payment information…");
+    try{
+      const {data:{session}}=await db.auth.getSession();
+      if(!session) throw new Error("Please sign in again to finish driver setup.");
+      const response=await fetch(SUPABASE_URL+"/functions/v1/send-driver-onboarding-complete",{
+        method:"POST",
+        headers:{"Authorization":"Bearer "+session.access_token,"apikey":SUPABASE_PUBLISHABLE_KEY,"Content-Type":"application/json"},
+        body:JSON.stringify({})
+      });
+      const result=await response.json().catch(()=>({}));
+      if(!response.ok||!result.success) throw new Error(result.error||"The driver follow-up email could not be sent.");
+      msg("profilePhotoMsg",result.already_sent?"Profile photo saved. Your driver setup email has already been sent.":"Profile photo saved. Your driver contract and Monday payment instructions have been emailed to you.","success");
+    }catch(e){
+      msg("profilePhotoMsg","Profile photo saved, but the driver follow-up email could not be sent: "+esc(e.message||e)+" Please contact admin.","error");
+    }
+  }else{
+    msg("profilePhotoMsg","Profile photo updated successfully.","success");
+  }
+});
+
 async function loadProfile(user){
   currentUser=user;
   const {data,error}=await db.from("worker_profiles")
@@ -496,6 +567,7 @@ async function loadProfile(user){
     await db.auth.signOut(); showLogin(); msg("loginMsg","Your worker account is inactive. Please contact Ezelex Enterprise admin.","error"); return;
   }
   profile=data;
+  applyRoleNavigation(data.role);
   showPortal();
 
   $("workerName").textContent=data.full_name||"Worker";
@@ -519,10 +591,16 @@ async function loadProfile(user){
   $("contractStart").textContent=dateOnly(data.contract_start);
   $("contractEnd").textContent=dateOnly(data.contract_end);
 
-  await ensureCurrentStockWeek();
-  await loadStockWeeks();
-  await Promise.all([loadSales(),loadStock(),loadStockHistory(),loadCredits(),loadTricycleContract()]);
-  await loadMessages();
+  await loadProfilePhoto();
+  if(isDriverRole(data.role)){
+    await loadDriverContract();
+    await loadMessages();
+  }else{
+    await ensureCurrentStockWeek();
+    await loadStockWeeks();
+    await Promise.all([loadSales(),loadStock(),loadStockHistory(),loadCredits()]);
+    await loadMessages();
+  }
 }
 
 function salesForWorker(){
@@ -918,58 +996,6 @@ async function loadMessages(){
      If a communication table exists, this section can be connected without changing worker login/profile. */
   $("messagesBody").innerHTML='<div class="message"><strong>Ezelex Enterprise</strong><br>Your worker communication area is ready.</div>';
 }
-
-
-// Tricycle contract worker area. Uses the separate tricycle tables and leaves sales/stock records untouched.
-let myTricycleContract = null;
-function triMoney(v){ return "GH₵"+Number(v||0).toLocaleString("en-GH",{minimumFractionDigits:2,maximumFractionDigits:2}); }
-function weekBounds(){
-  const now=new Date(); const start=new Date(now.getFullYear(),now.getMonth(),now.getDate());
-  const day=(start.getDay()+6)%7; start.setDate(start.getDate()-day);
-  const end=new Date(start); end.setDate(start.getDate()+6);
-  const iso=d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
-  return {start:iso(start),end:iso(end)};
-}
-function triDate(v){ return v ? new Date(String(v).slice(0,10)+'T00:00:00').toLocaleDateString('en-GB') : '—'; }
-async function loadTricycleContract(){
-  if(!currentUser) return;
-  const week=weekBounds();
-  $("triWeekLabel").textContent=`${triDate(week.start)} – ${triDate(week.end)} (Monday–Sunday)`;
-  const c=await db.from('tricycle_contracts').select('*').eq('driver_user_id',currentUser.id).in('status',['active','overdue','suspended']).order('created_at',{ascending:false}).limit(1).maybeSingle();
-  if(c.error){msg('tricycleMsg','Could not load your tricycle contract: '+esc(c.error.message),'error');return;}
-  myTricycleContract=c.data||null;
-  if(!myTricycleContract){$('triNoContract').classList.remove('hidden');$('triSubmitBtn').disabled=true;$('triReportsBody').innerHTML='<tr><td colspan="6">No tricycle contract assigned.</td></tr>';$('triPaymentsBody').innerHTML='<tr><td colspan="5">No payment history.</td></tr>';return;}
-  $('triNoContract').classList.add('hidden');$('triSubmitBtn').disabled=false;
-  $('triVehicleLabel').textContent=myTricycleContract.vehicle_id||'—';
-  $('triPeriodLabel').textContent=triDate(myTricycleContract.contract_start_date)+' – '+triDate(myTricycleContract.contract_end_date);
-  $('triTotalLabel').textContent=triMoney(myTricycleContract.total_contract_amount);
-  const [reports,payments,balance]=await Promise.all([
-    db.from('tricycle_weekly_reports').select('*').eq('contract_id',myTricycleContract.id).eq('driver_user_id',currentUser.id).order('week_start',{ascending:false}),
-    db.from('tricycle_contract_payments').select('amount,payment_date,payment_method,reference,notes').eq('contract_id',myTricycleContract.id).order('payment_date',{ascending:false}),
-    db.rpc('ezelex_tricycle_balance',{p_contract_id:myTricycleContract.id})
-  ]);
-  if(reports.error){msg('tricycleMsg','Contract loaded, but weekly reports could not load: '+esc(reports.error.message),'error');}
-  const rr=reports.data||[];
-  $('triReportsBody').innerHTML=rr.length?rr.map(r=>`<tr><td>${esc(triDate(r.week_start)+' – '+triDate(r.week_end))}</td><td>${triMoney(r.sales_reported)}</td><td>${triMoney(r.payment_amount)}</td><td>${esc(r.payment_reference||'—')}</td><td><span class="badge">${esc(String(r.status||'pending').toUpperCase())}</span></td><td>${esc(r.rejection_reason||'—')}</td></tr>`).join(''):'<tr><td colspan="6">No weekly reports submitted yet.</td></tr>';
-  const pp=payments.data||[];
-  $('triPaymentsBody').innerHTML=pp.length?pp.map(x=>`<tr><td>${esc(triDate(x.payment_date))}</td><td>${triMoney(x.amount)}</td><td>${esc(x.payment_method||'—')}</td><td>${esc(x.reference||'—')}</td><td>${esc(x.notes||'—')}</td></tr>`).join(''):'<tr><td colspan="5">No payments recorded yet.</td></tr>';
-  const paid=Number(myTricycleContract.opening_paid_amount||0)+pp.reduce((n,x)=>n+Number(x.amount||0),0);
-  $('triPaidLabel').textContent=triMoney(paid);
-  $('triBalanceLabel').textContent=triMoney(balance.error?Math.max(0,Number(myTricycleContract.total_contract_amount||0)-paid):balance.data);
-  if(rr.some(r=>r.week_start===week.start)){ $('triSubmitBtn').disabled=true;msg('tricycleMsg','A report for this week has already been submitted. Check My Weekly Reports below.'); }
-  else { $('triSubmitBtn').disabled=false; }
-}
-$('triReportForm')?.addEventListener('submit',async e=>{
-  e.preventDefault();
-  if(!currentUser||!myTricycleContract){msg('tricycleMsg','No tricycle contract is linked to your account.','error');return;}
-  const week=weekBounds();
-  const sales=Number($('triSalesReported').value), payment=Number($('triPaymentAmount').value);
-  if(!Number.isFinite(sales)||sales<0||!Number.isFinite(payment)||payment<0){msg('tricycleMsg','Enter valid non-negative amounts.','error');return;}
-  $('triSubmitBtn').disabled=true;msg('tricycleMsg','Submitting weekly report…');
-  const result=await db.from('tricycle_weekly_reports').insert({contract_id:myTricycleContract.id,driver_user_id:currentUser.id,week_start:week.start,week_end:week.end,sales_reported:sales,payment_amount:payment,payment_reference:$('triPaymentReference').value.trim()||null,driver_notes:$('triDriverNotes').value.trim()||null,status:'pending'});
-  if(result.error){$('triSubmitBtn').disabled=false;msg('tricycleMsg',result.error.code==='23505'?'A report for this week already exists.':('Could not submit report: '+esc(result.error.message)),'error');return;}
-  $('triReportForm').reset();msg('tricycleMsg','Weekly report submitted successfully and is waiting for admin approval. Your contract balance will update when the payment is approved.','success');await loadTricycleContract();
-});
 
 function stockMoney(v){
   return "GHS "+Number(v||0).toFixed(2);
@@ -1375,6 +1401,10 @@ db.auth.onAuthStateChange((event,session)=>{
 
 document.querySelectorAll(".tab").forEach(btn=>{
   btn.addEventListener("click",()=>{
+    if(btn.classList.contains("hidden"))return;
+    const driver=isDriverRole(profile?.role);
+    if(driver && ["sales","stock","stockHistory","credit"].includes(btn.dataset.tab))return;
+    if(!driver && btn.dataset.tab==="contract")return;
     document.querySelectorAll(".tab").forEach(b=>b.classList.remove("active"));
     document.querySelectorAll(".section").forEach(s=>s.classList.remove("active"));
     btn.classList.add("active");$(btn.dataset.tab).classList.add("active");
