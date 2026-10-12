@@ -60,6 +60,13 @@ th,td{padding:11px;border-bottom:1px solid #eee;text-align:left;font-size:14px}t
 
 @media(max-width:900px){.stats,.stockGrid{grid-template-columns:1fr 1fr}.resultGrid{grid-template-columns:1fr 1fr}}
 @media(max-width:700px){.grid,.cardrow{grid-template-columns:1fr}.full{grid-column:auto}.login{margin:30px 15px}.wrap{padding:0 12px}.stats,.stockGrid,.resultGrid{grid-template-columns:1fr}}
+
+/* Mobile-friendly navigation and driver identity/contract panels */
+.tabs{position:relative}
+.tabs .tab{min-height:44px}
+.photoPreview{width:104px;height:104px;border-radius:50%;object-fit:cover;background:#e5e7eb;border:3px solid #e5e7eb;display:block;margin:10px 0}
+.driverContractCard{border:1px solid #e5e7eb;border-radius:12px;padding:16px;margin:12px 0;background:#f8fafc}
+@media(max-width:600px){header{padding:14px 12px;align-items:flex-start}header h1{font-size:19px}.tabs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}.tab{padding:10px 8px;font-size:13px}.panel{padding:15px}.workerInfo{overflow-wrap:anywhere}.photoPreview{width:88px;height:88px}}
 </style>
 </head>
 <body>
@@ -126,6 +133,9 @@ th,td{padding:11px;border-bottom:1px solid #eee;text-align:left;font-size:14px}t
     <button class="tab" data-tab="stock">Live Stock</button>
     <button class="tab" data-tab="stockHistory">Edit History</button>
     <button class="tab" data-tab="credit">On-Credit</button>
+    <button class="tab" data-tab="contract" id="driverContractTab">Tricycle Contract</button>
+    <button class="tab" data-tab="profile">My Profile</button>
+    <button class="tab" data-tab="communication">Communication</button>
   </div>
 
   <section id="dashboard" class="section active">
@@ -304,6 +314,14 @@ th,td{padding:11px;border-bottom:1px solid #eee;text-align:left;font-size:14px}t
   <section id="profile" class="section">
     <div class="panel">
       <h2>My Profile</h2>
+      <div class="infoBox" style="margin-bottom:14px">
+        <strong>Profile Photo</strong>
+        <img id="profilePhotoPreview" class="photoPreview" alt="Your profile photo" src="" style="display:none">
+        <p class="live">Upload a clear photo of yourself for identification by Ezelex Enterprise admin.</p>
+        <input id="profilePhotoInput" type="file" accept="image/*" capture="user">
+        <button id="uploadProfilePhotoBtn" type="button" class="primary">Upload / Update Photo</button>
+        <div id="profilePhotoMsg" aria-live="polite"></div>
+      </div>
       <div class="infoBox">
         <strong>Worker ID:</strong> <span id="profileWorkerId">—</span><br>
         <strong>Full Name:</strong> <span id="profileFullName">—</span><br>
@@ -327,12 +345,10 @@ th,td{padding:11px;border-bottom:1px solid #eee;text-align:left;font-size:14px}t
 
   <section id="contract" class="section">
     <div class="panel">
-      <h2>📄 My Contract</h2>
-      <div class="infoBox">
-        <strong>Contract Start:</strong> <span id="contractStart">—</span><br>
-        <strong>Contract End:</strong> <span id="contractEnd">—</span>
-      </div>
-      <p style="margin-top:16px">Your contract details are linked to your worker profile. If Ezelex Enterprise has provided a contract document or link, it can be added here later without changing your worker login.</p>
+      <h2>🛺 My Tricycle Contract</h2>
+      <p class="stockNote">Your tricycle contract details and payment progress appear here when linked by Ezelex Enterprise admin.</p>
+      <div id="driverContractMsg" aria-live="polite"></div>
+      <div id="driverContractDetails"><div class="driverContractCard">Loading your contract details…</div></div>
     </div>
   </section>
 </main>
@@ -408,17 +424,18 @@ async function ensureCurrentStockWeek(){
   return currentStockWeek;
 }
 function renderStockWeekControls(){
-  if(!currentStockWeek)return;
-  $("weekRangeLabel").textContent=weekLabel(currentStockWeek);
-  const isOpen=currentStockWeek.status==="open";
-  $("weekStatusLabel").textContent=isOpen?"OPEN — add purchases and track sales":"CLOSED — archived and read-only";
-  $("closeStockWeekBtn").disabled=!isOpen;
-  $("closeStockWeekBtn").textContent=isOpen?"Close This Week (Sunday)":"Week Closed";
   const picker=$("stockWeekPicker");
+  if(currentStockWeek){
+    $("weekRangeLabel").textContent=weekLabel(currentStockWeek);
+    const isOpen=currentStockWeek.status==="open";
+    $("weekStatusLabel").textContent=isOpen?"OPEN — add purchases and track sales":"CLOSED — archived and read-only";
+    $("closeStockWeekBtn").disabled=!isOpen;
+    $("closeStockWeekBtn").textContent=isOpen?"Close This Week (Sunday)":"Week Closed";
+  }
   if(picker){
     const previous=selectedStockWeekId||picker.value||"";
     const books=[...stockWeekRows];
-    if(!books.some(w=>String(w.id)===String(currentStockWeek.id)))books.push(currentStockWeek);
+    if(currentStockWeek&&!books.some(w=>String(w.id)===String(currentStockWeek.id)))books.push(currentStockWeek);
     books.sort((a,b)=>String(b.week_start||"").localeCompare(String(a.week_start||"")));
     picker.innerHTML='<option value="">Current week</option>'+books.map(w=>`<option value="${esc(w.id)}">${esc(weekLabel(w))} — ${esc(String(w.status||"open").toUpperCase())}</option>`).join("");
     picker.value=previous&&books.some(w=>String(w.id)===String(previous))?previous:"";
@@ -429,21 +446,16 @@ async function loadStockWeeks(){
   const r=await db.from("worker_stock_weeks").select("*").eq("worker_id",currentUser.id).order("week_start",{ascending:false}).limit(100);
   if(r.error){msg("weeklyStockMsg","Weekly stock books could not be loaded: "+esc(r.error.message),"error");return;}
   stockWeekRows=r.data||[];
-  // Rebuild selector options from BOTH weekly books and saved stock dates.
-  // Display-only recovery: never changes or deletes saved stock records.
+  // Recover week options from existing stock records as a safe display fallback. This does not insert, update, or delete database data.
   const batches=await db.from("worker_stock_batches").select("id,week_id,stock_date,created_at").eq("worker_id",currentUser.id).order("stock_date",{ascending:false}).limit(2000);
   if(!batches.error){
     for(const b of (batches.data||[])){
-      const start=mondayDateISO(b.stock_date||b.created_at||today());
       const weekId=String(b.week_id||"");
-      const hasExactId=weekId&&stockWeekRows.some(w=>String(w.id)===weekId);
-      const hasSameStart=stockWeekRows.some(w=>String(w.week_start||"")===start);
-      if(!hasExactId&&!hasSameStart){
-        stockWeekRows.push({id:weekId||('date:'+start),week_start:start,week_end:addDaysISO(start,6),status:start===mondayDateISO(today())?'open':'closed',_derived:true});
-      }
+      if(weekId&&stockWeekRows.some(w=>String(w.id)===weekId))continue;
+      const start=mondayDateISO(b.stock_date||b.created_at||today());
+      if(stockWeekRows.some(w=>String(w.week_start)===start))continue;
+      stockWeekRows.push({id:weekId||('date:'+start),week_start:start,week_end:addDaysISO(start,6),status:start===mondayDateISO(today())?'open':'closed',_derived:true});
     }
-  } else {
-    msg("weeklyStockMsg","Stock dates are saved, but the weekly history list could not be rebuilt: "+esc(batches.error.message),"error");
   }
   stockWeekRows.sort((a,b)=>String(b.week_start||"").localeCompare(String(a.week_start||"")));
   renderStockWeekControls();
@@ -465,6 +477,97 @@ async function start(){
   await loadProfile(session.user);
 }
 
+const isDriverRole = value => String(value||"").trim().toLowerCase().replace(/[ _-]/g,"")==="driver";
+function applyRoleNavigation(role){
+  const driver=isDriverRole(role);
+  const driverOnly=new Set(["contract"]);
+  const workerOnly=new Set(["sales","stock","stockHistory","credit"]);
+  document.querySelectorAll(".tab[data-tab]").forEach(btn=>{
+    const tab=btn.dataset.tab;
+    btn.classList.toggle("hidden",driver?workerOnly.has(tab):driverOnly.has(tab));
+  });
+  // Profile and communication remain available to both roles.
+  if(driver){
+    document.querySelectorAll(".section").forEach(sec=>{
+      if(workerOnly.has(sec.id)){sec.classList.remove("active");}
+    });
+    document.querySelectorAll(".tab").forEach(b=>b.classList.remove("active"));
+    document.querySelectorAll(".section").forEach(sec=>sec.classList.remove("active"));
+    document.querySelector('.tab[data-tab="dashboard"]')?.classList.add("active");
+    $("dashboard")?.classList.add("active");
+  }
+}
+async function loadDriverContract(){
+  const host=$("driverContractDetails"); if(!host||!currentUser)return;
+  host.innerHTML='<div class="driverContractCard">Loading your contract details…</div>';
+  const r=await db.from("tricycle_contracts").select("*").eq("driver_user_id",currentUser.id).order("created_at",{ascending:false}).limit(10);
+  if(r.error){
+    host.innerHTML='<div class="msg error">Your contract could not be loaded. Please contact Ezelex Enterprise admin.</div>';
+    console.warn("Tricycle contract query failed:",r.error.message);return;
+  }
+  const rows=r.data||[];
+  if(!rows.length){host.innerHTML='<div class="driverContractCard">No tricycle contract has been linked to your account yet. Please contact Ezelex Enterprise admin.</div>';return;}
+  host.innerHTML=rows.map(c=>{
+    const moneyVal=v=>"GH₵"+Number(v||0).toLocaleString("en-GH",{minimumFractionDigits:2,maximumFractionDigits:2});
+    const status=String(c.status||"pending").replace(/[_-]/g," ");
+    const total=Number(c.total_amount||0),paid=Number(c.opening_paid_amount||0);
+    return `<div class="driverContractCard">
+      <h3>${esc(c.vehicle_registration||c.vehicle_id||"Tricycle contract")}</h3>
+      <p><strong>Status:</strong> ${esc(status)}</p>
+      <p><strong>Contract period:</strong> ${esc(dateOnly(c.contract_start))} – ${esc(dateOnly(c.contract_end))}</p>
+      <p><strong>Contract amount:</strong> ${moneyVal(total)}</p>
+      <p><strong>Opening amount paid:</strong> ${moneyVal(paid)}</p>
+      <p><strong>Weekly target:</strong> ${moneyVal(c.weekly_target??1400)}</p>
+      <p><strong>Daily target:</strong> ${moneyVal(c.daily_target??200)}</p>
+      ${c.admin_notes?`<p><strong>Admin notes:</strong> ${esc(c.admin_notes)}</p>`:""}
+    </div>`;
+  }).join("");
+}
+async function loadProfilePhoto(){
+  if(!currentUser)return;
+  const path=currentUser.user_metadata?.profile_photo_path;
+  const img=$("profilePhotoPreview");
+  if(!path||!img)return;
+  const r=await db.storage.from("worker-profile-photos").createSignedUrl(path,900);
+  if(!r.error&&r.data?.signedUrl){img.src=r.data.signedUrl;img.style.display="block";}
+}
+$("uploadProfilePhotoBtn")?.addEventListener("click",async()=>{
+  const file=$("profilePhotoInput")?.files?.[0];
+  if(!file){msg("profilePhotoMsg","Choose a photo or take one with your device camera first.","error");return;}
+  if(!file.type.startsWith("image/")){msg("profilePhotoMsg","Please select an image file.","error");return;}
+  if(file.size>5*1024*1024){msg("profilePhotoMsg","Please choose an image smaller than 5 MB.","error");return;}
+  const ext=({"image/jpeg":"jpg","image/png":"png","image/webp":"webp","image/heic":"heic"})[file.type]||"jpg";
+  const path=`${currentUser.id}/profile-${Date.now()}.${ext}`;
+  msg("profilePhotoMsg","Uploading your profile photo…");
+  const up=await db.storage.from("worker-profile-photos").upload(path,file,{contentType:file.type,upsert:true});
+  if(up.error){msg("profilePhotoMsg","Photo upload failed. The private worker-profile-photos bucket and its storage policies must be configured in Supabase. "+esc(up.error.message),"error");return;}
+  const meta=await db.auth.updateUser({data:{profile_photo_path:path}});
+  if(meta.error){msg("profilePhotoMsg","Photo uploaded but profile linking failed. Please contact admin. "+esc(meta.error.message),"error");return;}
+  currentUser.user_metadata={...(currentUser.user_metadata||{}),profile_photo_path:path};
+  await loadProfilePhoto();
+  // For drivers, send the separate onboarding/contract email only after they have
+  // successfully signed in (password set) and uploaded their profile photo.
+  if(String(profile?.role||"").toLowerCase()==="driver"){
+    msg("profilePhotoMsg","Photo saved. Sending your driver contract and payment information…");
+    try{
+      const {data:{session}}=await db.auth.getSession();
+      if(!session) throw new Error("Please sign in again to finish driver setup.");
+      const response=await fetch(SUPABASE_URL+"/functions/v1/send-driver-onboarding-complete",{
+        method:"POST",
+        headers:{"Authorization":"Bearer "+session.access_token,"apikey":SUPABASE_PUBLISHABLE_KEY,"Content-Type":"application/json"},
+        body:JSON.stringify({})
+      });
+      const result=await response.json().catch(()=>({}));
+      if(!response.ok||!result.success) throw new Error(result.error||"The driver follow-up email could not be sent.");
+      msg("profilePhotoMsg",result.already_sent?"Profile photo saved. Your driver setup email has already been sent.":"Profile photo saved. Your driver contract and Monday payment instructions have been emailed to you.","success");
+    }catch(e){
+      msg("profilePhotoMsg","Profile photo saved, but the driver follow-up email could not be sent: "+esc(e.message||e)+" Please contact admin.","error");
+    }
+  }else{
+    msg("profilePhotoMsg","Profile photo updated successfully.","success");
+  }
+});
+
 async function loadProfile(user){
   currentUser=user;
   const {data,error}=await db.from("worker_profiles")
@@ -485,6 +588,7 @@ async function loadProfile(user){
     await db.auth.signOut(); showLogin(); msg("loginMsg","Your worker account is inactive. Please contact Ezelex Enterprise admin.","error"); return;
   }
   profile=data;
+  applyRoleNavigation(data.role);
   showPortal();
 
   $("workerName").textContent=data.full_name||"Worker";
@@ -508,10 +612,16 @@ async function loadProfile(user){
   $("contractStart").textContent=dateOnly(data.contract_start);
   $("contractEnd").textContent=dateOnly(data.contract_end);
 
-  await ensureCurrentStockWeek();
-  await loadStockWeeks();
-  await Promise.all([loadSales(),loadStock(),loadStockHistory(),loadCredits()]);
-  await loadMessages();
+  await loadProfilePhoto();
+  if(isDriverRole(data.role)){
+    await loadDriverContract();
+    await loadMessages();
+  }else{
+    await ensureCurrentStockWeek();
+    await loadStockWeeks();
+    await Promise.all([loadSales(),loadStock(),loadStockHistory(),loadCredits()]);
+    await loadMessages();
+  }
 }
 
 function salesForWorker(){
@@ -588,32 +698,26 @@ async function loadStock(){
   const {data,error}=await db.from("worker_stock_batches").select("*").eq("worker_id",currentUser.id).order("stock_date",{ascending:false});
   if(error){$("stockBody").innerHTML='<tr><td colspan="11">Stock records could not be loaded.</td></tr>';msg("stockLiveMsg","Could not load live stock: "+error.message,"error");return;}
   const allRows=data||[]; liveStockRows=allRows;
-  const currentStart=currentStockWeek?.week_start||mondayDateISO(today());
-  const chosenBook=selectedStockWeekId?stockWeekRows.find(w=>String(w.id)===String(selectedStockWeekId)):currentStockWeek;
-  const chosenStart=chosenBook?.week_start||currentStart;
-  // Match by week_id OR by the stock record's actual date. This recovers older records
-  // even when their week_id points to a missing/different weekly-book row.
+  const chosenWeekId=selectedStockWeekId||currentStockWeek?.id||"";
+  const chosenWeek=stockWeekRows.find(w=>String(w.id)===String(chosenWeekId)) || (String(currentStockWeek?.id||"")===String(chosenWeekId)?currentStockWeek:null);
+  const chosenStart=chosenWeek?.week_start || (selectedStockWeekId?null:mondayDateISO(today()));
   const rows=allRows.filter(r=>{
-    const dateStart=mondayDateISO(r.stock_date||r.created_at||today());
-    const idMatch=!!selectedStockWeekId&&String(r.week_id||"")===String(selectedStockWeekId);
-    const dateMatch=dateStart===String(chosenStart);
-    const currentIdMatch=!selectedStockWeekId&&!!currentStockWeek?.id&&String(r.week_id||"")===String(currentStockWeek.id);
-    return idMatch||dateMatch||currentIdMatch;
+    if(r.week_id && String(r.week_id)===String(chosenWeekId))return true;
+    // Older records may not have week_id, or their week book may be missing. Group those records by their date so they remain visible.
+    if(!r.week_id || !stockWeekRows.some(w=>String(w.id)===String(r.week_id))){
+      const rowStart=mondayDateISO(r.stock_date||r.created_at||today());
+      return !!chosenStart && rowStart===chosenStart;
+    }
+    return false;
   });
   let units=0,value=0,revenue=0,profit=0,cash=0,purchased=0,soldWeek=0;
   rows.forEach(r=>{units+=Number(r.remaining_quantity||0);value+=Number(r.remaining_value||0);revenue+=Number(r.sales_revenue||0);profit+=Number(r.profit_loss||0);if(r.stock_type!=="carry_forward")purchased+=Number(r.total_quantity||0);soldWeek+=Number(r.sold_quantity||0);const cap=Number(r.capital_amount??r.purchase_total??0),pur=Number(r.purchase_total||0);cash+=Number(r.cash_in_hand??(cap+Number(r.sales_revenue||0)-Number(r.credit_outstanding||0)-pur));});
-  $("liveUnits").textContent=units.toLocaleString();$("liveValue").textContent=money(value);$("liveRevenue").textContent=money(revenue);$("liveProfit").textContent=money(profit);$("liveProfitLabel").textContent=profit>=0?"selected week profit":"selected week loss";
+  $("liveUnits").textContent=units.toLocaleString();$("liveValue").textContent=money(value);$("liveRevenue").textContent=money(revenue);$("liveProfit").textContent=money(profit);$("liveProfitLabel").textContent="selected week profit";
   $("weekPurchased").textContent=purchased.toLocaleString();$("weekSold").textContent=soldWeek.toLocaleString();$("weekRemaining").textContent=units.toLocaleString();
-  // Reuse the existing stock-batch Profit/Loss values without changing their calculation.
-  const weekProfitCard=$("weekProfitCard");
-  $("weekProfit").textContent=money(profit);
-  weekProfitCard.classList.toggle("profit",profit>0);
-  weekProfitCard.classList.toggle("loss",profit<0);
-  $("weekProfitLabel").textContent=profit>0?"You're gaining this week":profit<0?"You're losing money this week":"Break-even so far";
+  const weekProfitCard=$("weekProfitCard");$("weekProfit").textContent=money(profit);weekProfitCard.classList.toggle("profit",profit>0);weekProfitCard.classList.toggle("loss",profit<0);$("weekProfitLabel").textContent=profit>0?"You're gaining this week":profit<0?"You're losing money this week":"Break-even so far";
   const viewingClosed=!!selectedWeekIsClosed();
-  if(currentStockWeek?.status==="closed"&&!selectedStockWeekId){msg("weeklyStockMsg","This week's book is closed. Choose the current week after Monday to continue adding stock.","error");}
   if(!rows.length){$("stockBody").innerHTML='<tr><td colspan="11">No stock records in this week yet.</td></tr>';}
-  else $("stockBody").innerHTML=rows.map(r=>{const cap=Number(r.capital_amount??r.purchase_total??0),pur=Number(r.purchase_total||0),ci=Number(r.cash_in_hand??(cap+Number(r.sales_revenue||0)-Number(r.credit_outstanding||0)-pur));const rowStart=mondayDateISO(r.stock_date||r.created_at||today());const rowBook=stockWeekRows.find(w=>String(w.id)===String(r.week_id||""))||stockWeekRows.find(w=>String(w.week_start||"")===rowStart);const editable=!viewingClosed&&(!rowBook||rowBook.status!=="closed")&&rowStart===String(chosenStart)&&(!selectedStockWeekId||String(r.week_id||"")===String(selectedStockWeekId)||!r.week_id);return `<tr><td>${esc(dateOnly(r.stock_date))}</td><td>${esc(r.product_service||"")}${r.stock_type==="carry_forward"?' <span class="badge">Opening balance</span>':''}</td><td>${esc(r.total_quantity??0)}</td><td>${esc(r.sold_quantity??0)}</td><td>${esc(r.damage_quantity??0)}</td><td>${esc(r.remaining_quantity??0)}</td><td>${money(cap)}</td><td>${money(pur)}</td><td>${money(ci)}</td><td>${money(r.profit_loss)}</td><td>${editable?`<button type="button" class="primary" onclick="editStock('${esc(r.id)}')">Edit</button>`:'<span class="badge">Archived</span>'}</td></tr>`;}).join("");
+  else $("stockBody").innerHTML=rows.map(r=>{const cap=Number(r.capital_amount??r.purchase_total??0),pur=Number(r.purchase_total||0),ci=Number(r.cash_in_hand??(cap+Number(r.sales_revenue||0)-Number(r.credit_outstanding||0)-pur));const rowWeek=String(r.week_id||"")===String(currentStockWeek?.id||"") || (!r.week_id&&mondayDateISO(r.stock_date||r.created_at||today())===mondayDateISO(today()));const editable=true;return `<tr><td>${esc(dateOnly(r.stock_date))}</td><td>${esc(r.product_service||"")}${r.stock_type==="carry_forward"?' <span class="badge">Opening balance</span>':''}</td><td>${esc(r.total_quantity??0)}</td><td>${esc(r.sold_quantity??0)}</td><td>${esc(r.damage_quantity??0)}</td><td>${esc(r.remaining_quantity??0)}</td><td>${money(cap)}</td><td>${money(pur)}</td><td>${money(ci)}</td><td>${money(r.profit_loss)}</td><td>${editable?`<button type="button" class="primary" onclick="editStock('${esc(r.id)}')">Edit</button>`:'<span class="badge">Archived</span>'}</td></tr>`;}).join("");
   const sel=$("creditStockBatch");if(sel){const prev=sel.value;sel.innerHTML='<option value="">Choose stock batch</option>'+allRows.filter(r=>String(r.week_id||"")===String(currentStockWeek?.id||"")&&Number(r.remaining_quantity||0)>0).map(r=>`<option value="${esc(r.id)}">${esc(dateOnly(r.stock_date))} — ${esc(r.product_service||"Stock")} (remaining ${Number(r.remaining_quantity||0)})</option>`).join("");if(allRows.some(r=>r.id===prev))sel.value=prev;}
   $("saveStockBtn").disabled=!!currentStockWeek&&currentStockWeek.status!=="open"&&!editingStockId;
 }
@@ -756,12 +860,16 @@ function startStockEdit(r){
   msg("stockMsg","Editing stock batch. Update quantity, purchase cost per unit, sold or damage quantity, then save. ","success");
 }
 window.editStock=async function(id){
-  const {data:errorWeekData}=await db.from("worker_stock_batches").select("week_id").eq("id",id).eq("worker_id",currentUser.id).maybeSingle();
-  const week=stockWeekRows.find(w=>String(w.id)===String(errorWeekData?.week_id||""));
-  if(week&&week.status==="closed"){msg("stockMsg","This weekly stock book is closed and archived. It is kept for reporting and cannot be edited.","error");return;}
-  if(errorWeekData?.week_id&&String(errorWeekData.week_id)!==String(currentStockWeek?.id||"")){msg("stockMsg","Only the current week's stock can be edited. Older weekly books are archived for reporting.","error");return;}
-  const {data,error}=await db.from("worker_stock_batches").select("*").eq("id",id).eq("worker_id",currentUser.id).maybeSingle();
-  if(error||!data){msg("stockMsg","Could not open that stock record for editing.","error");return;} startStockEdit(data);
+  try {
+    // Previous and closed weekly books remain editable for the worker who owns them.
+    const {data,error}=await db.from("worker_stock_batches").select("*").eq("id",id).eq("worker_id",currentUser.id).maybeSingle();
+    if(error) throw error;
+    if(!data){msg("stockMsg","That stock record was not found or you do not have permission to edit it.","error");return;}
+    startStockEdit(data);
+  } catch(error) {
+    console.error("Open stock record for editing failed:",error);
+    msg("stockMsg","Could not open stock record: "+esc(error?.message||String(error)),"error");
+  }
 };
 function cancelStockEdit(){
   editingStockId=""; editingStockOriginal=null; $("editingStockId").value=""; $("stockForm").reset(); $("stockDate").value=today(); $("stockSold").value=0; $("stockDamage").value=0; $("saveStockBtn").textContent="Save Stock Record"; $("cancelEditStockBtn").style.display="none"; $("deleteStockBtn").style.display="none"; updateStockFormCreditSummary(""); calculateStock(); msg("stockMsg","Edit cancelled","");
@@ -783,8 +891,12 @@ $("deleteStockBtn").onclick=async()=>{
   await Promise.all([loadStock(),loadStockHistory()]);
 };
 $("saveStockBtn").onclick=async()=>{
+  const saveButton=$("saveStockBtn");
+  if(saveButton.disabled)return;
+  saveButton.disabled=true;
+  try {
   if(!editingStockId&&(!currentStockWeek||currentStockWeek.status!=="open")){msg("stockMsg","This weekly stock book is closed. Start or open the new Monday weekly book before adding stock.","error");return;}
-  if(selectedStockWeekId&&selectedStockWeekId!==String(currentStockWeek?.id||"")){msg("stockMsg","You are viewing an archived week. Switch to Current week before adding stock.","error");return;}
+  if(!editingStockId && selectedStockWeekId && selectedStockWeekId!==String(currentStockWeek?.id||"")){msg("stockMsg","You are viewing an archived week. You can edit existing records, but new stock can only be added to the current week.","error");return;}
   const total=num("stockTotal"),capital=num("capitalAmount"),unitCost=num("costPerUnit"),price=num("sellPrice"),purchase=(editingStockId&&editingStockOriginal?.stock_type==="carry_forward")?0:total*unitCost;
   const enteredSold=num("stockSold"),enteredDamage=num("stockDamage");
   const old=editingStockOriginal||{};
@@ -813,10 +925,13 @@ $("saveStockBtn").onclick=async()=>{
       const audit=`Purchase quantity: ${beforeTotal} → ${total}; unit cost: ${money(beforeUnit)} → ${money(unitCost)}; calculated purchase total: ${money(Number(editingStockOriginal?.purchase_total||0))} → ${money(purchase)}.`;
       historyRecord={...record,notes:[audit,String(record.notes||"")].filter(Boolean).join(" ")||null};
     }
+    // Update the stock row first so a separate history-table problem cannot block edits.
+    result=await db.from("worker_stock_batches").update(record).eq("id",editingStockId).eq("worker_id",currentUser.id).select("id");
+    if(result.error){msg("stockMsg","Stock update failed: "+result.error.message,"error");return;}
+    if(!result.data || !result.data.length){msg("stockMsg","No stock row was updated. Check the worker_stock_batches update policy for this worker, then try again.","error");return;}
     const historyError=await writeStockHistory(editingStockOriginal,historyRecord,historyAction);
-    if(historyError){msg("stockMsg","History could not be saved, so the stock was not changed. Please run the supplied stock history SQL in Supabase. "+historyError.message,"error");return;}
-    result=await db.from("worker_stock_batches").update(record).eq("id",editingStockId).eq("worker_id",currentUser.id);
-    if(result.error){msg("stockMsg","Stock update failed: "+result.error.message+". A history entry was retained for audit.","error");return;}
+    if(historyError){console.warn("Stock updated but history could not be saved:",historyError);window.stockHistoryWarning=historyError.message||String(historyError);}
+    else {window.stockHistoryWarning="";}
   }else{
     result=await db.from("worker_stock_batches").insert(record).select("*").single();
     if(result.error){msg("stockMsg","Stock record could not be saved: "+result.error.message,"error");return;}
@@ -824,8 +939,14 @@ $("saveStockBtn").onclick=async()=>{
     if(historyError){msg("stockMsg","Stock was saved, but its history entry could not be saved. Please check the stock history SQL/policies: "+historyError.message,"error");}
   }
   const savedStockDate=record.stock_date;
-  msg("stockMsg",wasEditing?"Stock updated and date/time history recorded.":"Stock record saved successfully and sent to Ezelex admin.","success");
+  msg("stockMsg",wasEditing?(window.stockHistoryWarning?"Stock updated successfully. Warning: edit history could not be saved: "+esc(window.stockHistoryWarning):"Stock updated successfully and edit history recorded."):"Stock record saved successfully and sent to Ezelex admin.","success");
   editingStockId=""; editingStockOriginal=null; $("editingStockId").value=""; $("stockForm").reset(); $("stockDate").value=savedStockDate||today(); $("stockSold").value=0; $("stockDamage").value=0; $("saveStockBtn").textContent="Save Stock Record"; $("cancelEditStockBtn").style.display="none"; $("deleteStockBtn").style.display="none"; updateStockFormCreditSummary(""); calculateStock(); await Promise.all([loadStock(),loadStockHistory(),loadStockWeeks()]);
+  } catch(error) {
+    console.error("Stock save/update failed:",error);
+    msg("stockMsg","Stock record was not updated: "+esc(error?.message||String(error)),"error");
+  } finally {
+    saveButton.disabled=false;
+  }
 };
 
 async function loadCredits(){
@@ -1322,6 +1443,10 @@ db.auth.onAuthStateChange((event,session)=>{
 
 document.querySelectorAll(".tab").forEach(btn=>{
   btn.addEventListener("click",()=>{
+    if(btn.classList.contains("hidden"))return;
+    const driver=isDriverRole(profile?.role);
+    if(driver && ["sales","stock","stockHistory","credit"].includes(btn.dataset.tab))return;
+    if(!driver && btn.dataset.tab==="contract")return;
     document.querySelectorAll(".tab").forEach(b=>b.classList.remove("active"));
     document.querySelectorAll(".section").forEach(s=>s.classList.remove("active"));
     btn.classList.add("active");$(btn.dataset.tab).classList.add("active");
