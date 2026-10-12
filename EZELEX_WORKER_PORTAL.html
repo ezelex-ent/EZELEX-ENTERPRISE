@@ -702,13 +702,11 @@ async function loadStock(){
   const chosenWeek=stockWeekRows.find(w=>String(w.id)===String(chosenWeekId)) || (String(currentStockWeek?.id||"")===String(chosenWeekId)?currentStockWeek:null);
   const chosenStart=chosenWeek?.week_start || (selectedStockWeekId?null:mondayDateISO(today()));
   const rows=allRows.filter(r=>{
+    const rowStart=mondayDateISO(r.stock_date||r.created_at||today());
+    // Match either the saved weekly-book ID OR the calendar week of the stock date.
+    // This keeps older records visible if a weekly book ID is missing or inconsistent.
     if(r.week_id && String(r.week_id)===String(chosenWeekId))return true;
-    // Older records may not have week_id, or their week book may be missing. Group those records by their date so they remain visible.
-    if(!r.week_id || !stockWeekRows.some(w=>String(w.id)===String(r.week_id))){
-      const rowStart=mondayDateISO(r.stock_date||r.created_at||today());
-      return !!chosenStart && rowStart===chosenStart;
-    }
-    return false;
+    return !!chosenStart && rowStart===chosenStart;
   });
   let units=0,value=0,revenue=0,profit=0,cash=0,purchased=0,soldWeek=0;
   rows.forEach(r=>{units+=Number(r.remaining_quantity||0);value+=Number(r.remaining_value||0);revenue+=Number(r.sales_revenue||0);profit+=Number(r.profit_loss||0);if(r.stock_type!=="carry_forward")purchased+=Number(r.total_quantity||0);soldWeek+=Number(r.sold_quantity||0);const cap=Number(r.capital_amount??r.purchase_total??0),pur=Number(r.purchase_total||0);cash+=Number(r.cash_in_hand??(cap+Number(r.sales_revenue||0)-Number(r.credit_outstanding||0)-pur));});
@@ -925,13 +923,12 @@ $("saveStockBtn").onclick=async()=>{
       const audit=`Purchase quantity: ${beforeTotal} → ${total}; unit cost: ${money(beforeUnit)} → ${money(unitCost)}; calculated purchase total: ${money(Number(editingStockOriginal?.purchase_total||0))} → ${money(purchase)}.`;
       historyRecord={...record,notes:[audit,String(record.notes||"")].filter(Boolean).join(" ")||null};
     }
-    // Update the stock row first so a separate history-table problem cannot block edits.
+    // Save the stock first: a separate edit-history table/policy must not block the stock update.
     result=await db.from("worker_stock_batches").update(record).eq("id",editingStockId).eq("worker_id",currentUser.id).select("id");
     if(result.error){msg("stockMsg","Stock update failed: "+result.error.message,"error");return;}
-    if(!result.data || !result.data.length){msg("stockMsg","No stock row was updated. Check the worker_stock_batches update policy for this worker, then try again.","error");return;}
+    if(!result.data || result.data.length===0){msg("stockMsg","No stock record was updated. The row may be blocked by Supabase UPDATE permissions or the worker ID may not match.","error");return;}
     const historyError=await writeStockHistory(editingStockOriginal,historyRecord,historyAction);
-    if(historyError){console.warn("Stock updated but history could not be saved:",historyError);window.stockHistoryWarning=historyError.message||String(historyError);}
-    else {window.stockHistoryWarning="";}
+    window.stockHistoryWarning=historyError?(historyError.message||String(historyError)):"";
   }else{
     result=await db.from("worker_stock_batches").insert(record).select("*").single();
     if(result.error){msg("stockMsg","Stock record could not be saved: "+result.error.message,"error");return;}
@@ -939,7 +936,7 @@ $("saveStockBtn").onclick=async()=>{
     if(historyError){msg("stockMsg","Stock was saved, but its history entry could not be saved. Please check the stock history SQL/policies: "+historyError.message,"error");}
   }
   const savedStockDate=record.stock_date;
-  msg("stockMsg",wasEditing?(window.stockHistoryWarning?"Stock updated successfully. Warning: edit history could not be saved: "+esc(window.stockHistoryWarning):"Stock updated successfully and edit history recorded."):"Stock record saved successfully and sent to Ezelex admin.","success");
+  msg("stockMsg",wasEditing?(window.stockHistoryWarning?"Stock updated successfully. However, edit history could not be saved: "+esc(window.stockHistoryWarning):"Stock updated successfully and edit history recorded."):"Stock record saved successfully and sent to Ezelex admin.","success");
   editingStockId=""; editingStockOriginal=null; $("editingStockId").value=""; $("stockForm").reset(); $("stockDate").value=savedStockDate||today(); $("stockSold").value=0; $("stockDamage").value=0; $("saveStockBtn").textContent="Save Stock Record"; $("cancelEditStockBtn").style.display="none"; $("deleteStockBtn").style.display="none"; updateStockFormCreditSummary(""); calculateStock(); await Promise.all([loadStock(),loadStockHistory(),loadStockWeeks()]);
   } catch(error) {
     console.error("Stock save/update failed:",error);
