@@ -431,13 +431,33 @@ function renderStockWeekControls(){
   $("closeStockWeekBtn").disabled=!isOpen;
   $("closeStockWeekBtn").textContent=isOpen?"Close This Week (Sunday)":"Week Closed";
   const picker=$("stockWeekPicker");
-  if(picker&&stockWeekRows.length){const old=picker.value;picker.innerHTML='<option value="">Current week</option>'+stockWeekRows.map(w=>`<option value="${esc(w.id)}">${esc(weekLabel(w))} — ${esc(String(w.status||"open").toUpperCase())}</option>`).join("");picker.value=old&&stockWeekRows.some(w=>w.id===old)?old:"";}
+  if(picker){
+    const previous=selectedStockWeekId||picker.value||"";
+    const books=[...stockWeekRows];
+    if(!books.some(w=>String(w.id)===String(currentStockWeek.id)))books.push(currentStockWeek);
+    books.sort((a,b)=>String(b.week_start||"").localeCompare(String(a.week_start||"")));
+    picker.innerHTML='<option value="">Current week</option>'+books.map(w=>`<option value="${esc(w.id)}">${esc(weekLabel(w))} — ${esc(String(w.status||"open").toUpperCase())}</option>`).join("");
+    picker.value=previous&&books.some(w=>String(w.id)===String(previous))?previous:"";
+  }
 }
 async function loadStockWeeks(){
   if(!currentUser)return;
   const r=await db.from("worker_stock_weeks").select("*").eq("worker_id",currentUser.id).order("week_start",{ascending:false}).limit(100);
-  if(r.error){msg("weeklyStockMsg","Weekly stock books could not be loaded. Run the supplied weekly stock SQL first: "+esc(r.error.message),"error");return;}
-  stockWeekRows=r.data||[];renderStockWeekControls();
+  if(r.error){msg("weeklyStockMsg","Weekly stock books could not be loaded: "+esc(r.error.message),"error");return;}
+  stockWeekRows=r.data||[];
+  // Recover week options from existing stock records as a safe display fallback. This does not insert, update, or delete database data.
+  const batches=await db.from("worker_stock_batches").select("id,week_id,stock_date,created_at").eq("worker_id",currentUser.id).order("stock_date",{ascending:false}).limit(2000);
+  if(!batches.error){
+    for(const b of (batches.data||[])){
+      const weekId=String(b.week_id||"");
+      if(weekId&&stockWeekRows.some(w=>String(w.id)===weekId))continue;
+      const start=mondayDateISO(b.stock_date||b.created_at||today());
+      if(stockWeekRows.some(w=>String(w.week_start)===start))continue;
+      stockWeekRows.push({id:weekId||('date:'+start),week_start:start,week_end:addDaysISO(start,6),status:start===mondayDateISO(today())?'open':'closed',_derived:true});
+    }
+  }
+  stockWeekRows.sort((a,b)=>String(b.week_start||"").localeCompare(String(a.week_start||"")));
+  renderStockWeekControls();
 }
 async function closeCurrentStockWeek(){
   if(!currentStockWeek||currentStockWeek.status!=="open")return;
