@@ -122,7 +122,7 @@ th,td{padding:11px;border-bottom:1px solid #eee;text-align:left;font-size:14px}t
 
   <div class="tabs">
     <button class="tab active" data-tab="dashboard">Dashboard</button>
-    <button class="tab" data-tab="sales">Record Sale</button>
+    <button class="tab" data-tab="tricycle">🛺 Tricycle Contract</button>
     <button class="tab" data-tab="stock">Live Stock</button>
     <button class="tab" data-tab="stockHistory">Edit History</button>
     <button class="tab" data-tab="credit">On-Credit</button>
@@ -146,7 +146,43 @@ th,td{padding:11px;border-bottom:1px solid #eee;text-align:left;font-size:14px}t
     </div>
   </section>
 
-  <section id="sales" class="section">
+  <section id="tricycle" class="section">
+    <div class="panel">
+      <h2>🛺 My Tricycle Contract</h2>
+      <p class="stockNote">View your assigned tricycle contract, outstanding balance and weekly reporting. Submit one report for each Monday–Sunday week. Your payment is only added to the contract ledger after admin approval.</p>
+      <div id="tricycleMsg"></div>
+      <div class="stockGrid" style="grid-template-columns:repeat(auto-fit,minmax(180px,1fr))">
+        <div class="stockCard"><small>Vehicle ID</small><strong id="triVehicleLabel">—</strong></div>
+        <div class="stockCard"><small>Contract Period</small><strong id="triPeriodLabel" style="font-size:15px">—</strong></div>
+        <div class="stockCard"><small>Agreed Contract Amount</small><strong id="triTotalLabel">GH₵0.00</strong></div>
+        <div class="stockCard"><small>Paid to Date</small><strong id="triPaidLabel">GH₵0.00</strong></div>
+        <div class="stockCard"><small>Outstanding Balance</small><strong id="triBalanceLabel">GH₵0.00</strong></div>
+      </div>
+      <div id="triNoContract" class="msg hidden">No active tricycle contract is linked to your worker account yet. Please contact Ezelex Enterprise admin.</div>
+    </div>
+    <div class="panel">
+      <h2>Submit Weekly Tricycle Report</h2>
+      <p>Week: <strong id="triWeekLabel">—</strong></p>
+      <form id="triReportForm" class="grid">
+        <div><label>Sales reported (GH₵)</label><input id="triSalesReported" type="number" min="0" step="0.01" required placeholder="0.00"></div>
+        <div><label>Payment made this week (GH₵)</label><input id="triPaymentAmount" type="number" min="0" step="0.01" required placeholder="0.00"></div>
+        <div class="full"><label>Payment reference (optional)</label><input id="triPaymentReference" maxlength="200" placeholder="Mobile Money reference or receipt number"></div>
+        <div class="full"><label>Notes (optional)</label><textarea id="triDriverNotes" maxlength="2000" placeholder="Add any explanation for this week's report"></textarea></div>
+        <div class="full"><button id="triSubmitBtn" class="primary" type="submit">Submit Weekly Report for Admin Approval</button></div>
+      </form>
+      <p class="live">Reports are saved as pending until reviewed. Do not submit the same week's report twice.</p>
+    </div>
+    <div class="panel">
+      <h2>My Weekly Reports</h2>
+      <div class="tablebox"><table><thead><tr><th>Week</th><th>Sales Reported</th><th>Payment Reported</th><th>Reference</th><th>Status</th><th>Admin Reason</th></tr></thead><tbody id="triReportsBody"><tr><td colspan="6">Loading reports…</td></tr></tbody></table></div>
+    </div>
+    <div class="panel">
+      <h2>Contract Payment History</h2>
+      <div class="tablebox"><table><thead><tr><th>Date</th><th>Amount</th><th>Method</th><th>Reference</th><th>Notes</th></tr></thead><tbody id="triPaymentsBody"><tr><td colspan="5">Loading payments…</td></tr></tbody></table></div>
+    </div>
+  </section>
+
+  <section id="sales" class="section hidden">
     <div class="panel">
       <h2 id="saleFormTitle">Record a Sale</h2>
       <div id="saleMsg"></div>
@@ -485,7 +521,7 @@ async function loadProfile(user){
 
   await ensureCurrentStockWeek();
   await loadStockWeeks();
-  await Promise.all([loadSales(),loadStock(),loadStockHistory(),loadCredits()]);
+  await Promise.all([loadSales(),loadStock(),loadStockHistory(),loadCredits(),loadTricycleContract()]);
   await loadMessages();
 }
 
@@ -530,7 +566,7 @@ async function loadSales(){
     const pending=(st==="pending"||!s.status);
     const action=pending
       ? `<span style="display:inline-flex;gap:6px;flex-wrap:wrap;align-items:center"><span class="badge" style="background:#fff3cd;color:#8a5b00">PENDING</span><button type="button" onclick="editSale('${esc(s.id)}')" style="padding:7px 10px">Edit</button><button type="button" onclick="deleteSale('${esc(s.id)}')" style="padding:7px 10px;background:#b42318;color:#fff">Delete</button></span>`
-      : `<span style="display:inline-flex;gap:6px;flex-wrap:wrap;align-items:center"><span class="badge" style="background:${st==='approved'?'#dcfae6':'#fee4e2'};color:${st==='approved'?'#067647':'#b42318'}">${esc(st.toUpperCase())}</span><button type="button" onclick="deleteSale('${esc(s.id)}')" style="padding:7px 10px;background:#b42318;color:#fff">Delete</button></span>`;
+      : `<span class="badge" style="background:${st==='approved'?'#dcfae6':'#fee4e2'};color:${st==='approved'?'#067647':'#b42318'}">${esc(st.toUpperCase())}</span>`;
     return `<tr>
       <td>${esc(dateOnly(s.sale_date))}</td><td>${esc(s.customer_reference||"")}</td><td>${esc(s.product_service||"")}</td>
       <td>${esc(s.quantity??"")}</td><td>${money(s.sale_amount)}</td><td>${esc(s.payment_method||"")}</td><td>${esc(s.notes||"")}</td><td>${action}</td>
@@ -883,6 +919,58 @@ async function loadMessages(){
   $("messagesBody").innerHTML='<div class="message"><strong>Ezelex Enterprise</strong><br>Your worker communication area is ready.</div>';
 }
 
+
+// Tricycle contract worker area. Uses the separate tricycle tables and leaves sales/stock records untouched.
+let myTricycleContract = null;
+function triMoney(v){ return "GH₵"+Number(v||0).toLocaleString("en-GH",{minimumFractionDigits:2,maximumFractionDigits:2}); }
+function weekBounds(){
+  const now=new Date(); const start=new Date(now.getFullYear(),now.getMonth(),now.getDate());
+  const day=(start.getDay()+6)%7; start.setDate(start.getDate()-day);
+  const end=new Date(start); end.setDate(start.getDate()+6);
+  const iso=d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  return {start:iso(start),end:iso(end)};
+}
+function triDate(v){ return v ? new Date(String(v).slice(0,10)+'T00:00:00').toLocaleDateString('en-GB') : '—'; }
+async function loadTricycleContract(){
+  if(!currentUser) return;
+  const week=weekBounds();
+  $("triWeekLabel").textContent=`${triDate(week.start)} – ${triDate(week.end)} (Monday–Sunday)`;
+  const c=await db.from('tricycle_contracts').select('*').eq('driver_user_id',currentUser.id).in('status',['active','overdue','suspended']).order('created_at',{ascending:false}).limit(1).maybeSingle();
+  if(c.error){msg('tricycleMsg','Could not load your tricycle contract: '+esc(c.error.message),'error');return;}
+  myTricycleContract=c.data||null;
+  if(!myTricycleContract){$('triNoContract').classList.remove('hidden');$('triSubmitBtn').disabled=true;$('triReportsBody').innerHTML='<tr><td colspan="6">No tricycle contract assigned.</td></tr>';$('triPaymentsBody').innerHTML='<tr><td colspan="5">No payment history.</td></tr>';return;}
+  $('triNoContract').classList.add('hidden');$('triSubmitBtn').disabled=false;
+  $('triVehicleLabel').textContent=myTricycleContract.vehicle_id||'—';
+  $('triPeriodLabel').textContent=triDate(myTricycleContract.contract_start_date)+' – '+triDate(myTricycleContract.contract_end_date);
+  $('triTotalLabel').textContent=triMoney(myTricycleContract.total_contract_amount);
+  const [reports,payments,balance]=await Promise.all([
+    db.from('tricycle_weekly_reports').select('*').eq('contract_id',myTricycleContract.id).eq('driver_user_id',currentUser.id).order('week_start',{ascending:false}),
+    db.from('tricycle_contract_payments').select('amount,payment_date,payment_method,reference,notes').eq('contract_id',myTricycleContract.id).order('payment_date',{ascending:false}),
+    db.rpc('ezelex_tricycle_balance',{p_contract_id:myTricycleContract.id})
+  ]);
+  if(reports.error){msg('tricycleMsg','Contract loaded, but weekly reports could not load: '+esc(reports.error.message),'error');}
+  const rr=reports.data||[];
+  $('triReportsBody').innerHTML=rr.length?rr.map(r=>`<tr><td>${esc(triDate(r.week_start)+' – '+triDate(r.week_end))}</td><td>${triMoney(r.sales_reported)}</td><td>${triMoney(r.payment_amount)}</td><td>${esc(r.payment_reference||'—')}</td><td><span class="badge">${esc(String(r.status||'pending').toUpperCase())}</span></td><td>${esc(r.rejection_reason||'—')}</td></tr>`).join(''):'<tr><td colspan="6">No weekly reports submitted yet.</td></tr>';
+  const pp=payments.data||[];
+  $('triPaymentsBody').innerHTML=pp.length?pp.map(x=>`<tr><td>${esc(triDate(x.payment_date))}</td><td>${triMoney(x.amount)}</td><td>${esc(x.payment_method||'—')}</td><td>${esc(x.reference||'—')}</td><td>${esc(x.notes||'—')}</td></tr>`).join(''):'<tr><td colspan="5">No payments recorded yet.</td></tr>';
+  const paid=Number(myTricycleContract.opening_paid_amount||0)+pp.reduce((n,x)=>n+Number(x.amount||0),0);
+  $('triPaidLabel').textContent=triMoney(paid);
+  $('triBalanceLabel').textContent=triMoney(balance.error?Math.max(0,Number(myTricycleContract.total_contract_amount||0)-paid):balance.data);
+  if(rr.some(r=>r.week_start===week.start)){ $('triSubmitBtn').disabled=true;msg('tricycleMsg','A report for this week has already been submitted. Check My Weekly Reports below.'); }
+  else { $('triSubmitBtn').disabled=false; }
+}
+$('triReportForm')?.addEventListener('submit',async e=>{
+  e.preventDefault();
+  if(!currentUser||!myTricycleContract){msg('tricycleMsg','No tricycle contract is linked to your account.','error');return;}
+  const week=weekBounds();
+  const sales=Number($('triSalesReported').value), payment=Number($('triPaymentAmount').value);
+  if(!Number.isFinite(sales)||sales<0||!Number.isFinite(payment)||payment<0){msg('tricycleMsg','Enter valid non-negative amounts.','error');return;}
+  $('triSubmitBtn').disabled=true;msg('tricycleMsg','Submitting weekly report…');
+  const result=await db.from('tricycle_weekly_reports').insert({contract_id:myTricycleContract.id,driver_user_id:currentUser.id,week_start:week.start,week_end:week.end,sales_reported:sales,payment_amount:payment,payment_reference:$('triPaymentReference').value.trim()||null,driver_notes:$('triDriverNotes').value.trim()||null,status:'pending'});
+  if(result.error){$('triSubmitBtn').disabled=false;msg('tricycleMsg',result.error.code==='23505'?'A report for this week already exists.':('Could not submit report: '+esc(result.error.message)),'error');return;}
+  $('triReportForm').reset();msg('tricycleMsg','Weekly report submitted successfully and is waiting for admin approval. Your contract balance will update when the payment is approved.','success');await loadTricycleContract();
+});
+
 function stockMoney(v){
   return "GHS "+Number(v||0).toFixed(2);
 }
@@ -1174,11 +1262,12 @@ window.editSale=async function(id){
 };
 
 window.deleteSale=async function(id){
-  const {data,error}=await db.from("sales").select("id,status,product_service").eq("id",id).eq("worker_id",currentUser.id).maybeSingle();
-  if(error||!data){msg("saleMsg",error?.message||"Sale not found or you do not have permission to delete it.","error");return;}
+  const {data,error}=await db.from("sales").select("id,status").eq("id",id).eq("worker_id",currentUser.id).maybeSingle();
+  if(error||!data){msg("saleMsg",error?.message||"Sale not found.","error");return;}
   const st=String(data.status||"pending").toLowerCase();
-  if(!confirm(`Delete this ${st} sale${data.product_service?` (${data.product_service})`:""}? This cannot be undone and will remove it from reports and totals.`))return;
-  const r=await db.from("sales").delete().eq("id",id).eq("worker_id",currentUser.id);
+  if(st!=="pending"){msg("saleMsg","Only sales waiting for admin approval can be deleted.","error");return;}
+  if(!confirm("Delete this sale? This cannot be undone."))return;
+  const r=await db.from("sales").delete().eq("id",id).eq("worker_id",currentUser.id).eq("status","pending");
   if(r.error){msg("saleMsg","Sale could not be deleted: "+r.error.message,"error");return;}
   msg("saleMsg","Sale deleted successfully.","success");
   await loadSales();
