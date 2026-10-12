@@ -567,7 +567,9 @@ function calculateStock(){
   $("profitLabel").textContent=profit>0?"You are making a profit":profit<0?"You are currently making a loss":"Break-even";
   const over=accounted>total || cash<0;
   $("calcAccountedNote").textContent=accounted>total?"Too many units accounted for — check your numbers.":cash<0?"Purchase cost exceeds starting capital plus recorded sales — check your figures.":"Sold + damage";
-  $("saveStockBtn").disabled=total<=0||accounted>total||cash<0;
+  // Keep the button clickable while editing so the save handler can show the exact validation message.
+  // New stock entries retain the existing validation-based disabled state.
+  $("saveStockBtn").disabled=!editingStockId&&(total<=0||accounted>total||cash<0);
 }
 
 async function loadStock(){
