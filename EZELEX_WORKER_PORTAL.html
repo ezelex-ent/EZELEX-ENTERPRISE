@@ -520,33 +520,28 @@ function applyRoleNavigation(role){
 async function loadDriverContract(){
   const host=$("driverContractDetails"); if(!host||!currentUser)return;
   host.innerHTML='<div class="driverContractCard">Loading your contract details…</div>';
-  try {
-    const r=await db.from("tricycle_contracts").select("*").eq("driver_user_id",currentUser.id).order("created_at",{ascending:false}).limit(10);
-    if(r.error){
-      host.innerHTML='<div class="msg error">Your contract could not be loaded. Please contact Ezelex Enterprise admin.</div>';
-      console.warn("Tricycle contract query failed:",r.error.message);return;
-    }
-    const rows=r.data||[];
-    if(!rows.length){host.innerHTML='<div class="driverContractCard">No tricycle contract has been linked to your account yet. Please contact Ezelex Enterprise admin.</div>';return;}
-    host.innerHTML=rows.map(c=>{
-      const moneyVal=v=>"GH₵"+Number(v||0).toLocaleString("en-GH",{minimumFractionDigits:2,maximumFractionDigits:2});
-      const status=String(c.status||"pending").replace(/[_-]/g," ");
-      const total=Number(c.total_contract_amount||0),paid=Number(c.opening_paid_amount||0);
-      return `<div class="driverContractCard">
-        <h3>${esc(c.vehicle_registration||c.vehicle_id||"Tricycle contract")}</h3>
-        <p><strong>Status:</strong> ${esc(status)}</p>
-        <p><strong>Contract period:</strong> ${esc(dateOnly(c.contract_start_date))} – ${esc(dateOnly(c.contract_end_date))}</p>
-        <p><strong>Contract amount:</strong> ${moneyVal(total)}</p>
-        <p><strong>Opening amount paid:</strong> ${moneyVal(paid)}</p>
-        <p><strong>Weekly target:</strong> ${moneyVal(c.weekly_target??1400)}</p>
-        <p><strong>Daily target:</strong> ${moneyVal(c.daily_target??200)}</p>
-        ${c.admin_notes?`<p><strong>Admin notes:</strong> ${esc(c.admin_notes)}</p>`:""}
-      </div>`;
-    }).join("");
-  } catch(error) {
-    host.innerHTML='<div class="msg error">Your contract could not be loaded right now. Please refresh the page or contact Ezelex Enterprise admin.</div>';
-    console.warn("Unexpected tricycle contract loading error:",error);
+  const r=await db.from("tricycle_contracts").select("*").eq("driver_user_id",currentUser.id).order("created_at",{ascending:false}).limit(10);
+  if(r.error){
+    host.innerHTML='<div class="msg error">Your contract could not be loaded. Please contact Ezelex Enterprise admin.</div>';
+    console.warn("Tricycle contract query failed:",r.error.message);return;
   }
+  const rows=r.data||[];
+  if(!rows.length){host.innerHTML='<div class="driverContractCard">No tricycle contract has been linked to your account yet. Please contact Ezelex Enterprise admin.</div>';return;}
+  host.innerHTML=rows.map(c=>{
+    const moneyVal=v=>"GH₵"+Number(v||0).toLocaleString("en-GH",{minimumFractionDigits:2,maximumFractionDigits:2});
+    const status=String(c.status||"pending").replace(/[_-]/g," ");
+    const total=Number(c.total_amount||0),paid=Number(c.opening_paid_amount||0);
+    return `<div class="driverContractCard">
+      <h3>${esc(c.vehicle_registration||c.vehicle_id||"Tricycle contract")}</h3>
+      <p><strong>Status:</strong> ${esc(status)}</p>
+      <p><strong>Contract period:</strong> ${esc(dateOnly(c.contract_start))} – ${esc(dateOnly(c.contract_end))}</p>
+      <p><strong>Contract amount:</strong> ${moneyVal(total)}</p>
+      <p><strong>Opening amount paid:</strong> ${moneyVal(paid)}</p>
+      <p><strong>Weekly target:</strong> ${moneyVal(c.weekly_target??1400)}</p>
+      <p><strong>Daily target:</strong> ${moneyVal(c.daily_target??200)}</p>
+      ${c.admin_notes?`<p><strong>Admin notes:</strong> ${esc(c.admin_notes)}</p>`:""}
+    </div>`;
+  }).join("");
 }
 async function loadProfilePhoto(){
   if(!currentUser)return;
