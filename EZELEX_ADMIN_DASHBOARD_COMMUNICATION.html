@@ -13,7 +13,7 @@ header{background:linear-gradient(135deg,#081426,#142b4a);color:#fff;padding:18p
 button{border:0;border-radius:9px;padding:11px 15px;cursor:pointer;font-weight:700}.primary{background:#12355b;color:#fff}.gold{background:#d9a441;color:#081426}.danger{background:#b42318;color:#fff}.soft{background:#e9eef5;color:#17202a}.success{background:#087443;color:#fff}.reject{background:#b42318;color:#fff}
 .hidden{display:none!important}.wrap{max-width:1320px;margin:28px auto;padding:0 18px}.login{max-width:430px;margin:70px auto;background:#fff;padding:30px;border-radius:16px;box-shadow:0 12px 40px #102a430d}
 input,select,textarea{width:100%;padding:12px;margin:6px 0 13px;border:1px solid #d5dce5;border-radius:9px;font-size:15px;background:#fff}.msg{padding:11px;border-radius:9px;margin:12px 0;background:#fff3cd}.error{background:#fee4e2;color:#912018}.ok{background:#dcfae6;color:#067647}
-.nav{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px}.nav button.active{background:#12355b;color:#fff}.cards{display:grid;grid-template-columns:repeat(5,1fr);gap:14px}.card{background:#fff;padding:19px;border-radius:14px;box-shadow:0 4px 18px #102a430b}.label{color:#667085;font-size:13px}.value{font-size:25px;font-weight:850;margin-top:8px}
+.nav{display:flex;flex-direction:column;gap:5px;width:min(360px,100%);margin:0 0 20px;padding:14px;background:#fff;border:1px solid #d9e1ec;border-radius:14px;box-shadow:0 12px 30px #102a4318}.menu-title{font-size:12px;font-weight:900;letter-spacing:1.2px;color:#667085;padding:5px 10px 10px}.nav button{width:100%;text-align:left;padding:12px 13px;border-radius:8px;background:#f5f7fa;color:#17202a}.nav button:hover,.nav button:focus{background:#e7edf5;outline:2px solid #d9a441}.nav .menu-group-label{font-weight:800;padding:10px 10px 3px;color:#12355b}.nav .menu-subitem{padding-left:28px;background:#fbfcfe;font-weight:600}.nav .menu-logout{background:#b42318;color:#fff;margin-top:5px}.nav .menu-dashboard{background:#12355b;color:#fff}.cards{display:grid;grid-template-columns:repeat(5,1fr);gap:14px}.card{background:#fff;padding:19px;border-radius:14px;box-shadow:0 4px 18px #102a430b}.label{color:#667085;font-size:13px}.value{font-size:25px;font-weight:850;margin-top:8px}
 .section{background:#fff;padding:20px;border-radius:14px;margin-top:20px;box-shadow:0 4px 18px #102a430b}.section h2{margin:0 0 15px}.grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}.toolbar{display:flex;gap:9px;flex-wrap:wrap;margin-bottom:14px}.tablebox{overflow:auto;border:1px solid #edf0f3;border-radius:10px}
 table{width:100%;border-collapse:collapse;min-width:1050px}th,td{padding:11px;border-bottom:1px solid #edf0f3;text-align:left;font-size:13px;vertical-align:top}th{background:#f8fafc}
 .badge{display:inline-block;padding:5px 9px;border-radius:999px;font-size:11px;font-weight:800}.pending{background:#fff3cd;color:#8a5b00}.approved{background:#dcfae6;color:#067647}.rejected{background:#fee4e2;color:#b42318}.profit{color:#087443;font-weight:800}.loss{color:#b42318;font-weight:800}
@@ -31,7 +31,7 @@ table{width:100%;border-collapse:collapse;min-width:1050px}th,td{padding:11px;bo
 </style>
 </head>
 <body>
-<header><div class="brand"><div class="logo">EZ</div><div><h1>EZELEX ENTERPRISE</h1><small>Admin Command Centre</small></div></div><div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><button id="openMenuBtn" class="gold hidden" type="button" aria-expanded="false" aria-controls="adminNavigation">☰ Open Menu</button><button id="logoutBtn" class="danger hidden">Log out</button></div></header>
+<header><div class="brand"><div class="logo">EZ</div><div><h1>EZELEX ENTERPRISE</h1><small>Admin Command Centre</small></div></div><div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><button id="openMenuBtn" class="gold hidden" type="button" aria-expanded="false" aria-controls="adminNavigation">☰ Menu</button><button id="logoutBtn" class="danger hidden">Log out</button></div></header>
 
 <section id="loginSection" class="login">
 <h2>Admin Login</h2><p class="muted">Sign in with your EZELEX administrator account.</p><div id="loginMsg"></div>
@@ -40,9 +40,23 @@ table{width:100%;border-collapse:collapse;min-width:1050px}th,td{padding:11px;bo
 </section>
 
 <main id="dashboard" class="wrap hidden"><div id="dashMsg"></div>
-<div class="nav hidden" id="adminNavigation">
-<button class="soft active" data-section="overview">Dashboard</button><button class="soft" data-section="capital">Business Capital 🔒</button><button class="soft" data-section="tricycle">Tricycle Contract 🛺</button><button class="soft" data-section="stock">Stock & Profit</button><button class="soft" data-section="credits">On-Credit Sales</button><button class="soft" data-section="stockHistory">Edit History</button><button class="soft" data-section="workers">Workers</button><button class="soft" data-section="communication">Communication Centre</button><button class="soft" data-section="profile">Admin Profile</button><button class="soft" data-section="security">Security</button>
-</div>
+<nav class="nav hidden" id="adminNavigation" aria-label="Admin menu">
+  <div class="menu-title">EZELEX ADMIN MENU</div>
+  <button type="button" class="menu-item" data-section="capital">1. Business Capital</button>
+  <button type="button" class="menu-item" data-section="tricycle">2. Tricycle Contract</button>
+  <button type="button" class="menu-item" data-section="stock">3. Stock &amp; Profit</button>
+  <button type="button" class="menu-item" data-section="credits">4. On-Credit Sales</button>
+  <button type="button" class="menu-item" data-section="stockHistory">5. Edit History</button>
+  <div class="menu-group-label">6. Create Employee Accounts</div>
+  <button type="button" class="menu-subitem" data-section="workers" data-focus="createWorker">↳ Create Worker</button>
+  <button type="button" class="menu-subitem" data-section="tricycle" data-focus="createDriver">↳ Create Driver</button>
+  <button type="button" class="menu-subitem" data-section="workers" data-focus="deleteWorker">↳ Delete Worker</button>
+  <button type="button" class="menu-item" data-section="communication">7. Communication Centre</button>
+  <button type="button" class="menu-item" data-section="profile">8. Admin Profile</button>
+  <button type="button" class="menu-item" data-section="security">9. Security</button>
+  <button type="button" class="menu-item menu-logout" id="menuLogoutBtn">10. Log Out</button>
+  <button type="button" class="menu-item menu-dashboard" data-section="overview">11. Back to Dashboard</button>
+</nav>
 
 <section id="capital" class="page hidden">
 <div class="section"><h2>🔒 Private Business Capital</h2><p class="muted">Admin-only financial overview. Original investment is kept separate from weekly stock books. Enter the actual cash currently held by the business; stock and outstanding credit are calculated from saved records.</p><div id="capitalMsg"></div>
@@ -298,24 +312,30 @@ $("forgotBtn").onclick=async()=>{const email=$("email").value.trim();if(!email){
 $("logoutBtn").onclick=async()=>{await db.auth.signOut();showLogin()}
 $("refreshBtn").onclick=async()=>{await loadWorkers();await Promise.all([loadSales(),loadInventory(),loadStockHistory(),loadAdminCredits(),loadBusinessCapital()])}
 $("refreshWorkers").onclick=loadWorkers;$("applyFilters").onclick=applyFilters;$("statusFilter").onchange=applyFilters;$("workerFilter").onchange=applyFilters;$("refreshInventory").onclick=loadInventory;$("applyInvFilters").onclick=applyInvFilters;$("invWorkerFilter").onchange=applyInvFilters
-document.querySelectorAll(".nav button").forEach(b=>b.onclick=()=>{
- document.querySelectorAll(".nav button").forEach(x=>x.classList.remove("active"));
- b.classList.add("active");
+function closeAdminMenu(){
+ const nav=$("adminNavigation");nav.classList.add("hidden");
+ $("openMenuBtn").textContent="☰ Menu";$("openMenuBtn").setAttribute("aria-expanded","false");
+}
+function showAdminSection(sectionId, focusTarget){
  document.querySelectorAll(".page").forEach(p=>p.classList.add("hidden"));
- const target=$(b.dataset.section);if(target)target.classList.remove("hidden");
- // After choosing a destination, close the menu without navigating back to Dashboard.
- $("adminNavigation").classList.add("hidden");
- $("openMenuBtn").textContent="☰ Open Menu";
- $("openMenuBtn").setAttribute("aria-expanded","false");
-});
+ const target=$(sectionId);if(target)target.classList.remove("hidden");
+ closeAdminMenu();
+ if(focusTarget){
+   const focusMap={createWorker:document.querySelector('#workers .section'),deleteWorker:document.querySelectorAll('#workers .section')[2],createDriver:document.querySelector('#tricycle .section:nth-of-type(2)')};
+   const el=focusMap[focusTarget];if(el)setTimeout(()=>el.scrollIntoView({behavior:'smooth',block:'start'}),80);
+ }
+ if(sectionId==='overview')window.scrollTo({top:0,behavior:'smooth'});
+}
+document.querySelectorAll("#adminNavigation [data-section]").forEach(b=>b.addEventListener("click",()=>showAdminSection(b.dataset.section,b.dataset.focus||null)));
 $("openMenuBtn").onclick=(event)=>{
  event.preventDefault();event.stopPropagation();
  const nav=$("adminNavigation"),isOpening=nav.classList.contains("hidden");
  nav.classList.toggle("hidden",!isOpening);
- $("openMenuBtn").textContent=isOpening?"✕ Close Menu":"☰ Open Menu";
+ $("openMenuBtn").textContent=isOpening?"✕ Close Menu":"☰ Menu";
  $("openMenuBtn").setAttribute("aria-expanded",String(isOpening));
  if(isOpening)nav.scrollIntoView({behavior:"smooth",block:"start"});
 };
+$("menuLogoutBtn").onclick=async()=>{closeAdminMenu();await db.auth.signOut();showLogin()};
 $("changePass").onclick=async()=>{const a=$("newPass").value,b=$("confirmPass").value;if(a.length<8){msg("securityMsg","Password must be at least 8 characters.","error");return}if(a!==b){msg("securityMsg","Passwords do not match.","error");return}const r=await db.auth.updateUser({password:a});msg("securityMsg",r.error?r.error.message:"Password changed successfully.",r.error?"error":"ok");if(!r.error){$("newPass").value="";$("confirmPass").value=""}}
 $("csvBtn").onclick=()=>{const rows=[["Date","Worker","Worker ID","Product/Service","Quantity","Amount","Payment","Status","Reason"],...filteredSales.map(s=>{const w=workerInfo(s.worker_id);return[dateOnly(s.sale_date||s.created_at),w.full_name||"",w.worker_id||"",s.product_service||"",s.quantity??"",amount(s).toFixed(2),s.payment_method||"",status(s),s.rejection_reason||""]})];const csv=rows.map(r=>r.map(x=>`"${String(x).replace(/"/g,'""')}"`).join(",")).join("\n");const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([csv],{type:"text/csv"}));a.download="EZELEX-sales.csv";a.click()}
 $("invCsvBtn").onclick=()=>{const rows=[["Date","Worker","Worker ID","Product","Total","Sold","Damaged","Remaining","Purchase","Revenue","Damage Value","Profit/Loss"],...filteredInventory.map(r=>{const c=invCalc(r),w=workerInfo(r.worker_id);return[dateOnly(r.stock_date||r.created_at),w.full_name||"",w.worker_id||"",r.product_service||"",c.total,c.sold,c.damage,c.remaining,c.purchase.toFixed(2),c.revenue.toFixed(2),c.damageValue.toFixed(2),c.profit.toFixed(2)]})];const csv=rows.map(r=>r.map(x=>`"${String(x).replace(/"/g,'""')}"`).join(",")).join("\n");const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([csv],{type:"text/csv"}));a.download="EZELEX-stock-profit-report.csv";a.click()}
