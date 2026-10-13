@@ -13,7 +13,7 @@ header{background:linear-gradient(135deg,#081426,#142b4a);color:#fff;padding:18p
 button{border:0;border-radius:9px;padding:11px 15px;cursor:pointer;font-weight:700}.primary{background:#12355b;color:#fff}.gold{background:#d9a441;color:#081426}.danger{background:#b42318;color:#fff}.soft{background:#e9eef5;color:#17202a}.success{background:#087443;color:#fff}.reject{background:#b42318;color:#fff}
 .hidden{display:none!important}.wrap{max-width:1320px;margin:28px auto;padding:0 18px}.login{max-width:430px;margin:70px auto;background:#fff;padding:30px;border-radius:16px;box-shadow:0 12px 40px #102a430d}
 input,select,textarea{width:100%;padding:12px;margin:6px 0 13px;border:1px solid #d5dce5;border-radius:9px;font-size:15px;background:#fff}.msg{padding:11px;border-radius:9px;margin:12px 0;background:#fff3cd}.error{background:#fee4e2;color:#912018}.ok{background:#dcfae6;color:#067647}
-.nav{display:flex;flex-direction:column;gap:5px;width:min(360px,100%);margin:0 0 20px;padding:14px;background:#fff;border:1px solid #d9e1ec;border-radius:14px;box-shadow:0 12px 30px #102a4318}.menu-title{font-size:12px;font-weight:900;letter-spacing:1.2px;color:#667085;padding:5px 10px 10px}.nav button{width:100%;text-align:left;padding:12px 13px;border-radius:8px;background:#f5f7fa;color:#17202a}.nav button:hover,.nav button:focus{background:#e7edf5;outline:2px solid #d9a441}.nav .menu-group-label{font-weight:800;padding:10px 10px 3px;color:#12355b}.nav .menu-subitem{padding-left:28px;background:#fbfcfe;font-weight:600}.nav .menu-logout{background:#b42318;color:#fff;margin-top:5px}.nav .menu-dashboard{background:#12355b;color:#fff}.cards{display:grid;grid-template-columns:repeat(5,1fr);gap:14px}.card{background:#fff;padding:19px;border-radius:14px;box-shadow:0 4px 18px #102a430b}.label{color:#667085;font-size:13px}.value{font-size:25px;font-weight:850;margin-top:8px}
+.nav{position:fixed;top:80px;right:4%;z-index:50;display:flex;flex-direction:column;gap:5px;width:min(360px,calc(100vw - 24px));max-height:calc(100vh - 100px);overflow-y:auto;margin:0;padding:14px;background:#fff;border:1px solid #d9e1ec;border-radius:14px;box-shadow:0 12px 30px #102a4318}.menu-title{font-size:12px;font-weight:900;letter-spacing:1.2px;color:#667085;padding:5px 10px 10px}.nav button{width:100%;text-align:left;padding:12px 13px;border-radius:8px;background:#f5f7fa;color:#17202a}.nav button:hover,.nav button:focus{background:#e7edf5;outline:2px solid #d9a441}.nav .menu-group-label{font-weight:800;padding:10px 10px 3px;color:#12355b}.nav .menu-subitem{padding-left:28px;background:#fbfcfe;font-weight:600}.nav .menu-logout{background:#b42318;color:#fff;margin-top:5px}.nav .menu-dashboard{background:#12355b;color:#fff}.cards{display:grid;grid-template-columns:repeat(5,1fr);gap:14px}.card{background:#fff;padding:19px;border-radius:14px;box-shadow:0 4px 18px #102a430b}.label{color:#667085;font-size:13px}.value{font-size:25px;font-weight:850;margin-top:8px}
 .section{background:#fff;padding:20px;border-radius:14px;margin-top:20px;box-shadow:0 4px 18px #102a430b}.section h2{margin:0 0 15px}.grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}.toolbar{display:flex;gap:9px;flex-wrap:wrap;margin-bottom:14px}.tablebox{overflow:auto;border:1px solid #edf0f3;border-radius:10px}
 table{width:100%;border-collapse:collapse;min-width:1050px}th,td{padding:11px;border-bottom:1px solid #edf0f3;text-align:left;font-size:13px;vertical-align:top}th{background:#f8fafc}
 .badge{display:inline-block;padding:5px 9px;border-radius:999px;font-size:11px;font-weight:800}.pending{background:#fff3cd;color:#8a5b00}.approved{background:#dcfae6;color:#067647}.rejected{background:#fee4e2;color:#b42318}.profit{color:#087443;font-weight:800}.loss{color:#b42318;font-weight:800}
@@ -312,6 +312,12 @@ $("forgotBtn").onclick=async()=>{const email=$("email").value.trim();if(!email){
 $("logoutBtn").onclick=async()=>{await db.auth.signOut();showLogin()}
 $("refreshBtn").onclick=async()=>{await loadWorkers();await Promise.all([loadSales(),loadInventory(),loadStockHistory(),loadAdminCredits(),loadBusinessCapital()])}
 $("refreshWorkers").onclick=loadWorkers;$("applyFilters").onclick=applyFilters;$("statusFilter").onchange=applyFilters;$("workerFilter").onchange=applyFilters;$("refreshInventory").onclick=loadInventory;$("applyInvFilters").onclick=applyInvFilters;$("invWorkerFilter").onchange=applyInvFilters
+function positionAdminMenu(){
+ const nav=$("adminNavigation"),btn=$("openMenuBtn"),r=btn.getBoundingClientRect();
+ // Keep the dropdown directly beneath the Menu button, aligned to its right edge.
+ nav.style.top=Math.min(r.bottom+8,Math.max(8,window.innerHeight-120))+"px";
+ nav.style.right=Math.max(8,window.innerWidth-r.right)+"px";
+}
 function closeAdminMenu(){
  const nav=$("adminNavigation");nav.classList.add("hidden");
  $("openMenuBtn").textContent="☰ Menu";$("openMenuBtn").setAttribute("aria-expanded","false");
@@ -330,11 +336,12 @@ document.querySelectorAll("#adminNavigation [data-section]").forEach(b=>b.addEve
 $("openMenuBtn").onclick=(event)=>{
  event.preventDefault();event.stopPropagation();
  const nav=$("adminNavigation"),isOpening=nav.classList.contains("hidden");
+ if(isOpening)positionAdminMenu();
  nav.classList.toggle("hidden",!isOpening);
  $("openMenuBtn").textContent=isOpening?"✕ Close Menu":"☰ Menu";
  $("openMenuBtn").setAttribute("aria-expanded",String(isOpening));
- if(isOpening)nav.scrollIntoView({behavior:"smooth",block:"start"});
 };
+window.addEventListener("resize",()=>{if(!$("adminNavigation").classList.contains("hidden"))positionAdminMenu()});
 $("menuLogoutBtn").onclick=async()=>{closeAdminMenu();await db.auth.signOut();showLogin()};
 $("changePass").onclick=async()=>{const a=$("newPass").value,b=$("confirmPass").value;if(a.length<8){msg("securityMsg","Password must be at least 8 characters.","error");return}if(a!==b){msg("securityMsg","Passwords do not match.","error");return}const r=await db.auth.updateUser({password:a});msg("securityMsg",r.error?r.error.message:"Password changed successfully.",r.error?"error":"ok");if(!r.error){$("newPass").value="";$("confirmPass").value=""}}
 $("csvBtn").onclick=()=>{const rows=[["Date","Worker","Worker ID","Product/Service","Quantity","Amount","Payment","Status","Reason"],...filteredSales.map(s=>{const w=workerInfo(s.worker_id);return[dateOnly(s.sale_date||s.created_at),w.full_name||"",w.worker_id||"",s.product_service||"",s.quantity??"",amount(s).toFixed(2),s.payment_method||"",status(s),s.rejection_reason||""]})];const csv=rows.map(r=>r.map(x=>`"${String(x).replace(/"/g,'""')}"`).join(",")).join("\n");const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([csv],{type:"text/csv"}));a.download="EZELEX-sales.csv";a.click()}
