@@ -1,0 +1,25 @@
+name: EZELEX Driver Weekly Reminder
+
+on:
+  schedule:
+    # Ghana uses UTC year-round: Sunday at 07:00 Ghana time.
+    - cron: '0 7 * * 0'
+  workflow_dispatch:
+
+jobs:
+  send-driver-reminders:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Send weekly driver reminders
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          DRIVER_REMINDER_CRON_SECRET: ${{ secrets.DRIVER_REMINDER_CRON_SECRET }}
+        run: |
+          set -euo pipefail
+          test -n "$SUPABASE_URL"
+          test -n "$DRIVER_REMINDER_CRON_SECRET"
+          curl --fail-with-body --silent --show-error \
+            -X POST "${SUPABASE_URL%/}/functions/v1/send-driver-weekly-reminder" \
+            -H "Content-Type: application/json" \
+            -H "x-cron-secret: ${DRIVER_REMINDER_CRON_SECRET}" \
+            --data '{}'
