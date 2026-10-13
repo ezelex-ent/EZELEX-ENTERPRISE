@@ -31,7 +31,7 @@ table{width:100%;border-collapse:collapse;min-width:1050px}th,td{padding:11px;bo
 </style>
 </head>
 <body>
-<header><div class="brand"><div class="logo">EZ</div><div><h1>EZELEX ENTERPRISE</h1><small>Admin Command Centre</small></div></div><div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><button id="openMenuBtn" class="gold hidden" type="button" aria-expanded="true" aria-controls="adminNavigation">☰ Open Menu</button><button id="logoutBtn" class="danger hidden">Log out</button></div></header>
+<header><div class="brand"><div class="logo">EZ</div><div><h1>EZELEX ENTERPRISE</h1><small>Admin Command Centre</small></div></div><div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><button id="openMenuBtn" class="gold hidden" type="button" aria-expanded="false" aria-controls="adminNavigation">☰ Open Menu</button><button id="logoutBtn" class="danger hidden">Log out</button></div></header>
 
 <section id="loginSection" class="login">
 <h2>Admin Login</h2><p class="muted">Sign in with your EZELEX administrator account.</p><div id="loginMsg"></div>
@@ -40,7 +40,7 @@ table{width:100%;border-collapse:collapse;min-width:1050px}th,td{padding:11px;bo
 </section>
 
 <main id="dashboard" class="wrap hidden"><div id="dashMsg"></div>
-<div class="nav" id="adminNavigation">
+<div class="nav hidden" id="adminNavigation">
 <button class="soft active" data-section="overview">Dashboard</button><button class="soft" data-section="capital">Business Capital 🔒</button><button class="soft" data-section="tricycle">Tricycle Contract 🛺</button><button class="soft" data-section="stock">Stock & Profit</button><button class="soft" data-section="credits">On-Credit Sales</button><button class="soft" data-section="stockHistory">Edit History</button><button class="soft" data-section="workers">Workers</button><button class="soft" data-section="communication">Communication Centre</button><button class="soft" data-section="profile">Admin Profile</button><button class="soft" data-section="security">Security</button>
 </div>
 
@@ -298,8 +298,24 @@ $("forgotBtn").onclick=async()=>{const email=$("email").value.trim();if(!email){
 $("logoutBtn").onclick=async()=>{await db.auth.signOut();showLogin()}
 $("refreshBtn").onclick=async()=>{await loadWorkers();await Promise.all([loadSales(),loadInventory(),loadStockHistory(),loadAdminCredits(),loadBusinessCapital()])}
 $("refreshWorkers").onclick=loadWorkers;$("applyFilters").onclick=applyFilters;$("statusFilter").onchange=applyFilters;$("workerFilter").onchange=applyFilters;$("refreshInventory").onclick=loadInventory;$("applyInvFilters").onclick=applyInvFilters;$("invWorkerFilter").onchange=applyInvFilters
-document.querySelectorAll(".nav button").forEach(b=>b.onclick=()=>{document.querySelectorAll(".nav button").forEach(x=>x.classList.remove("active"));b.classList.add("active");document.querySelectorAll(".page").forEach(p=>p.classList.add("hidden"));$(b.dataset.section).classList.remove("hidden")});
-$("openMenuBtn").onclick=()=>{const nav=$("adminNavigation"),isHidden=nav.classList.toggle("hidden");$("openMenuBtn").textContent=isHidden?"☰ Open Menu":"✕ Close Menu";$("openMenuBtn").setAttribute("aria-expanded",String(!isHidden))};
+document.querySelectorAll(".nav button").forEach(b=>b.onclick=()=>{
+ document.querySelectorAll(".nav button").forEach(x=>x.classList.remove("active"));
+ b.classList.add("active");
+ document.querySelectorAll(".page").forEach(p=>p.classList.add("hidden"));
+ const target=$(b.dataset.section);if(target)target.classList.remove("hidden");
+ // After choosing a destination, close the menu without navigating back to Dashboard.
+ $("adminNavigation").classList.add("hidden");
+ $("openMenuBtn").textContent="☰ Open Menu";
+ $("openMenuBtn").setAttribute("aria-expanded","false");
+});
+$("openMenuBtn").onclick=(event)=>{
+ event.preventDefault();event.stopPropagation();
+ const nav=$("adminNavigation"),isOpening=nav.classList.contains("hidden");
+ nav.classList.toggle("hidden",!isOpening);
+ $("openMenuBtn").textContent=isOpening?"✕ Close Menu":"☰ Open Menu";
+ $("openMenuBtn").setAttribute("aria-expanded",String(isOpening));
+ if(isOpening)nav.scrollIntoView({behavior:"smooth",block:"start"});
+};
 $("changePass").onclick=async()=>{const a=$("newPass").value,b=$("confirmPass").value;if(a.length<8){msg("securityMsg","Password must be at least 8 characters.","error");return}if(a!==b){msg("securityMsg","Passwords do not match.","error");return}const r=await db.auth.updateUser({password:a});msg("securityMsg",r.error?r.error.message:"Password changed successfully.",r.error?"error":"ok");if(!r.error){$("newPass").value="";$("confirmPass").value=""}}
 $("csvBtn").onclick=()=>{const rows=[["Date","Worker","Worker ID","Product/Service","Quantity","Amount","Payment","Status","Reason"],...filteredSales.map(s=>{const w=workerInfo(s.worker_id);return[dateOnly(s.sale_date||s.created_at),w.full_name||"",w.worker_id||"",s.product_service||"",s.quantity??"",amount(s).toFixed(2),s.payment_method||"",status(s),s.rejection_reason||""]})];const csv=rows.map(r=>r.map(x=>`"${String(x).replace(/"/g,'""')}"`).join(",")).join("\n");const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([csv],{type:"text/csv"}));a.download="EZELEX-sales.csv";a.click()}
 $("invCsvBtn").onclick=()=>{const rows=[["Date","Worker","Worker ID","Product","Total","Sold","Damaged","Remaining","Purchase","Revenue","Damage Value","Profit/Loss"],...filteredInventory.map(r=>{const c=invCalc(r),w=workerInfo(r.worker_id);return[dateOnly(r.stock_date||r.created_at),w.full_name||"",w.worker_id||"",r.product_service||"",c.total,c.sold,c.damage,c.remaining,c.purchase.toFixed(2),c.revenue.toFixed(2),c.damageValue.toFixed(2),c.profit.toFixed(2)]})];const csv=rows.map(r=>r.map(x=>`"${String(x).replace(/"/g,'""')}"`).join(",")).join("\n");const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([csv],{type:"text/csv"}));a.download="EZELEX-stock-profit-report.csv";a.click()}
