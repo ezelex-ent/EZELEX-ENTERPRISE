@@ -9,7 +9,7 @@
 <style>
 *{box-sizing:border-box}
 body{margin:0;font-family:Arial,sans-serif;background:#f4f6f8;color:#17202a}
-header{background:#111827;color:#fff;padding:18px 5%;display:flex;justify-content:space-between;align-items:center;gap:15px;position:sticky;top:0;z-index:10}
+header{background:#111827;color:#fff;padding:14px clamp(12px,4vw,5%);display:flex;justify-content:space-between;align-items:center;gap:12px;position:sticky;top:0;z-index:10;min-width:0}
 header h1{margin:0;font-size:22px}
 header small{display:block;color:#cbd5e1;margin-top:4px}
 button{border:0;border-radius:8px;padding:11px 16px;cursor:pointer;font-weight:700}
@@ -26,11 +26,11 @@ textarea{min-height:90px;resize:vertical}
 .error{background:#fee4e2;color:#912018}.success{background:#dcfae6;color:#067647}
 .hidden{display:none!important}
 .workerInfo{font-size:14px;line-height:1.7}
-.menuWrap{position:relative;display:flex;justify-content:flex-end;margin:0 0 18px;z-index:20}
-.menuToggle{background:#111827;color:#fff;min-width:118px}
-.menuPopup{position:absolute;right:0;top:calc(100% + 8px);width:min(300px,calc(100vw - 32px));background:#fff;border:1px solid #dbe1e8;border-radius:12px;box-shadow:0 12px 35px #0002;padding:8px;display:none;max-height:70vh;overflow:auto}
+.menuWrap{position:relative;display:flex;justify-content:flex-end;margin:0 0 14px;z-index:30}
+.menuToggle{background:#111827;color:#fff;min-width:118px;min-height:44px;touch-action:manipulation}
+.menuPopup{position:absolute;right:0;top:calc(100% + 8px);width:min(320px,calc(100vw - 28px));background:#fff;border:1px solid #dbe1e8;border-radius:12px;box-shadow:0 12px 35px #0002;padding:8px;display:none;max-height:min(72vh,560px);overflow:auto;overscroll-behavior:contain}
 .menuPopup.open{display:block}
-.menuItem{display:block;width:100%;text-align:left;background:#fff;color:#17202a;padding:12px;border-radius:8px;margin:2px 0;font-weight:700}
+.menuItem{display:block;width:100%;min-height:44px;text-align:left;background:#fff;color:#17202a;padding:12px;border-radius:8px;margin:2px 0;font-weight:700;font-size:15px;touch-action:manipulation}
 .menuItem:hover,.menuItem:focus{background:#f1f5f9;outline:2px solid #cbd5e1}
 .menuItem.active{background:#e5e7eb}
 .menuDivider{height:1px;background:#e5e7eb;margin:7px 4px}
@@ -65,7 +65,7 @@ th,td{padding:11px;border-bottom:1px solid #eee;text-align:left;font-size:14px}t
 @media(max-width:700px){#dailyPerformanceChart{height:270px}.dailyChartPanel{padding:8px}}
 
 @media(max-width:900px){.stats,.stockGrid{grid-template-columns:1fr 1fr}.resultGrid{grid-template-columns:1fr 1fr}}
-@media(max-width:700px){.grid,.cardrow{grid-template-columns:1fr}.full{grid-column:auto}.login{margin:30px 15px}.wrap{padding:0 12px}.stats,.stockGrid,.resultGrid{grid-template-columns:1fr}}
+@media(max-width:700px){header{padding:12px 14px}header h1{font-size:18px}.grid,.cardrow{grid-template-columns:1fr}.full{grid-column:auto}.login{margin:24px 12px;padding:22px}.wrap{padding:0 10px;margin:14px auto}.panel{padding:15px;border-radius:10px}.stats,.stockGrid,.resultGrid{grid-template-columns:1fr}.menuWrap{margin-bottom:10px}.menuPopup{width:min(340px,calc(100vw - 20px));right:0;max-height:65vh}.menuToggle{min-width:104px}.tablebox{max-width:100%;-webkit-overflow-scrolling:touch}button{min-height:44px}input,select,textarea{font-size:16px}}
 </style>
 </head>
 <body>
@@ -111,21 +111,6 @@ th,td{padding:11px;border-bottom:1px solid #eee;text-align:left;font-size:14px}t
 </section>
 
 <main id="portal" class="wrap hidden">
-  <div class="panel">
-    <h2>Welcome, <span id="workerName">Worker</span> 👋</h2>
-    <div class="workerInfo">
-      <strong>Worker ID:</strong> <span id="workerId">—</span> &nbsp; | &nbsp;
-      <strong>Role:</strong> <span id="workerRole">—</span> &nbsp; | &nbsp;
-      <strong>Status:</strong> <span id="workerStatus" class="badge">—</span>
-    </div>
-    <div class="stats">
-      <div class="stat"><small>Today Sale</small><strong id="todaySales">GH₵0.00</strong></div>
-      <div class="stat"><small>This Week</small><strong id="weekSales">GH₵0.00</strong></div>
-      <div class="stat"><small>This Month</small><strong id="monthSales">GH₵0.00</strong></div>
-      <div class="stat"><small>All Time</small><strong id="allSales">GH₵0.00</strong></div>
-    </div>
-  </div>
-
   <div class="menuWrap">
     <button id="menuToggle" class="menuToggle" type="button" aria-expanded="false" aria-controls="workerMenu">☰ Menu</button>
     <nav id="workerMenu" class="menuPopup" aria-label="Worker portal menu">
@@ -141,6 +126,20 @@ th,td{padding:11px;border-bottom:1px solid #eee;text-align:left;font-size:14px}t
       <div class="menuDivider"></div>
       <button type="button" id="menuLogout" class="menuItem" style="color:#b42318">Log out</button>
     </nav>
+  </div>
+  <div class="panel">
+    <h2>Welcome, <span id="workerName">Worker</span> 👋</h2>
+    <div class="workerInfo">
+      <strong>Worker ID:</strong> <span id="workerId">—</span> &nbsp; | &nbsp;
+      <strong>Role:</strong> <span id="workerRole">—</span> &nbsp; | &nbsp;
+      <strong>Status:</strong> <span id="workerStatus" class="badge">—</span>
+    </div>
+    <div class="stats">
+      <div class="stat"><small>Today Sale</small><strong id="todaySales">GH₵0.00</strong></div>
+      <div class="stat"><small>This Week</small><strong id="weekSales">GH₵0.00</strong></div>
+      <div class="stat"><small>This Month</small><strong id="monthSales">GH₵0.00</strong></div>
+      <div class="stat"><small>All Time</small><strong id="allSales">GH₵0.00</strong></div>
+    </div>
   </div>
 
   <section id="dashboard" class="section active">
