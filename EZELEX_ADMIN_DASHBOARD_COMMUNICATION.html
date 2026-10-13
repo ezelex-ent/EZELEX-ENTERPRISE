@@ -31,7 +31,7 @@ table{width:100%;border-collapse:collapse;min-width:1050px}th,td{padding:11px;bo
 </style>
 </head>
 <body>
-<header><div class="brand"><div class="logo">EZ</div><div><h1>EZELEX ENTERPRISE</h1><small>Admin Command Centre</small></div></div><div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><button id="openMenuBtn" class="gold hidden" type="button" aria-expanded="false" aria-controls="adminNavigation">☰ Menu</button><button id="logoutBtn" class="danger hidden">Log out</button></div></header>
+<header><div class="brand"><div class="logo">EZ</div><div><h1>EZELEX ENTERPRISE</h1><small>Admin Command Centre</small></div></div><div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><button id="openMenuBtn" class="gold hidden" type="button" aria-expanded="false" aria-controls="adminNavigation">☰ Menu</button><button id="logoutBtn" class="danger hidden" style="display:none!important" aria-hidden="true" tabindex="-1">Log out</button></div></header>
 
 <section id="loginSection" class="login">
 <h2>Admin Login</h2><p class="muted">Sign in with your EZELEX administrator account.</p><div id="loginMsg"></div>
@@ -42,20 +42,20 @@ table{width:100%;border-collapse:collapse;min-width:1050px}th,td{padding:11px;bo
 <main id="dashboard" class="wrap hidden"><div id="dashMsg"></div>
 <nav class="nav hidden" id="adminNavigation" aria-label="Admin menu">
   <div class="menu-title">EZELEX ADMIN MENU</div>
-  <button type="button" class="menu-item" data-section="capital">1. Business Capital</button>
-  <button type="button" class="menu-item" data-section="tricycle">2. Tricycle Contract</button>
-  <button type="button" class="menu-item" data-section="stock">3. Stock &amp; Profit</button>
-  <button type="button" class="menu-item" data-section="credits">4. On-Credit Sales</button>
-  <button type="button" class="menu-item" data-section="stockHistory">5. Edit History</button>
-  <div class="menu-group-label">6. Create Employee Accounts</div>
+  <button type="button" class="menu-item" data-section="capital">Business Capital</button>
+  <button type="button" class="menu-item" data-section="tricycle">Tricycle Contract</button>
+  <button type="button" class="menu-item" data-section="stock">Stock &amp; Profit</button>
+  <button type="button" class="menu-item" data-section="credits">On-Credit Sales</button>
+  <button type="button" class="menu-item" data-section="stockHistory">Edit History</button>
+  <div class="menu-group-label">Create Employee Accounts</div>
   <button type="button" class="menu-subitem" data-section="workers" data-focus="createWorker">↳ Create Worker</button>
   <button type="button" class="menu-subitem" data-section="tricycle" data-focus="createDriver">↳ Create Driver</button>
   <button type="button" class="menu-subitem" data-section="workers" data-focus="deleteWorker">↳ Delete Worker</button>
-  <button type="button" class="menu-item" data-section="communication">7. Communication Centre</button>
-  <button type="button" class="menu-item" data-section="profile">8. Admin Profile</button>
-  <button type="button" class="menu-item" data-section="security">9. Security</button>
-  <button type="button" class="menu-item menu-logout" id="menuLogoutBtn">10. Log Out</button>
-  <button type="button" class="menu-item menu-dashboard" data-section="overview">11. Back to Dashboard</button>
+  <button type="button" class="menu-item" data-section="communication">Communication Centre</button>
+  <button type="button" class="menu-item" data-section="profile">Admin Profile</button>
+  <button type="button" class="menu-item" data-section="security">Security</button>
+  <button type="button" class="menu-item menu-logout" id="menuLogoutBtn">Log Out</button>
+  <button type="button" class="menu-item menu-dashboard" data-section="overview">Back to Dashboard</button>
 </nav>
 
 <section id="capital" class="page hidden">
