@@ -26,8 +26,14 @@ textarea{min-height:90px;resize:vertical}
 .error{background:#fee4e2;color:#912018}.success{background:#dcfae6;color:#067647}
 .hidden{display:none!important}
 .workerInfo{font-size:14px;line-height:1.7}
-.tabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:18px}
-.tab{background:#e5e7eb;color:#111827}.tab.active{background:#111827;color:#fff}
+.menuWrap{position:relative;display:flex;justify-content:flex-end;margin:0 0 18px;z-index:20}
+.menuToggle{background:#111827;color:#fff;min-width:118px}
+.menuPopup{position:absolute;right:0;top:calc(100% + 8px);width:min(300px,calc(100vw - 32px));background:#fff;border:1px solid #dbe1e8;border-radius:12px;box-shadow:0 12px 35px #0002;padding:8px;display:none;max-height:70vh;overflow:auto}
+.menuPopup.open{display:block}
+.menuItem{display:block;width:100%;text-align:left;background:#fff;color:#17202a;padding:12px;border-radius:8px;margin:2px 0;font-weight:700}
+.menuItem:hover,.menuItem:focus{background:#f1f5f9;outline:2px solid #cbd5e1}
+.menuItem.active{background:#e5e7eb}
+.menuDivider{height:1px;background:#e5e7eb;margin:7px 4px}
 .section{display:none}.section.active{display:block}
 .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:18px}
 .stat{background:#f8fafc;border:1px solid #e5e7eb;border-radius:12px;padding:15px}
@@ -60,18 +66,6 @@ th,td{padding:11px;border-bottom:1px solid #eee;text-align:left;font-size:14px}t
 
 @media(max-width:900px){.stats,.stockGrid{grid-template-columns:1fr 1fr}.resultGrid{grid-template-columns:1fr 1fr}}
 @media(max-width:700px){.grid,.cardrow{grid-template-columns:1fr}.full{grid-column:auto}.login{margin:30px 15px}.wrap{padding:0 12px}.stats,.stockGrid,.resultGrid{grid-template-columns:1fr}}
-
-/* Driver first-login photo prompt */
-.driver-photo-modal{position:fixed;inset:0;z-index:9999;background:rgba(15,23,42,.72);display:flex;align-items:center;justify-content:center;padding:18px}
-.driver-photo-card{width:min(460px,100%);background:#fff;border-radius:18px;padding:24px;box-shadow:0 20px 60px #0005}
-.driver-photo-card h2{margin-top:0;color:#111827}.driver-photo-card p{line-height:1.5;color:#475569}
-.driver-photo-card input{margin-top:12px}.driver-photo-card button{width:100%;margin-top:8px}
-/* Mobile-friendly navigation and driver identity/contract panels */
-.tabs{position:relative}
-.tabs .tab{min-height:44px}
-.photoPreview{width:104px;height:104px;border-radius:50%;object-fit:cover;background:#e5e7eb;border:3px solid #e5e7eb;display:block;margin:10px 0}
-.driverContractCard{border:1px solid #e5e7eb;border-radius:12px;padding:16px;margin:12px 0;background:#f8fafc}
-@media(max-width:600px){header{padding:14px 12px;align-items:flex-start}header h1{font-size:19px}.tabs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}.tab{padding:10px 8px;font-size:13px}.panel{padding:15px}.workerInfo{overflow-wrap:anywhere}.photoPreview{width:88px;height:88px}}
 </style>
 </head>
 <body>
@@ -81,7 +75,7 @@ th,td{padding:11px;border-bottom:1px solid #eee;text-align:left;font-size:14px}t
     <h1>Ezelex Enterprise</h1>
     <small>Worker Dashboard</small>
   </div>
-  <a id="settingsBtn" class="secondary hidden" href="https://ezelexenterprise.com/worker-profile.html" style="text-decoration:none">Settings</a>
+
 </header>
 
 <section id="loginSection" class="login">
@@ -132,15 +126,21 @@ th,td{padding:11px;border-bottom:1px solid #eee;text-align:left;font-size:14px}t
     </div>
   </div>
 
-  <div class="tabs">
-    <button class="tab active" data-tab="dashboard">Dashboard</button>
-    <button class="tab" data-tab="sales">Record Sale</button>
-    <button class="tab" data-tab="stock">Live Stock</button>
-    <button class="tab" data-tab="stockHistory">Edit History</button>
-    <button class="tab" data-tab="credit">On-Credit</button>
-    <button class="tab" data-tab="contract" id="driverContractTab">Tricycle Contract</button>
-    <button class="tab" data-tab="profile">My Profile</button>
-    <button class="tab" data-tab="communication">Communication</button>
+  <div class="menuWrap">
+    <button id="menuToggle" class="menuToggle" type="button" aria-expanded="false" aria-controls="workerMenu">☰ Menu</button>
+    <nav id="workerMenu" class="menuPopup" aria-label="Worker portal menu">
+      <button type="button" class="menuItem active" data-tab="dashboard">Dashboard</button>
+      <button type="button" class="menuItem" data-tab="sales">Record Sale</button>
+      <button type="button" class="menuItem" data-tab="stock">Live Stock</button>
+      <button type="button" class="menuItem" data-tab="stockHistory">Edit History</button>
+      <button type="button" class="menuItem" data-tab="credit">On-Credit</button>
+      <button type="button" class="menuItem" data-tab="settings">Settings</button>
+      <button type="button" class="menuItem" data-tab="communication">Communication</button>
+      <button type="button" class="menuItem" data-tab="profile">My Profile</button>
+      <button type="button" class="menuItem" data-tab="contract">My Contract</button>
+      <div class="menuDivider"></div>
+      <button type="button" id="menuLogout" class="menuItem" style="color:#b42318">Log out</button>
+    </nav>
   </div>
 
   <section id="dashboard" class="section active">
@@ -152,7 +152,7 @@ th,td{padding:11px;border-bottom:1px solid #eee;text-align:left;font-size:14px}t
         <div class="infoBox"><strong>Last activity</strong><br><span id="lastActivity">Loading...</span></div>
       </div>
   </div>
-    <div id="workerSalesDashboardPanel" class="panel">
+    <div class="panel">
       <h2>Recent Sales</h2>
       <div class="tablebox">
         <table><thead><tr><th>Date</th><th>Customer</th><th>Product/Service</th><th>Qty</th><th>Amount</th><th>Payment</th></tr></thead>
@@ -316,17 +316,19 @@ th,td{padding:11px;border-bottom:1px solid #eee;text-align:left;font-size:14px}t
     </div>
   </section>
 
+  <section id="settings" class="section">
+    <div class="panel">
+      <h2>Settings</h2>
+      <p>Manage your worker account access. Your sales and stock records are not changed by these settings.</p>
+      <div class="infoBox"><strong>Signed in as:</strong> <span id="settingsEmail">—</span><br><strong>Worker ID:</strong> <span id="settingsWorkerId">—</span></div>
+      <button id="sendPasswordResetBtn" type="button" class="primary" style="margin-top:14px">Email Me a Password Reset Link</button>
+      <div id="settingsMsg" aria-live="polite"></div>
+    </div>
+  </section>
+
   <section id="profile" class="section">
     <div class="panel">
       <h2>My Profile</h2>
-      <div class="infoBox" style="margin-bottom:14px">
-        <strong>Profile Photo</strong>
-        <img id="profilePhotoPreview" class="photoPreview" alt="Your profile photo" src="" style="display:none">
-        <p class="live">Upload a clear photo of yourself for identification by Ezelex Enterprise admin.</p>
-        <input id="profilePhotoInput" type="file" accept="image/*" capture="user">
-        <button id="uploadProfilePhotoBtn" type="button" class="primary">Upload / Update Photo</button>
-        <div id="profilePhotoMsg" aria-live="polite"></div>
-      </div>
       <div class="infoBox">
         <strong>Worker ID:</strong> <span id="profileWorkerId">—</span><br>
         <strong>Full Name:</strong> <span id="profileFullName">—</span><br>
@@ -350,24 +352,15 @@ th,td{padding:11px;border-bottom:1px solid #eee;text-align:left;font-size:14px}t
 
   <section id="contract" class="section">
     <div class="panel">
-      <h2>🛺 My Tricycle Contract</h2>
-      <p class="stockNote">Your tricycle contract details and payment progress appear here when linked by Ezelex Enterprise admin.</p>
-      <div id="driverContractMsg" aria-live="polite"></div>
-      <div id="driverContractDetails"><div class="driverContractCard">Loading your contract details…</div></div>
+      <h2>📄 My Contract</h2>
+      <div class="infoBox">
+        <strong>Contract Start:</strong> <span id="contractStart">—</span><br>
+        <strong>Contract End:</strong> <span id="contractEnd">—</span>
+      </div>
+      <p style="margin-top:16px">Your contract details are linked to your worker profile. If Ezelex Enterprise has provided a contract document or link, it can be added here later without changing your worker login.</p>
     </div>
   </section>
 </main>
-
-<div id="driverPhotoModal" class="driver-photo-modal hidden" role="dialog" aria-modal="true" aria-labelledby="driverPhotoTitle">
-  <div class="driver-photo-card">
-    <h2 id="driverPhotoTitle">Complete your driver profile</h2>
-    <p>Before continuing, please take or upload a clear photo of yourself. Ezelex Enterprise admin uses it to identify the driver linked to the tricycle contract.</p>
-    <label for="driverPhotoModalInput">Take a photo or choose an image</label>
-    <input id="driverPhotoModalInput" type="file" accept="image/*" capture="user">
-    <div id="driverPhotoModalMsg" aria-live="polite"></div>
-    <button id="driverPhotoModalUpload" class="primary" type="button">Save Driver Photo</button>
-  </div>
-</div>
 
 <script>
 const SUPABASE_URL="https://hweczhwoggmsrwhkktrx.supabase.co";
@@ -396,12 +389,12 @@ function dateOnly(v){return v?String(v).slice(0,10):"—";}
 function showLogin(){
   $("loginSection").classList.remove("hidden");
   $("portal").classList.add("hidden");
-  $("settingsBtn").classList.add("hidden");
+
 }
 function showPortal(){
   $("loginSection").classList.add("hidden");
   $("portal").classList.remove("hidden");
-  $("settingsBtn").classList.remove("hidden");
+
 }
 
 function mondayDateISO(value=today()){
@@ -412,6 +405,24 @@ function mondayDateISO(value=today()){
 }
 function addDaysISO(value,days){const d=new Date(String(value).slice(0,10)+"T12:00:00");d.setDate(d.getDate()+days);return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");}
 function weekLabel(w){return w?`${dateOnly(w.week_start)} – ${dateOnly(w.week_end)}`:"No weekly book";}
+// Read existing records by the authenticated Supabase UUID first. If older rows were saved
+// using the visible worker ID, try that owner key as a read-only fallback.
+async function selectWorkerRows(table, columns="*", orderColumn=null, limitCount=null){
+  if(!currentUser) return {data:[],error:new Error("No signed-in worker")};
+  const run=async owner=>{
+    let q=db.from(table).select(columns).eq("worker_id",owner);
+    if(orderColumn) q=q.order(orderColumn.column,{ascending:orderColumn.ascending!==false});
+    if(limitCount) q=q.limit(limitCount);
+    return await q;
+  };
+  let result=await run(currentUser.id);
+  if((result.error || !(result.data||[]).length) && profile?.worker_id && String(profile.worker_id)!==String(currentUser.id)){
+    const legacy=await run(profile.worker_id);
+    if(!legacy.error && (legacy.data||[]).length) return legacy;
+  }
+  return result;
+}
+
 async function ensureCurrentStockWeek(){
   const start=mondayDateISO(today()),end=addDaysISO(start,6);
   // Any still-open previous week is archived automatically when a new Monday begins.
@@ -440,37 +451,26 @@ async function ensureCurrentStockWeek(){
   return currentStockWeek;
 }
 function renderStockWeekControls(){
+  if(!currentStockWeek)return;
+  $("weekRangeLabel").textContent=weekLabel(currentStockWeek);
+  const isOpen=currentStockWeek.status==="open";
+  $("weekStatusLabel").textContent=isOpen?"OPEN — add purchases and track sales":"CLOSED — archived and read-only";
+  $("closeStockWeekBtn").disabled=!isOpen;
+  $("closeStockWeekBtn").textContent=isOpen?"Close This Week (Sunday)":"Week Closed";
   const picker=$("stockWeekPicker");
-  if(currentStockWeek){
-    $("weekRangeLabel").textContent=weekLabel(currentStockWeek);
-    const isOpen=currentStockWeek.status==="open";
-    $("weekStatusLabel").textContent=isOpen?"OPEN — add purchases and track sales":"CLOSED — archived and read-only";
-    $("closeStockWeekBtn").disabled=!isOpen;
-    $("closeStockWeekBtn").textContent=isOpen?"Close This Week (Sunday)":"Week Closed";
-  }
-  if(picker){
-    const previous=selectedStockWeekId||picker.value||"";
-    const books=[...stockWeekRows];
-    if(currentStockWeek&&!books.some(w=>String(w.id)===String(currentStockWeek.id)))books.push(currentStockWeek);
-    books.sort((a,b)=>String(b.week_start||"").localeCompare(String(a.week_start||"")));
-    picker.innerHTML='<option value="">Current week</option>'+books.map(w=>`<option value="${esc(w.id)}">${esc(weekLabel(w))} — ${esc(String(w.status||"open").toUpperCase())}</option>`).join("");
-    picker.value=previous&&books.some(w=>String(w.id)===String(previous))?previous:"";
-  }
+  if(picker&&stockWeekRows.length){const old=selectedStockWeekId||picker.value;picker.innerHTML='<option value="">Current week</option>'+stockWeekRows.map(w=>`<option value="${esc(w.id)}">${esc(weekLabel(w))} — ${esc(String(w.status||"open").toUpperCase())}</option>`).join("");picker.value=old&&stockWeekRows.some(w=>String(w.id)===String(old))?String(old):"";selectedStockWeekId=picker.value;}
 }
 async function loadStockWeeks(){
   if(!currentUser)return;
   const r=await db.from("worker_stock_weeks").select("*").eq("worker_id",currentUser.id).order("week_start",{ascending:false}).limit(100);
   if(r.error){msg("weeklyStockMsg","Weekly stock books could not be loaded: "+esc(r.error.message),"error");return;}
   stockWeekRows=r.data||[];
-  // Recover week options from existing stock records as a safe display fallback. This does not insert, update, or delete database data.
   const batches=await db.from("worker_stock_batches").select("id,week_id,stock_date,created_at").eq("worker_id",currentUser.id).order("stock_date",{ascending:false}).limit(2000);
   if(!batches.error){
     for(const b of (batches.data||[])){
-      const weekId=String(b.week_id||"");
-      if(weekId&&stockWeekRows.some(w=>String(w.id)===weekId))continue;
-      const start=mondayDateISO(b.stock_date||b.created_at||today());
-      if(stockWeekRows.some(w=>String(w.week_start)===start))continue;
-      stockWeekRows.push({id:weekId||('date:'+start),week_start:start,week_end:addDaysISO(start,6),status:start===mondayDateISO(today())?'open':'closed',_derived:true});
+      const start=mondayDateISO(b.stock_date||b.created_at||today()), weekId=String(b.week_id||"");
+      if(!stockWeekRows.some(w=>(weekId&&String(w.id)===weekId)||String(w.week_start||"")===start))
+        stockWeekRows.push({id:weekId||("date:"+start),week_start:start,week_end:addDaysISO(start,6),status:start===mondayDateISO(today())?"open":"closed",_derived:true});
     }
   }
   stockWeekRows.sort((a,b)=>String(b.week_start||"").localeCompare(String(a.week_start||"")));
@@ -493,114 +493,6 @@ async function start(){
   await loadProfile(session.user);
 }
 
-const isDriverRole = value => String(value||"").trim().toLowerCase().replace(/[ _-]/g,"")==="driver";
-function applyRoleNavigation(role){
-  const driver=isDriverRole(role);
-  $("workerSalesDashboardPanel")?.classList.toggle("hidden",driver);
-  const driverOnly=new Set(["contract"]);
-  const workerOnly=new Set(["sales","stock","stockHistory","credit"]);
-  document.querySelectorAll(".tab[data-tab]").forEach(btn=>{
-    const tab=btn.dataset.tab;
-    // Drivers get Dashboard + Tricycle Contract, with shared Profile and Communication.
-    // Normal workers get the sales/stock/history/credit tabs and never see Tricycle Contract.
-    btn.classList.toggle("hidden",driver?workerOnly.has(tab):driverOnly.has(tab));
-  });
-  if(driver){
-    ["sales","stock","stockHistory","credit"].forEach(id=>$(id)?.classList.remove("active"));
-    document.querySelectorAll(".tab[data-tab]").forEach(b=>b.classList.remove("active"));
-    document.querySelectorAll(".section").forEach(sec=>sec.classList.remove("active"));
-    document.querySelector('.tab[data-tab="dashboard"]')?.classList.add("active");
-    $("dashboard")?.classList.add("active");
-  }else{
-    // Defensive: workers must never be left on the driver-only contract panel.
-    $("contract")?.classList.remove("active");
-    document.querySelector('.tab[data-tab="contract"]')?.classList.remove("active");
-  }
-}
-async function loadDriverContract(){
-  const host=$("driverContractDetails"); if(!host||!currentUser)return;
-  host.innerHTML='<div class="driverContractCard">Loading your contract details…</div>';
-  const r=await db.from("tricycle_contracts").select("*").eq("driver_user_id",currentUser.id).order("created_at",{ascending:false}).limit(10);
-  if(r.error){
-    host.innerHTML='<div class="msg error">Your contract could not be loaded. Please contact Ezelex Enterprise admin.</div>';
-    console.warn("Tricycle contract query failed:",r.error.message);return;
-  }
-  const rows=r.data||[];
-  if(!rows.length){host.innerHTML='<div class="driverContractCard">No tricycle contract has been linked to your account yet. Please contact Ezelex Enterprise admin.</div>';return;}
-  host.innerHTML=rows.map(c=>{
-    const moneyVal=v=>"GH₵"+Number(v||0).toLocaleString("en-GH",{minimumFractionDigits:2,maximumFractionDigits:2});
-    const status=String(c.status||"pending").replace(/[_-]/g," ");
-    const total=Number(c.total_amount||0),paid=Number(c.opening_paid_amount||0);
-    return `<div class="driverContractCard">
-      <h3>${esc(c.vehicle_registration||c.vehicle_id||"Tricycle contract")}</h3>
-      <p><strong>Status:</strong> ${esc(status)}</p>
-      <p><strong>Contract period:</strong> ${esc(dateOnly(c.contract_start))} – ${esc(dateOnly(c.contract_end))}</p>
-      <p><strong>Contract amount:</strong> ${moneyVal(total)}</p>
-      <p><strong>Opening amount paid:</strong> ${moneyVal(paid)}</p>
-      <p><strong>Weekly target:</strong> ${moneyVal(c.weekly_target??1400)}</p>
-      <p><strong>Daily target:</strong> ${moneyVal(c.daily_target??200)}</p>
-      ${c.admin_notes?`<p><strong>Admin notes:</strong> ${esc(c.admin_notes)}</p>`:""}
-    </div>`;
-  }).join("");
-}
-async function loadProfilePhoto(){
-  if(!currentUser)return;
-  const path=currentUser.user_metadata?.profile_photo_path;
-  const img=$("profilePhotoPreview");
-  if(!path||!img)return;
-  const r=await db.storage.from("worker-profile-photos").createSignedUrl(path,900);
-  if(!r.error&&r.data?.signedUrl){img.src=r.data.signedUrl;img.style.display="block";}
-}
-$("uploadProfilePhotoBtn")?.addEventListener("click",async()=>{
-  const modalFile=$("driverPhotoModalInput")?.files?.[0];
-  const file=modalFile||$("profilePhotoInput")?.files?.[0];
-  if(!file){
-    msg("profilePhotoMsg","Choose a photo or take one with your device camera first.","error");
-    const modalMsg=$("driverPhotoModalMsg");if(modalMsg)modalMsg.innerHTML='<div class="msg error">Please take or choose a photo first.</div>';
-    return;
-  }
-  if(!file.type.startsWith("image/")){msg("profilePhotoMsg","Please select an image file.","error");return;}
-  if(file.size>5*1024*1024){msg("profilePhotoMsg","Please choose an image smaller than 5 MB.","error");return;}
-  const ext=({"image/jpeg":"jpg","image/png":"png","image/webp":"webp","image/heic":"heic"})[file.type]||"jpg";
-  const path=`${currentUser.id}/profile-${Date.now()}.${ext}`;
-  msg("profilePhotoMsg","Uploading your profile photo…");
-  const up=await db.storage.from("worker-profile-photos").upload(path,file,{contentType:file.type,upsert:true});
-  if(up.error){msg("profilePhotoMsg","Photo upload failed. The private worker-profile-photos bucket and its storage policies must be configured in Supabase. "+esc(up.error.message),"error");return;}
-  const meta=await db.auth.updateUser({data:{profile_photo_path:path}});
-  if(meta.error){msg("profilePhotoMsg","Photo uploaded but profile linking failed. Please contact admin. "+esc(meta.error.message),"error");return;}
-  currentUser.user_metadata={...(currentUser.user_metadata||{}),profile_photo_path:path};
-  await loadProfilePhoto();
-  $("driverPhotoModal")?.classList.add("hidden");
-  // For drivers, send the separate onboarding/contract email only after they have
-  // successfully signed in (password set) and uploaded their profile photo.
-  if(String(profile?.role||"").toLowerCase()==="driver"){
-    msg("profilePhotoMsg","Photo saved. Sending your driver contract and payment information…");
-    try{
-      const {data:{session}}=await db.auth.getSession();
-      if(!session) throw new Error("Please sign in again to finish driver setup.");
-      const response=await fetch(SUPABASE_URL+"/functions/v1/send-driver-onboarding-complete",{
-        method:"POST",
-        headers:{"Authorization":"Bearer "+session.access_token,"apikey":SUPABASE_PUBLISHABLE_KEY,"Content-Type":"application/json"},
-        body:JSON.stringify({})
-      });
-      const result=await response.json().catch(()=>({}));
-      if(!response.ok||!result.success) throw new Error(result.error||"The driver follow-up email could not be sent.");
-      msg("profilePhotoMsg",result.already_sent?"Profile photo saved. Your driver setup email has already been sent.":"Profile photo saved. Your driver contract and Monday payment instructions have been emailed to you.","success");
-    }catch(e){
-      msg("profilePhotoMsg","Profile photo saved, but the driver follow-up email could not be sent: "+esc(e.message||e)+" Please contact admin.","error");
-    }
-  }else{
-    msg("profilePhotoMsg","Profile photo updated successfully.","success");
-  }
-});
-
-$("driverPhotoModalUpload")?.addEventListener("click",()=>{
-  const file=$("driverPhotoModalInput")?.files?.[0];
-  if(!file){$("driverPhotoModalMsg").innerHTML='<div class="msg error">Please take or choose a photo first.</div>';return;}
-  // Reuse the existing profile-photo upload flow; the modal file takes priority there.
-  $("uploadProfilePhotoBtn")?.click();
-});
-
 async function loadProfile(user){
   currentUser=user;
   const {data,error}=await db.from("worker_profiles")
@@ -621,7 +513,6 @@ async function loadProfile(user){
     await db.auth.signOut(); showLogin(); msg("loginMsg","Your worker account is inactive. Please contact Ezelex Enterprise admin.","error"); return;
   }
   profile=data;
-  applyRoleNavigation(data.role);
   showPortal();
 
   $("workerName").textContent=data.full_name||"Worker";
@@ -642,27 +533,19 @@ async function loadProfile(user){
   $("profileStart").textContent=dateOnly(data.contract_start);
   $("profileEnd").textContent=dateOnly(data.contract_end);
   $("profileEmail").textContent=user.email||"—";
+  $("settingsEmail").textContent=user.email||"—";
+  $("settingsWorkerId").textContent=data.worker_id||"—";
   $("contractStart").textContent=dateOnly(data.contract_start);
   $("contractEnd").textContent=dateOnly(data.contract_end);
 
-  await loadProfilePhoto();
-  if(isDriverRole(data.role)){
-    if(!currentUser.user_metadata?.profile_photo_path){
-      $("driverPhotoModal")?.classList.remove("hidden");
-      $("driverPhotoModalMsg").innerHTML="";
-    }
-    await loadDriverContract();
-    await loadMessages();
-  }else{
-    await ensureCurrentStockWeek();
-    await loadStockWeeks();
-    await Promise.all([loadSales(),loadStock(),loadStockHistory(),loadCredits()]);
-    await loadMessages();
-  }
+  await ensureCurrentStockWeek();
+  await loadStockWeeks();
+  await Promise.all([loadSales(),loadStock(),loadStockHistory(),loadCredits()]);
+  await loadMessages();
 }
 
 function salesForWorker(){
-  return db.from("sales").select("*").eq("worker_id",currentUser.id).order("sale_date",{ascending:false});
+  return selectWorkerRows("sales","*",{column:"sale_date",ascending:false});
 }
 async function loadSales(){
   const {data,error}=await salesForWorker();
@@ -700,9 +583,10 @@ async function loadSales(){
   $("salesBody").innerHTML=rows.map(s=>{
     const st=String(s.status||"pending").toLowerCase();
     const pending=(st==="pending"||!s.status);
+    const deletable=pending||st==="rejected";
     const action=pending
       ? `<span style="display:inline-flex;gap:6px;flex-wrap:wrap;align-items:center"><span class="badge" style="background:#fff3cd;color:#8a5b00">PENDING</span><button type="button" onclick="editSale('${esc(s.id)}')" style="padding:7px 10px">Edit</button><button type="button" onclick="deleteSale('${esc(s.id)}')" style="padding:7px 10px;background:#b42318;color:#fff">Delete</button></span>`
-      : `<span class="badge" style="background:${st==='approved'?'#dcfae6':'#fee4e2'};color:${st==='approved'?'#067647':'#b42318'}">${esc(st.toUpperCase())}</span>`;
+      : `<span class="badge" style="background:${st==='approved'?'#dcfae6':'#fee4e2'};color:${st==='approved'?'#067647':'#b42318'}">${esc(st.toUpperCase())}</span>${deletable?` <button type="button" onclick="deleteSale('${esc(s.id)}')" style="padding:7px 10px;background:#b42318;color:#fff">Delete</button>`:""}`;
     return `<tr>
       <td>${esc(dateOnly(s.sale_date))}</td><td>${esc(s.customer_reference||"")}</td><td>${esc(s.product_service||"")}</td>
       <td>${esc(s.quantity??"")}</td><td>${money(s.sale_amount)}</td><td>${esc(s.payment_method||"")}</td><td>${esc(s.notes||"")}</td><td>${action}</td>
@@ -732,27 +616,27 @@ function calculateStock(){
 }
 
 async function loadStock(){
-  const {data,error}=await db.from("worker_stock_batches").select("*").eq("worker_id",currentUser.id).order("stock_date",{ascending:false});
+  const {data,error}=await selectWorkerRows("worker_stock_batches","*",{column:"stock_date",ascending:false});
   if(error){$("stockBody").innerHTML='<tr><td colspan="11">Stock records could not be loaded.</td></tr>';msg("stockLiveMsg","Could not load live stock: "+error.message,"error");return;}
   const allRows=data||[]; liveStockRows=allRows;
   const chosenWeekId=selectedStockWeekId||currentStockWeek?.id||"";
-  const chosenWeek=stockWeekRows.find(w=>String(w.id)===String(chosenWeekId)) || (String(currentStockWeek?.id||"")===String(chosenWeekId)?currentStockWeek:null);
-  const chosenStart=chosenWeek?.week_start || (selectedStockWeekId?null:mondayDateISO(today()));
-  const rows=allRows.filter(r=>{
-    const rowStart=mondayDateISO(r.stock_date||r.created_at||today());
-    // Match either the saved weekly-book ID OR the calendar week of the stock date.
-    // This keeps older records visible if a weekly book ID is missing or inconsistent.
-    if(r.week_id && String(r.week_id)===String(chosenWeekId))return true;
-    return !!chosenStart && rowStart===chosenStart;
-  });
+  const chosenWeek=stockWeekRows.find(w=>String(w.id)===String(chosenWeekId))||currentStockWeek;
+  const chosenStart=chosenWeek?.week_start||mondayDateISO(today());
+  const rows=allRows.filter(r=>String(r.week_id||"")===String(chosenWeekId)||mondayDateISO(r.stock_date||r.created_at||today())===String(chosenStart));
   let units=0,value=0,revenue=0,profit=0,cash=0,purchased=0,soldWeek=0;
   rows.forEach(r=>{units+=Number(r.remaining_quantity||0);value+=Number(r.remaining_value||0);revenue+=Number(r.sales_revenue||0);profit+=Number(r.profit_loss||0);if(r.stock_type!=="carry_forward")purchased+=Number(r.total_quantity||0);soldWeek+=Number(r.sold_quantity||0);const cap=Number(r.capital_amount??r.purchase_total??0),pur=Number(r.purchase_total||0);cash+=Number(r.cash_in_hand??(cap+Number(r.sales_revenue||0)-Number(r.credit_outstanding||0)-pur));});
-  $("liveUnits").textContent=units.toLocaleString();$("liveValue").textContent=money(value);$("liveRevenue").textContent=money(revenue);$("liveProfit").textContent=money(profit);$("liveProfitLabel").textContent="selected week profit";
+  $("liveUnits").textContent=units.toLocaleString();$("liveValue").textContent=money(value);$("liveRevenue").textContent=money(revenue);$("liveProfit").textContent=money(profit);$("liveProfitLabel").textContent=profit>=0?"selected week profit":"selected week loss";
   $("weekPurchased").textContent=purchased.toLocaleString();$("weekSold").textContent=soldWeek.toLocaleString();$("weekRemaining").textContent=units.toLocaleString();
-  const weekProfitCard=$("weekProfitCard");$("weekProfit").textContent=money(profit);weekProfitCard.classList.toggle("profit",profit>0);weekProfitCard.classList.toggle("loss",profit<0);$("weekProfitLabel").textContent=profit>0?"You're gaining this week":profit<0?"You're losing money this week":"Break-even so far";
+  // Reuse the existing stock-batch Profit/Loss values without changing their calculation.
+  const weekProfitCard=$("weekProfitCard");
+  $("weekProfit").textContent=money(profit);
+  weekProfitCard.classList.toggle("profit",profit>0);
+  weekProfitCard.classList.toggle("loss",profit<0);
+  $("weekProfitLabel").textContent=profit>0?"You're gaining this week":profit<0?"You're losing money this week":"Break-even so far";
   const viewingClosed=!!selectedWeekIsClosed();
+  if(currentStockWeek?.status==="closed"&&!selectedStockWeekId){msg("weeklyStockMsg","This week's book is closed. Choose the current week after Monday to continue adding stock.","error");}
   if(!rows.length){$("stockBody").innerHTML='<tr><td colspan="11">No stock records in this week yet.</td></tr>';}
-  else $("stockBody").innerHTML=rows.map(r=>{const cap=Number(r.capital_amount??r.purchase_total??0),pur=Number(r.purchase_total||0),ci=Number(r.cash_in_hand??(cap+Number(r.sales_revenue||0)-Number(r.credit_outstanding||0)-pur));const rowWeek=String(r.week_id||"")===String(currentStockWeek?.id||"") || (!r.week_id&&mondayDateISO(r.stock_date||r.created_at||today())===mondayDateISO(today()));const editable=true;return `<tr><td>${esc(dateOnly(r.stock_date))}</td><td>${esc(r.product_service||"")}${r.stock_type==="carry_forward"?' <span class="badge">Opening balance</span>':''}</td><td>${esc(r.total_quantity??0)}</td><td>${esc(r.sold_quantity??0)}</td><td>${esc(r.damage_quantity??0)}</td><td>${esc(r.remaining_quantity??0)}</td><td>${money(cap)}</td><td>${money(pur)}</td><td>${money(ci)}</td><td>${money(r.profit_loss)}</td><td>${editable?`<button type="button" class="primary" onclick="editStock('${esc(r.id)}')">Edit</button>`:'<span class="badge">Archived</span>'}</td></tr>`;}).join("");
+  else $("stockBody").innerHTML=rows.map(r=>{const cap=Number(r.capital_amount??r.purchase_total??0),pur=Number(r.purchase_total||0),ci=Number(r.cash_in_hand??(cap+Number(r.sales_revenue||0)-Number(r.credit_outstanding||0)-pur));const editable=true;return `<tr><td>${esc(dateOnly(r.stock_date))}</td><td>${esc(r.product_service||"")}${r.stock_type==="carry_forward"?' <span class="badge">Opening balance</span>':''}</td><td>${esc(r.total_quantity??0)}</td><td>${esc(r.sold_quantity??0)}</td><td>${esc(r.damage_quantity??0)}</td><td>${esc(r.remaining_quantity??0)}</td><td>${money(cap)}</td><td>${money(pur)}</td><td>${money(ci)}</td><td>${money(r.profit_loss)}</td><td>${editable?`<button type="button" class="primary" onclick="editStock('${esc(r.id)}')">Edit</button>`:'<span class="badge">Archived</span>'}</td></tr>`;}).join("");
   const sel=$("creditStockBatch");if(sel){const prev=sel.value;sel.innerHTML='<option value="">Choose stock batch</option>'+allRows.filter(r=>String(r.week_id||"")===String(currentStockWeek?.id||"")&&Number(r.remaining_quantity||0)>0).map(r=>`<option value="${esc(r.id)}">${esc(dateOnly(r.stock_date))} — ${esc(r.product_service||"Stock")} (remaining ${Number(r.remaining_quantity||0)})</option>`).join("");if(allRows.some(r=>r.id===prev))sel.value=prev;}
   $("saveStockBtn").disabled=!!currentStockWeek&&currentStockWeek.status!=="open"&&!editingStockId;
 }
@@ -760,7 +644,7 @@ function selectedWeekIsClosed(){const id=selectedStockWeekId||currentStockWeek?.
 
 function dateTime(v){if(!v)return "—";const d=new Date(v);return Number.isNaN(d.getTime())?String(v):d.toLocaleString("en-GB",{day:"2-digit",month:"short",year:"numeric",hour:"2-digit",minute:"2-digit",second:"2-digit"});}
 async function loadStockHistory(){
-  const {data,error}=await db.from("worker_stock_edit_history").select("*").eq("worker_id",currentUser.id).order("changed_at",{ascending:false}).limit(1000);
+  const {data,error}=await selectWorkerRows("worker_stock_edit_history","*",{column:"changed_at",ascending:false},1000);
   if(error){$("stockHistoryBody").innerHTML='<tr><td colspan="8">History unavailable. Please run the supplied stock history SQL in Supabase.</td></tr>';$("stockDailyBody").innerHTML='<tr><td colspan="4">History unavailable.</td></tr>';msg("stockHistoryMsg","Could not load stock history: "+esc(error.message),"error");return;}
   // Hide historical deletion entries from the worker Edit History; keep normal stock edits visible.
   stockHistoryRows=(data||[]).filter(h=>!String(h.action||"").toLowerCase().includes("delet"));renderStockHistory();
@@ -895,16 +779,12 @@ function startStockEdit(r){
   msg("stockMsg","Editing stock batch. Update quantity, purchase cost per unit, sold or damage quantity, then save. ","success");
 }
 window.editStock=async function(id){
-  try {
-    // Previous and closed weekly books remain editable for the worker who owns them.
-    const {data,error}=await db.from("worker_stock_batches").select("*").eq("id",id).eq("worker_id",currentUser.id).maybeSingle();
-    if(error) throw error;
-    if(!data){msg("stockMsg","That stock record was not found or you do not have permission to edit it.","error");return;}
-    startStockEdit(data);
-  } catch(error) {
-    console.error("Open stock record for editing failed:",error);
-    msg("stockMsg","Could not open stock record: "+esc(error?.message||String(error)),"error");
-  }
+  const {data:errorWeekData}=await db.from("worker_stock_batches").select("week_id").eq("id",id).eq("worker_id",currentUser.id).maybeSingle();
+  const week=stockWeekRows.find(w=>String(w.id)===String(errorWeekData?.week_id||""));
+  if(week&&week.status==="closed"){msg("stockMsg","This weekly stock book is closed and archived. It is kept for reporting and cannot be edited.","error");return;}
+  if(errorWeekData?.week_id&&String(errorWeekData.week_id)!==String(currentStockWeek?.id||"")){msg("stockMsg","Only the current week's stock can be edited. Older weekly books are archived for reporting.","error");return;}
+  const {data,error}=await db.from("worker_stock_batches").select("*").eq("id",id).eq("worker_id",currentUser.id).maybeSingle();
+  if(error||!data){msg("stockMsg","Could not open that stock record for editing.","error");return;} startStockEdit(data);
 };
 function cancelStockEdit(){
   editingStockId=""; editingStockOriginal=null; $("editingStockId").value=""; $("stockForm").reset(); $("stockDate").value=today(); $("stockSold").value=0; $("stockDamage").value=0; $("saveStockBtn").textContent="Save Stock Record"; $("cancelEditStockBtn").style.display="none"; $("deleteStockBtn").style.display="none"; updateStockFormCreditSummary(""); calculateStock(); msg("stockMsg","Edit cancelled","");
@@ -929,9 +809,9 @@ $("saveStockBtn").onclick=async()=>{
   const saveButton=$("saveStockBtn");
   if(saveButton.disabled)return;
   saveButton.disabled=true;
-  try {
+  try{
   if(!editingStockId&&(!currentStockWeek||currentStockWeek.status!=="open")){msg("stockMsg","This weekly stock book is closed. Start or open the new Monday weekly book before adding stock.","error");return;}
-  if(!editingStockId && selectedStockWeekId && selectedStockWeekId!==String(currentStockWeek?.id||"")){msg("stockMsg","You are viewing an archived week. You can edit existing records, but new stock can only be added to the current week.","error");return;}
+  if(!editingStockId&&selectedStockWeekId&&selectedStockWeekId!==String(currentStockWeek?.id||"")){msg("stockMsg","You are viewing a previous week. Existing records can be edited, but new stock can only be added to the current week.","error");return;}
   const total=num("stockTotal"),capital=num("capitalAmount"),unitCost=num("costPerUnit"),price=num("sellPrice"),purchase=(editingStockId&&editingStockOriginal?.stock_type==="carry_forward")?0:total*unitCost;
   const enteredSold=num("stockSold"),enteredDamage=num("stockDamage");
   const old=editingStockOriginal||{};
@@ -960,12 +840,11 @@ $("saveStockBtn").onclick=async()=>{
       const audit=`Purchase quantity: ${beforeTotal} → ${total}; unit cost: ${money(beforeUnit)} → ${money(unitCost)}; calculated purchase total: ${money(Number(editingStockOriginal?.purchase_total||0))} → ${money(purchase)}.`;
       historyRecord={...record,notes:[audit,String(record.notes||"")].filter(Boolean).join(" ")||null};
     }
-    // Save the stock first: a separate edit-history table/policy must not block the stock update.
     result=await db.from("worker_stock_batches").update(record).eq("id",editingStockId).eq("worker_id",currentUser.id).select("id");
     if(result.error){msg("stockMsg","Stock update failed: "+result.error.message,"error");return;}
-    if(!result.data || result.data.length===0){msg("stockMsg","No stock record was updated. The row may be blocked by Supabase UPDATE permissions or the worker ID may not match.","error");return;}
+    if(!result.data||result.data.length===0){msg("stockMsg","No stock row was updated. The signed-in account may not own this row under the current Supabase policy. No stock data was changed.","error");return;}
     const historyError=await writeStockHistory(editingStockOriginal,historyRecord,historyAction);
-    window.stockHistoryWarning=historyError?(historyError.message||String(historyError)):"";
+    if(historyError){msg("stockMsg","Stock was updated successfully, but the edit-history entry failed: "+historyError.message,"error");}
   }else{
     result=await db.from("worker_stock_batches").insert(record).select("*").single();
     if(result.error){msg("stockMsg","Stock record could not be saved: "+result.error.message,"error");return;}
@@ -973,19 +852,19 @@ $("saveStockBtn").onclick=async()=>{
     if(historyError){msg("stockMsg","Stock was saved, but its history entry could not be saved. Please check the stock history SQL/policies: "+historyError.message,"error");}
   }
   const savedStockDate=record.stock_date;
-  msg("stockMsg",wasEditing?(window.stockHistoryWarning?"Stock updated successfully. However, edit history could not be saved: "+esc(window.stockHistoryWarning):"Stock updated successfully and edit history recorded."):"Stock record saved successfully and sent to Ezelex admin.","success");
+  msg("stockMsg",wasEditing?"Stock updated and date/time history recorded.":"Stock record saved successfully and sent to Ezelex admin.","success");
   editingStockId=""; editingStockOriginal=null; $("editingStockId").value=""; $("stockForm").reset(); $("stockDate").value=savedStockDate||today(); $("stockSold").value=0; $("stockDamage").value=0; $("saveStockBtn").textContent="Save Stock Record"; $("cancelEditStockBtn").style.display="none"; $("deleteStockBtn").style.display="none"; updateStockFormCreditSummary(""); calculateStock(); await Promise.all([loadStock(),loadStockHistory(),loadStockWeeks()]);
-  } catch(error) {
+  }catch(error){
     console.error("Stock save/update failed:",error);
-    msg("stockMsg","Stock record was not updated: "+esc(error?.message||String(error)),"error");
-  } finally {
+    msg("stockMsg","Stock could not be saved: "+esc(error?.message||String(error)),"error");
+  }finally{
     saveButton.disabled=false;
   }
 };
 
 async function loadCredits(){
   if(!$('creditBody'))return;
-  const r=await db.from('worker_stock_credit_sales').select('*').eq('worker_id',currentUser.id).order('credit_date',{ascending:false}).order('created_at',{ascending:false});
+  const r=await selectWorkerRows("worker_stock_credit_sales","*",{column:"credit_date",ascending:false});
   if(r.error){$('creditBody').innerHTML='<tr><td colspan="9">Credit records unavailable. Check the supplied credit SQL and policies.</td></tr>';msg('creditMsg','Could not load credit records: '+esc(r.error.message),'error');return;}
   creditRows=r.data||[];
   const stockSnapshot=await db.from('worker_stock_batches').select('*').eq('worker_id',currentUser.id);
@@ -1367,9 +1246,9 @@ window.deleteSale=async function(id){
   const {data,error}=await db.from("sales").select("id,status").eq("id",id).eq("worker_id",currentUser.id).maybeSingle();
   if(error||!data){msg("saleMsg",error?.message||"Sale not found.","error");return;}
   const st=String(data.status||"pending").toLowerCase();
-  if(st!=="pending"){msg("saleMsg","Only sales waiting for admin approval can be deleted.","error");return;}
-  if(!confirm("Delete this sale? This cannot be undone."))return;
-  const r=await db.from("sales").delete().eq("id",id).eq("worker_id",currentUser.id).eq("status","pending");
+  if(st!=="pending"&&st!=="rejected"){msg("saleMsg","You can delete only pending or rejected sales. Approved sales can be deleted only by admin.","error");return;}
+  if(!confirm(`Delete this ${st} sale? This cannot be undone.`))return;
+  const r=await db.from("sales").delete().eq("id",id).eq("worker_id",currentUser.id).in("status",st==="pending"?["pending"]:["rejected"]);
   if(r.error){msg("saleMsg","Sale could not be deleted: "+r.error.message,"error");return;}
   msg("saleMsg","Sale deleted successfully.","success");
   await loadSales();
@@ -1468,23 +1347,50 @@ db.auth.onAuthStateChange((event,session)=>{
   if(event==="PASSWORD_RECOVERY"){
     $("loginSection").classList.add("hidden");
     $("portal").classList.add("hidden");
-    $("settingsBtn").classList.add("hidden");
+  
     $("passwordRecovery").classList.remove("hidden");
   }
 });
 
 
 
-document.querySelectorAll(".tab").forEach(btn=>{
+const menuToggle=$("menuToggle");
+const workerMenu=$("workerMenu");
+function closeWorkerMenu(){workerMenu?.classList.remove("open");menuToggle?.setAttribute("aria-expanded","false");}
+menuToggle?.addEventListener("click",()=>{
+  const open=!workerMenu.classList.contains("open");
+  workerMenu.classList.toggle("open",open);menuToggle.setAttribute("aria-expanded",String(open));
+});
+document.addEventListener("click",event=>{
+  if(workerMenu && menuToggle && !workerMenu.contains(event.target) && !menuToggle.contains(event.target)) closeWorkerMenu();
+});
+document.querySelectorAll(".menuItem[data-tab]").forEach(btn=>{
   btn.addEventListener("click",()=>{
-    if(btn.classList.contains("hidden"))return;
-    const driver=isDriverRole(profile?.role);
-    if(driver && ["sales","stock","stockHistory","credit"].includes(btn.dataset.tab))return;
-    if(!driver && btn.dataset.tab==="contract")return;
-    document.querySelectorAll(".tab").forEach(b=>b.classList.remove("active"));
-    document.querySelectorAll(".section").forEach(s=>s.classList.remove("active"));
-    btn.classList.add("active");$(btn.dataset.tab).classList.add("active");
+    document.querySelectorAll(".menuItem[data-tab]").forEach(b=>b.classList.remove("active"));
+    document.querySelectorAll(".section").forEach(section=>section.classList.remove("active"));
+    btn.classList.add("active");
+    const section=$(btn.dataset.tab); if(section)section.classList.add("active");
+    closeWorkerMenu();
+    if(btn.dataset.tab==="sales") loadSales();
+    if(btn.dataset.tab==="stock") loadStock();
+    if(btn.dataset.tab==="stockHistory") loadStockHistory();
+    if(btn.dataset.tab==="credit") loadCredits();
+    if(btn.dataset.tab==="communication") loadMessages();
   });
+});
+$("menuLogout")?.addEventListener("click",async()=>{
+  closeWorkerMenu();
+  const {error}=await db.auth.signOut();
+  if(error){alert("Could not log out: "+error.message);return;}
+  currentUser=null;profile=null;showLogin();
+});
+$("sendPasswordResetBtn")?.addEventListener("click",async()=>{
+  const email=currentUser?.email;
+  if(!email){msg("settingsMsg","Your signed-in email could not be found.","error");return;}
+  msg("settingsMsg","Sending password reset email...");
+  const {error}=await db.auth.resetPasswordForEmail(email,{redirectTo:"https://ezelexenterprise.com/EZELEX_SET_PASSWORD.html"});
+  if(error){msg("settingsMsg",esc(error.message),"error");return;}
+  msg("settingsMsg","Password reset link sent. Check your inbox.","success");
 });
 
 let dailyChartResizeTimer;
