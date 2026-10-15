@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="Choose Worker or Driver login for EZELEX Enterprise.">
+<title>Employee Portal | Ezelex Enterprise</title>
+<style>
+:root{--ink:#101828;--muted:#667085;--blue:#1d4ed8;--line:#e4e7ec;--bg:#f4f7fc;--white:#fff}
+*{box-sizing:border-box}body{margin:0;min-height:100vh;font-family:Inter,system-ui,-apple-system,"Segoe UI",Arial,sans-serif;color:var(--ink);background:radial-gradient(circle at 10% 0%,#dbeafe 0,transparent 35%),linear-gradient(135deg,#f8fafc,#edf2ff);display:flex;flex-direction:column}
+header{background:rgba(255,255,255,.92);border-bottom:1px solid var(--line);padding:18px 5%;display:flex;align-items:center;justify-content:space-between;gap:16px}.brand{font-size:23px;font-weight:900;letter-spacing:3px}.home{color:var(--blue);text-decoration:none;font-weight:750}
+main{width:min(980px,92%);margin:auto;padding:58px 0 72px}.eyebrow{text-align:center;color:var(--blue);font-size:12px;font-weight:900;letter-spacing:2px;text-transform:uppercase}h1{text-align:center;font-size:clamp(32px,5vw,48px);letter-spacing:-1.5px;line-height:1.1;margin:12px 0} .intro{text-align:center;color:var(--muted);font-size:17px;max-width:620px;margin:0 auto 36px}
+.options{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:22px}.option{background:var(--white);border:1px solid var(--line);border-radius:22px;padding:32px;box-shadow:0 18px 45px rgba(16,24,40,.08);display:flex;flex-direction:column;align-items:flex-start;min-height:300px}.icon{width:62px;height:62px;border-radius:16px;display:grid;place-items:center;background:#eaf1ff;font-size:31px;margin-bottom:20px}.driver .icon{background:#e6f7ef}h2{font-size:25px;margin:0 0 10px}.option p{color:var(--muted);margin:0 0 22px;line-height:1.6}.features{font-size:14px;color:#475467;margin:0 0 26px;padding-left:19px}.features li{margin:5px 0}.btn{display:inline-flex;align-items:center;justify-content:center;text-decoration:none;background:var(--blue);color:white;border-radius:10px;padding:13px 18px;font-weight:800;margin-top:auto;width:100%;min-height:48px}.driver .btn{background:#087443}.btn:hover{filter:brightness(.94)}.note{text-align:center;color:var(--muted);font-size:13px;margin:26px 0 0}footer{text-align:center;padding:20px;color:var(--muted);font-size:13px}
+@media(max-width:650px){header{padding:15px 4%}.brand{font-size:19px}.options{grid-template-columns:1fr}.option{min-height:auto;padding:25px}.intro{font-size:16px}.btn{margin-top:6px}}
+</style>
+</head>
+<body>
+<header><div class="brand">EZELEX</div><a class="home" href="index.html">← Back to website</a></header>
+<main>
+<div class="eyebrow">Ezelex Enterprise · Employee access</div>
+<h1>Welcome to the Employee Portal</h1>
+<p class="intro">Choose the type of account you have. Your login will open the correct portal for your role.</p>
+<div class="options">
+<section class="option worker"><div class="icon" aria-hidden="true">👷</div><h2>Worker Login</h2><p>For EZELEX workers who record egg sales and manage stock.</p><ul class="features"><li>Record and review sales</li><li>Live stock and edit history</li><li>On-credit records</li></ul><a class="btn" href="EZELEX_WORKER_PORTAL.html">Continue to Worker Login</a></section>
+<section class="option driver"><div class="icon" aria-hidden="true">🛺</div><h2>Driver Login</h2><p>For EZELEX drivers who access driver information and tricycle contract details.</p><ul class="features"><li>Driver dashboard</li><li>Profile and photo setup</li><li>Tricycle contract information</li></ul><a class="btn" href="EZELEX_DRIVER_PORTAL.html">Continue to Driver Login</a></section>
+</div>
+<p class="note">Use the account and email address provided to you by EZELEX. Selecting an option does not change your account role.</p>
+</main>
+<footer>© 2026 Ezelex Enterprise</footer>
+</body>
+</html>
