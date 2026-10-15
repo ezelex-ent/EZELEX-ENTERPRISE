@@ -498,10 +498,10 @@ async function loadProfile(user){
     .select("user_id,worker_id,full_name,phone,role,active,activated_at,contract_start,contract_end")
     .eq("user_id",user.id).maybeSingle();
 
-  if(error||!data||String(data.role||"").toLowerCase()==="admin"){
+  if(error||!data||String(data.role||"").trim().toLowerCase()!=="worker"){
     await db.auth.signOut();
     showLogin();
-    msg("loginMsg","This account is not a worker account.","error");
+    msg("loginMsg","This is the Worker Portal. Please sign in with an account assigned the Worker role. Drivers must use the Driver Portal.","error");
     return;
   }
   if(!data.activated_at){
