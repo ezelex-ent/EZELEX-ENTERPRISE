@@ -484,8 +484,19 @@ async function closeCurrentStockWeek(){
 $("closeStockWeekBtn")?.addEventListener("click",closeCurrentStockWeek);
 $("stockWeekPicker")?.addEventListener("change",async()=>{selectedStockWeekId=$("stockWeekPicker").value||"";await loadStock();});
 
+// Password-recovery links must never render the authenticated dashboard behind the form.
+let passwordRecoveryMode = /(?:^|[&#?])type=recovery(?:&|$)/i.test(location.hash + "&" + location.search);
+function enforcePasswordRecoveryScreen(){
+  $("loginSection")?.classList.add("hidden");
+  $("portal")?.classList.add("hidden");
+  $("settingsBtn")?.classList.add("hidden");
+  $("driverPhotoGate")?.classList.add("hidden");
+  $("passwordRecovery")?.classList.remove("hidden");
+}
 async function start(){
+  if(passwordRecoveryMode){ enforcePasswordRecoveryScreen(); return; }
   const {data:{session}}=await db.auth.getSession();
+  if(passwordRecoveryMode){ enforcePasswordRecoveryScreen(); return; }
   if(!session){showLogin();return;}
   await loadProfile(session.user);
 }
@@ -1490,15 +1501,13 @@ $("updatePasswordBtn").onclick=async()=>{
   const {error}=await db.auth.updateUser({password:p});
   if(error){msg("recoveryMsg",error.message,"error");return;}
   msg("recoveryMsg","Password updated successfully. You can now sign in.","success");
-  setTimeout(async()=>{await db.auth.signOut();$("passwordRecovery").classList.add("hidden");showLogin();$("loginMsg").innerHTML='<div class="msg success">Password updated. Please sign in with your new password.</div>';},900);
+  setTimeout(async()=>{await db.auth.signOut();passwordRecoveryMode=false;$("passwordRecovery").classList.add("hidden");showLogin();$("loginMsg").innerHTML='<div class="msg success">Password updated. Please sign in with your new password.</div>';},900);
 };
 
 db.auth.onAuthStateChange((event,session)=>{
   if(event==="PASSWORD_RECOVERY"){
-    $("loginSection").classList.add("hidden");
-    $("portal").classList.add("hidden");
-    $("settingsBtn").classList.add("hidden");
-    $("passwordRecovery").classList.remove("hidden");
+    passwordRecoveryMode=true;
+    enforcePasswordRecoveryScreen();
   }
 });
 
