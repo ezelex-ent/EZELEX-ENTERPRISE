@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Ezelex Enterprise — Worker Dashboard</title>
+<title>Ezelex Enterprise — Driver Dashboard</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <style>
@@ -61,12 +61,19 @@ th,td{padding:11px;border-bottom:1px solid #eee;text-align:left;font-size:14px}t
 @media(max-width:900px){.stats,.stockGrid{grid-template-columns:1fr 1fr}.resultGrid{grid-template-columns:1fr 1fr}}
 @media(max-width:700px){.grid,.cardrow{grid-template-columns:1fr}.full{grid-column:auto}.login{margin:30px 15px}.wrap{padding:0 12px}.stats,.stockGrid,.resultGrid{grid-template-columns:1fr}}
 
+/* Driver top-corner menu */
+.driverMenuWrap{position:relative;margin-left:auto;flex-shrink:0}
+.driverMenu{position:absolute;right:0;top:calc(100% + 8px);width:220px;padding:8px;background:#fff;border:1px solid #dbe1e8;border-radius:12px;box-shadow:0 12px 30px #0002;z-index:100;display:flex;flex-direction:column;gap:5px}
+.driverMenu button{width:100%;text-align:left;background:#f3f4f6;color:#111827}
+.driverMenu button:hover{background:#e5e7eb}
+.driverMenu .menuLogout{background:#b42318;color:#fff}
+.driverMenu .menuLogout:hover{background:#912018}
 /* Mobile-friendly navigation and driver identity/contract panels */
 .tabs{position:relative}
 .tabs .tab{min-height:44px}
 .photoPreview{width:104px;height:104px;border-radius:50%;object-fit:cover;background:#e5e7eb;border:3px solid #e5e7eb;display:block;margin:10px 0}
 .driverContractCard{border:1px solid #e5e7eb;border-radius:12px;padding:16px;margin:12px 0;background:#f8fafc}
-@media(max-width:600px){header{padding:14px 12px;align-items:flex-start}header h1{font-size:19px}.tabs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}.tab{padding:10px 8px;font-size:13px}.panel{padding:15px}.workerInfo{overflow-wrap:anywhere}.photoPreview{width:88px;height:88px}}
+@media(max-width:600px){header{padding:14px 12px;align-items:center}header h1{font-size:19px}.tabs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}.tab{padding:10px 8px;font-size:13px}.panel{padding:15px}.workerInfo{overflow-wrap:anywhere}.photoPreview{width:88px;height:88px}}
 </style>
 </head>
 <body>
@@ -74,14 +81,23 @@ th,td{padding:11px;border-bottom:1px solid #eee;text-align:left;font-size:14px}t
 <header>
   <div>
     <h1>Ezelex Enterprise</h1>
-    <small>Worker Dashboard</small>
+    <small>Driver Dashboard</small>
   </div>
-  <a id="settingsBtn" class="secondary hidden" href="https://ezelexenterprise.com/worker-profile.html" style="text-decoration:none">Settings</a>
+  <div class="driverMenuWrap hidden" id="driverMenuWrap">
+    <button type="button" id="driverMenuToggle" class="primary" aria-expanded="false" aria-controls="driverMenu">☰ Menu</button>
+    <nav id="driverMenu" class="driverMenu hidden" aria-label="Driver menu">
+      <button type="button" data-driver-go="contract">My Contract</button>
+      <button type="button" data-driver-go="profile">Profile</button>
+      <button type="button" data-driver-go="communication">Communication</button>
+      <button type="button" data-driver-go="dashboard">Back to dashboard</button>
+      <button type="button" id="driverMenuLogout" class="menuLogout">Log Out</button>
+    </nav>
+  </div>
 </header>
 
 <section id="loginSection" class="login">
-  <h2>Worker Login</h2>
-  <p>Sign in with your Ezelex Enterprise worker account.</p>
+  <h2>Driver Login</h2>
+  <p>Sign in with your Ezelex Enterprise driver account.</p>
   <div id="loginMsg"></div>
   <label>Email</label>
   <input id="email" type="email" placeholder="Worker email">
@@ -92,7 +108,7 @@ th,td{padding:11px;border-bottom:1px solid #eee;text-align:left;font-size:14px}t
   <div id="forgotBox" class="hidden" style="margin-top:18px">
     <hr>
     <h3>Reset your password</h3>
-    <p>Enter your worker email and Ezelex Enterprise will send you a password reset link.</p>
+    <p>Enter your driver email and Ezelex Enterprise will send you a password reset link.</p>
     <input id="resetEmail" type="email" placeholder="Worker email">
     <button id="sendResetBtn" class="primary" type="button" style="width:100%">Send Reset Link</button>
     <button id="backLoginBtn" class="secondary" type="button" style="width:100%;margin-top:8px">Back to Sign In</button>
@@ -146,7 +162,7 @@ th,td{padding:11px;border-bottom:1px solid #eee;text-align:left;font-size:14px}t
     <button class="tab" data-tab="stock">Live Stock</button>
     <button class="tab" data-tab="stockHistory">Edit History</button>
     <button class="tab" data-tab="credit">On-Credit</button>
-    <button class="tab" data-tab="contract" id="driverContractTab">Tricycle Contract</button>
+    <button class="tab" data-tab="contract" id="driverContractTab">My Contract</button>
     <button class="tab" data-tab="profile">My Profile</button>
     <button class="tab" data-tab="communication">Communication</button>
   </div>
@@ -510,42 +526,47 @@ function applyRoleNavigation(role){
     const tab=btn.dataset.tab;
     btn.classList.toggle("hidden",driver?workerOnly.has(tab):driverOnly.has(tab));
   });
-  // Profile and communication remain available to both roles.
+  // Driver navigation is through the top-right Menu; keep the dashboard as the landing section.
+  const menu=$("driverMenuWrap");
+  if(menu)menu.classList.toggle("hidden",!driver);
   if(driver){
-    document.querySelectorAll(".section").forEach(sec=>{
-      if(workerOnly.has(sec.id)){sec.classList.remove("active");}
-    });
-    document.querySelectorAll(".tab").forEach(b=>b.classList.remove("active"));
+    document.querySelectorAll(".tabs .tab").forEach(b=>b.classList.add("hidden"));
     document.querySelectorAll(".section").forEach(sec=>sec.classList.remove("active"));
-    document.querySelector('.tab[data-tab="dashboard"]')?.classList.add("active");
     $("dashboard")?.classList.add("active");
   }
 }
 async function loadDriverContract(){
   const host=$("driverContractDetails"); if(!host||!currentUser)return;
-  host.innerHTML='<div class="driverContractCard">Loading your contract details…</div>';
-  const r=await db.from("tricycle_contracts").select("*").eq("driver_user_id",currentUser.id).order("created_at",{ascending:false}).limit(10);
-  if(r.error){
-    host.innerHTML='<div class="msg error">Your contract could not be loaded. Please contact Ezelex Enterprise admin.</div>';
-    console.warn("Tricycle contract query failed:",r.error.message);return;
-  }
-  const rows=r.data||[];
-  if(!rows.length){host.innerHTML='<div class="driverContractCard">No tricycle contract has been linked to your account yet. Please contact Ezelex Enterprise admin.</div>';return;}
-  host.innerHTML=rows.map(c=>{
+  host.innerHTML='<div class="driverContractCard">Checking your linked contract…</div>';
+  try {
+    const r=await db.from("tricycle_contracts").select("*").eq("driver_user_id",currentUser.id).order("created_at",{ascending:false}).limit(10);
+    if(r.error){
+      host.innerHTML='<div class="msg error">We could not load your contract right now. Please contact Ezelex Enterprise admin and share this message: '+esc(r.error.message)+'</div>';
+      console.warn("Tricycle contract query failed:",r.error.message);return;
+    }
+    const rows=r.data||[];
+    if(!rows.length){host.innerHTML='<div class="driverContractCard"><h3>No contract linked yet</h3><p>Your driver login is working, but Ezelex Enterprise admin has not linked a tricycle contract to this account yet.</p><p>Once the contract is created and assigned to your driver account, return here and tap <strong>Refresh contract</strong>.</p><button type="button" class="primary" id="refreshDriverContract">Refresh contract</button></div>';$("refreshDriverContract")?.addEventListener("click",loadDriverContract);return;}
     const moneyVal=v=>"GH₵"+Number(v||0).toLocaleString("en-GH",{minimumFractionDigits:2,maximumFractionDigits:2});
-    const status=String(c.status||"pending").replace(/[_-]/g," ");
-    const total=Number(c.total_amount||0),paid=Number(c.opening_paid_amount||0);
-    return `<div class="driverContractCard">
-      <h3>${esc(c.vehicle_registration||c.vehicle_id||"Tricycle contract")}</h3>
-      <p><strong>Status:</strong> ${esc(status)}</p>
-      <p><strong>Contract period:</strong> ${esc(dateOnly(c.contract_start))} – ${esc(dateOnly(c.contract_end))}</p>
-      <p><strong>Contract amount:</strong> ${moneyVal(total)}</p>
-      <p><strong>Opening amount paid:</strong> ${moneyVal(paid)}</p>
-      <p><strong>Weekly target:</strong> ${moneyVal(c.weekly_target??1400)}</p>
-      <p><strong>Daily target:</strong> ${moneyVal(c.daily_target??200)}</p>
-      ${c.admin_notes?`<p><strong>Admin notes:</strong> ${esc(c.admin_notes)}</p>`:""}
-    </div>`;
-  }).join("");
+    host.innerHTML=rows.map(c=>{
+      const status=String(c.status||"pending").replace(/[_-]/g," ");
+      const total=Number(c.total_contract_amount??c.total_amount??0),paid=Number(c.opening_paid_amount||0);
+      const start=c.contract_start_date||c.contract_start, end=c.contract_end_date||c.contract_end;
+      return `<div class="driverContractCard">
+        <h3>${esc(c.vehicle_registration||c.vehicle_id||"Tricycle contract")}</h3>
+        <p><strong>Status:</strong> ${esc(status)}</p>
+        <p><strong>Contract period:</strong> ${esc(dateOnly(start))} – ${esc(dateOnly(end))}</p>
+        <p><strong>Contract amount:</strong> ${moneyVal(total)}</p>
+        <p><strong>Opening amount paid:</strong> ${moneyVal(paid)}</p>
+        <p><strong>Weekly target:</strong> ${moneyVal(c.weekly_target??1400)}</p>
+        <p><strong>Daily target:</strong> ${moneyVal(c.daily_target??200)}</p>
+        ${c.admin_notes?`<p><strong>Admin notes:</strong> ${esc(c.admin_notes)}</p>`:""}
+      </div>`;
+    }).join("");
+  } catch(err) {
+    console.error("Unexpected contract loading error:",err);
+    host.innerHTML='<div class="msg error">Something interrupted contract loading. Please try again.</div><button type="button" class="primary" id="retryDriverContract">Try again</button>';
+    $("retryDriverContract")?.addEventListener("click",loadDriverContract);
+  }
 }
 async function loadProfilePhoto(){
   if(!currentUser)return;
@@ -1513,6 +1534,34 @@ db.auth.onAuthStateChange((event,session)=>{
 
 
 
+const driverMenuToggle=$("driverMenuToggle");
+const driverMenu=$("driverMenu");
+function closeDriverMenu(){driverMenu?.classList.add("hidden");driverMenuToggle?.setAttribute("aria-expanded","false");}
+driverMenuToggle?.addEventListener("click",()=>{
+  if(!isDriverRole(profile?.role))return;
+  const opening=driverMenu?.classList.contains("hidden");
+  driverMenu?.classList.toggle("hidden",!opening);
+  driverMenuToggle.setAttribute("aria-expanded",String(!!opening));
+});
+document.querySelectorAll("[data-driver-go]").forEach(btn=>btn.addEventListener("click",async()=>{
+  if(!isDriverRole(profile?.role))return;
+  const target=btn.dataset.driverGo;
+  if(!["dashboard","contract","profile","communication"].includes(target))return;
+  document.querySelectorAll(".section").forEach(sec=>sec.classList.remove("active"));
+  $(target)?.classList.add("active");
+  document.querySelectorAll(".tabs .tab").forEach(b=>b.classList.remove("active"));
+  document.querySelector(`.tabs .tab[data-tab="${target}"]`)?.classList.add("active");
+  closeDriverMenu();
+  if(target==="contract")await loadDriverContract();
+  if(target==="communication")await loadMessages();
+  window.scrollTo({top:0,behavior:"smooth"});
+}));
+$("driverMenuLogout")?.addEventListener("click",async()=>{
+  closeDriverMenu();
+  await db.auth.signOut();currentUser=null;profile=null;hideDriverPhotoGate();showLogin();
+});
+document.addEventListener("click",event=>{if(!event.target.closest("#driverMenuWrap"))closeDriverMenu();});
+
 document.querySelectorAll(".tab").forEach(btn=>{
   btn.addEventListener("click",()=>{
     if(btn.classList.contains("hidden"))return;
@@ -1522,6 +1571,7 @@ document.querySelectorAll(".tab").forEach(btn=>{
     document.querySelectorAll(".tab").forEach(b=>b.classList.remove("active"));
     document.querySelectorAll(".section").forEach(s=>s.classList.remove("active"));
     btn.classList.add("active");$(btn.dataset.tab).classList.add("active");
+    if(btn.dataset.tab==="contract")loadDriverContract();
   });
 });
 
