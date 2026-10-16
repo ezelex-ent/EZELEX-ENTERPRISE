@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Ezelex Enterprise — Driver Dashboard</title>
+<title>Ezelex Enterprise — Driver Portal</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <style>
@@ -142,11 +142,11 @@ th,td{padding:11px;border-bottom:1px solid #eee;text-align:left;font-size:14px}t
 
 <main id="portal" class="wrap hidden">
   <div class="panel">
-    <h2>Welcome, <span id="workerName">Worker</span> 👋</h2>
+    <h2>Welcome, <span id="workerName">Driver</span> 👋</h2>
     <div class="workerInfo">
-      <strong>Driver ID:</strong> <span id="workerId">—</span> &nbsp; | &nbsp;
-      <strong>Role:</strong> <span id="workerRole">—</span> &nbsp; | &nbsp;
-      <strong>Status:</strong> <span id="workerStatus" class="badge">—</span>
+      <strong>Driver ID:</strong> <span id="workerId">Loading…</span> &nbsp; | &nbsp;
+      <strong>Role:</strong> <span id="workerRole">Driver</span> &nbsp; | &nbsp;
+      <strong>Status:</strong> <span id="workerStatus" class="badge">Checking…</span>
     </div>
     <div class="stats">
       <div class="stat"><small>Today Sale</small><strong id="todaySales">GH₵0.00</strong></div>
@@ -168,9 +168,25 @@ th,td{padding:11px;border-bottom:1px solid #eee;text-align:left;font-size:14px}t
   </div>
 
   <section id="dashboard" class="section active">
+    <div class="panel" id="driverWeeklyReportPanel">
+      <h2>🗓️ Submit Weekly Tricycle Report</h2>
+      <p>Submit your weekly sales and the amount you are reporting as paid. Your report will remain pending until Ezelex Enterprise admin reviews it.</p>
+      <div id="driverReportMsg" aria-live="polite"></div>
+      <form id="driverWeeklyReportForm" class="grid">
+        <div><label for="driverReportWeekStart">Week starting (Monday)</label><input id="driverReportWeekStart" type="date" required></div>
+        <div><label for="driverReportWeekEnd">Week ending (Sunday)</label><input id="driverReportWeekEnd" type="date" required></div>
+        <div><label for="driverReportSales">Total sales reported (GH₵)</label><input id="driverReportSales" type="number" min="0" step="0.01" required></div>
+        <div><label for="driverReportPayment">Payment submitted (GH₵)</label><input id="driverReportPayment" type="number" min="0" step="0.01" required></div>
+        <div><label for="driverReportReference">Payment reference (optional)</label><input id="driverReportReference" maxlength="200" placeholder="Mobile Money / receipt reference"></div>
+        <div class="full"><label for="driverReportNotes">Notes for admin (optional)</label><textarea id="driverReportNotes" maxlength="2000" placeholder="Add any details about this week's report"></textarea></div>
+        <div class="full"><button class="primary" id="submitDriverWeeklyReport" type="submit">Submit Weekly Report for Approval</button></div>
+      </form>
+      <h3 style="margin-top:24px">My Submitted Weekly Reports</h3>
+      <div class="tablebox"><table><thead><tr><th>Period</th><th>Sales</th><th>Payment</th><th>Status</th><th>Admin response</th></tr></thead><tbody id="driverWeeklyReportsBody"><tr><td colspan="5">Loading your reports…</td></tr></tbody></table></div>
+    </div>
     <div class="panel">
       <h2>Driver Overview</h2>
-      <p>Your sales are sent to the central Ezelex Enterprise admin dashboard. Stock records are also saved centrally.</p>
+      <p>Use the weekly report form above to report sales and payments for your tricycle contract. Reports remain pending until admin reviews them.</p>
       <div class="cardrow">
         <div class="infoBox"><strong>Driver account</strong><br><span id="dashEmail">—</span><br><span id="dashPhone">—</span></div>
         <div class="infoBox"><strong>Last activity</strong><br><span id="lastActivity">Loading...</span></div>
@@ -520,21 +536,35 @@ async function start(){
 const isDriverRole = value => String(value||"").trim().toLowerCase().replace(/[ _-]/g,"")==="driver";
 function applyRoleNavigation(role){
   const driver=isDriverRole(role);
-  const driverOnly=new Set(["contract"]);
-  const workerOnly=new Set(["sales","stock","stockHistory","credit"]);
+  const workerOnlyTabs=new Set(["sales","stock","stockHistory","credit"]);
   document.querySelectorAll(".tab[data-tab]").forEach(btn=>{
     const tab=btn.dataset.tab;
-    btn.classList.toggle("hidden",driver?workerOnly.has(tab):driverOnly.has(tab));
+    btn.classList.toggle("hidden",driver ? workerOnlyTabs.has(tab) : tab==="contract");
   });
-  // Driver navigation is through the top-right Menu; keep the dashboard as the landing section.
   const menu=$("driverMenuWrap");
   if(menu)menu.classList.toggle("hidden",!driver);
   if(driver){
+    // Never expose worker sales/stock/credit panels to a driver account.
+    ["sales","stock","stockHistory","credit"].forEach(id=>$(id)?.classList.add("hidden"));
     document.querySelectorAll(".tabs .tab").forEach(b=>b.classList.add("hidden"));
     document.querySelectorAll(".section").forEach(sec=>sec.classList.remove("active"));
+    $("dashboard")?.classList.remove("hidden");
+    $("profile")?.classList.remove("hidden");
+    $("communication")?.classList.remove("hidden");
+    $("contract")?.classList.remove("hidden");
     $("dashboard")?.classList.add("active");
+    if($("driverWeeklyReportPanel"))$("driverWeeklyReportPanel").classList.remove("hidden");
+    // Hide worker sales-summary tiles and the worker sales-history panel on driver accounts.
+    $("dashboard")?.querySelector(".stats")?.classList.add("hidden");
+    $("dashboard")?.querySelectorAll(".panel").forEach(panel=>{
+      const heading=panel.querySelector("h2")?.textContent?.trim().toLowerCase()||"";
+      if(heading.includes("recent sales")||heading.includes("sales history"))panel.classList.add("hidden");
+    });
+  }else{
+    ["sales","stock","stockHistory","credit"].forEach(id=>$(id)?.classList.remove("hidden"));
   }
 }
+
 async function loadDriverContract(){
   const host=$("driverContractDetails"); if(!host||!currentUser)return;
   host.innerHTML='<div class="driverContractCard">Checking your linked contract…</div>';
@@ -544,7 +574,9 @@ async function loadDriverContract(){
       host.innerHTML='<div class="msg error">We could not load your contract right now. Please contact Ezelex Enterprise admin and share this message: '+esc(r.error.message)+'</div>';
       console.warn("Tricycle contract query failed:",r.error.message);return;
     }
-    const rows=r.data||[];
+    const rows=(r.data||[]).filter(c=>String(c.driver_user_id||"")===String(currentUser.id));
+    const banner=document.querySelector("#contract .stockNote");
+    if(banner)banner.style.display=rows.length?"none":"block";
     if(!rows.length){host.innerHTML='<div class="driverContractCard"><h3>No contract linked yet</h3><p>Your driver login is working, but Ezelex Enterprise admin has not linked a tricycle contract to this account yet.</p><p>Once the contract is created and assigned to your driver account, return here and tap <strong>Refresh contract</strong>.</p><button type="button" class="primary" id="refreshDriverContract">Refresh contract</button></div>';$("refreshDriverContract")?.addEventListener("click",loadDriverContract);return;}
     const moneyVal=v=>"GH₵"+Number(v||0).toLocaleString("en-GH",{minimumFractionDigits:2,maximumFractionDigits:2});
     host.innerHTML=rows.map(c=>{
@@ -663,7 +695,7 @@ async function loadProfile(user){
   if(error||!data||String(data.role||"").toLowerCase()==="admin"){
     await db.auth.signOut();
     showLogin();
-    msg("loginMsg","This account is not a driver account. Please use your assigned driver login.","error");
+    msg("loginMsg",error?"Could not load your driver profile: "+esc(error.message):"No driver profile is linked to this login. Please ask admin to check the Driver ID and account link.","error");
     return;
   }
   // Dedicated Driver Portal: worker accounts cannot enter this file.
@@ -689,12 +721,13 @@ async function loadProfile(user){
   hideDriverPhotoGate();
   showPortal();
 
-  $("workerName").textContent=data.full_name||"Worker";
+  $("workerName").textContent=data.full_name||user.user_metadata?.full_name||user.email?.split("@")[0]||"Driver";
   $("workerId").textContent=data.worker_id||"—";
-  $("workerRole").textContent=data.role||"worker";
+  $("workerRole").textContent="Driver";
   $("workerStatus").textContent=data.active?"Active":"Inactive";
   $("saleDate").value=today();
   $("stockDate").value=today();
+  if($("driverReportWeekStart")){const monday=mondayISO(today());$("driverReportWeekStart").value=monday;$("driverReportWeekEnd").value=sundayISO(monday);}
   if($("creditDate"))$("creditDate").value=today();
 
   $("dashEmail").textContent=user.email||"—";
@@ -713,6 +746,7 @@ async function loadProfile(user){
   await loadProfilePhoto();
   if(isDriverRole(data.role)){
     await loadDriverContract();
+    await loadDriverWeeklyReports();
     await loadMessages();
   }else{
     await ensureCurrentStockWeek();
@@ -1128,6 +1162,41 @@ window.markCreditPaid=async id=>{
   if(stock){const next=Math.max(0,Number(stock.credit_outstanding||0)-bal);const su=await db.from('worker_stock_batches').update({credit_outstanding:next,cash_in_hand:Number(stock.capital_amount||0)+Number(stock.sales_revenue||0)-next-Number(stock.purchase_total||0)}).eq('id',stock.id).eq('worker_id',currentUser.id);if(su.error){msg('creditMsg','Payment saved but stock cash summary needs refresh: '+esc(su.error.message),'error');}}
   msg('creditMsg','Payment recorded. Cash in hand has been updated.','success');await Promise.all([loadStock(),loadCredits()]);calculateStock();
 };
+function mondayISO(value){const d=new Date(String(value).slice(0,10)+"T12:00:00");const day=d.getDay();d.setDate(d.getDate()-(day===0?6:day-1));return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");}
+function sundayISO(monday){const d=new Date(String(monday).slice(0,10)+"T12:00:00");d.setDate(d.getDate()+6);return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");}
+async function loadDriverWeeklyReports(){
+ const body=$("driverWeeklyReportsBody"); if(!body||!currentUser)return;
+ body.innerHTML='<tr><td colspan="5">Loading your reports…</td></tr>';
+ const r=await db.from("tricycle_weekly_reports").select("id,driver_user_id,contract_id,week_start,week_end,sales_reported,payment_amount,status,rejection_reason,driver_notes,submitted_at").eq("driver_user_id",currentUser.id).order("submitted_at",{ascending:false});
+ if(r.error){body.innerHTML='<tr><td colspan="5">Could not load reports: '+esc(r.error.message)+'</td></tr>';return;}
+ const rows=(r.data||[]).filter(x=>String(x.driver_user_id)===String(currentUser.id));
+ body.innerHTML=rows.length?rows.map(x=>'<tr><td>'+esc(dateOnly(x.week_start))+ ' – '+esc(dateOnly(x.week_end))+'</td><td>'+money(x.sales_reported)+'</td><td>'+money(x.payment_amount)+'</td><td>'+esc(x.status||"pending")+'</td><td>'+esc(x.rejection_reason||"—")+'</td></tr>').join(''):'<tr><td colspan="5">No weekly reports submitted yet.</td></tr>';
+}
+$("driverReportWeekStart")?.addEventListener("change",()=>{const a=$("driverReportWeekStart").value;if(a){const monday=mondayISO(a);$("driverReportWeekStart").value=monday;$("driverReportWeekEnd").value=sundayISO(monday);}});
+$("driverWeeklyReportForm")?.addEventListener("submit",async event=>{
+ event.preventDefault(); if(!currentUser||!profile||!isDriverRole(profile.role)){msg("driverReportMsg","Please sign in with your driver account first.","error");return;}
+ const weekStart=$("driverReportWeekStart").value,weekEnd=$("driverReportWeekEnd").value,sales=Number($("driverReportSales").value),payment=Number($("driverReportPayment").value);
+ if(!weekStart||!weekEnd||weekEnd<weekStart||weekStart!==mondayISO(weekStart)||weekEnd!==sundayISO(weekStart)){msg("driverReportMsg","Choose a complete Monday–Sunday week.","error");return;}
+ if(!Number.isFinite(sales)||sales<0||!Number.isFinite(payment)||payment<0){msg("driverReportMsg","Sales and payment must be zero or greater.","error");return;}
+ const contractResult=await db.from("tricycle_contracts").select("id").eq("driver_user_id",currentUser.id).order("created_at",{ascending:false}).limit(1);
+ if(contractResult.error){msg("driverReportMsg","Could not verify your contract: "+esc(contractResult.error.message),"error");return;}
+ const owned=(contractResult.data||[]).filter(c=>String(c.driver_user_id||"")===String(currentUser.id));
+ if(!owned.length){msg("driverReportMsg","You need an active tricycle contract linked to your driver account before submitting a weekly report. Please contact admin.","error");return;}
+ const btn=$("submitDriverWeeklyReport");btn.disabled=true;
+ const payload={contract_id:owned[0].id,driver_user_id:currentUser.id,week_start:weekStart,week_end:weekEnd,sales_reported:sales,payment_amount:payment,payment_reference:$("driverReportReference").value.trim()||null,driver_notes:$("driverReportNotes").value.trim()||null,status:"pending",submitted_at:new Date().toISOString()};
+ try{
+  const existing=await db.from("tricycle_weekly_reports").select("id,status").eq("driver_user_id",currentUser.id).eq("contract_id",owned[0].id).eq("week_start",weekStart).eq("week_end",weekEnd).maybeSingle();
+  if(existing.error)throw new Error(existing.error.message);
+  if(existing.data)throw new Error("A report already exists for this contract and week. Please contact admin if it needs correction.");
+  const saved=await db.from("tricycle_weekly_reports").insert(payload);
+  if(saved.error)throw new Error(saved.error.message);
+  msg("driverReportMsg","Weekly report submitted. It is now pending admin review.","success");
+  $("driverReportSales").value="";$("driverReportPayment").value="";$("driverReportReference").value="";$("driverReportNotes").value="";
+  await loadDriverWeeklyReports();
+ }catch(e){msg("driverReportMsg","Report was not saved: "+esc(e.message||e),"error");}
+ finally{btn.disabled=false;}
+});
+
 async function loadMessages(){
   /* Communication is intentionally read-only here.
      If a communication table exists, this section can be connected without changing worker login/profile. */
