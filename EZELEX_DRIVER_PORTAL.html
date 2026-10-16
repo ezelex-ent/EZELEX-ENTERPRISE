@@ -686,6 +686,7 @@ $("gateSignOut")?.addEventListener("click",async()=>{await db.auth.signOut();cur
 
 async function loadProfile(user){
   currentUser=user;
+  msg("loginMsg","Signed in. Checking your driver profile…");
   const {data,error}=await db.from("worker_profiles")
     .select("user_id,worker_id,full_name,phone,role,active,activated_at,contract_start,contract_end")
     .eq("user_id",user.id).maybeSingle();
@@ -741,6 +742,7 @@ async function loadProfile(user){
   showPortal();
   await loadProfilePhoto();
   if(isDriverRole(data.role)){
+    msg("loginMsg","Profile verified. Loading your contract and weekly reports…");
     await loadDriverContract();
     await loadDriverWeeklyReports();
     await loadMessages();
@@ -1546,21 +1548,38 @@ $("saleForm").onsubmit=async(e)=>{
 };
 
 $("loginBtn").onclick=async()=>{
-  msg("loginMsg","Signing in...");
+  const btn=$("loginBtn");
   const email=$("email").value.trim();
   const password=$("password").value;
   if(!email||!password){msg("loginMsg","Enter your email and password.","error");return;}
-  const {data,error}=await db.auth.signInWithPassword({email,password});
-  if(error){
-    const detail=(error.message||"").toLowerCase();
-    if(detail.includes("invalid api key")){
-      msg("loginMsg","The Supabase API key used by this website is no longer valid. The login code is correct, but the project key needs to be updated in this file.","error");
-    }else{
-      msg("loginMsg",error.message,"error");
+  if(btn)btn.disabled=true;
+  msg("loginMsg","Checking your sign-in details…");
+  try{
+    const authResult=await Promise.race([
+      db.auth.signInWithPassword({email,password}),
+      new Promise((_,reject)=>setTimeout(()=>reject(new Error("Sign-in is taking too long to respond. Please refresh the page and try again. If it keeps happening, the Supabase connection or request is hanging.")),20000))
+    ]);
+    const {data,error}=authResult;
+    if(error){
+      const detail=(error.message||"").toLowerCase();
+      if(detail.includes("invalid api key")){
+        msg("loginMsg","The Supabase API key used by this website is no longer valid. The login code is correct, but the project key needs to be updated in this file.","error");
+      }else{
+        msg("loginMsg",esc(error.message||"Sign-in failed."),"error");
+      }
+      return;
     }
-    return;
+    if(!data?.user){msg("loginMsg","Sign-in returned no user. Please try again.","error");return;}
+    msg("loginMsg","Signed in. Loading your driver profile…");
+    await Promise.race([
+      loadProfile(data.user),
+      new Promise((_,reject)=>setTimeout(()=>reject(new Error("Your sign-in succeeded, but the driver profile or its data requests did not finish loading within 25 seconds. Refresh the page. If it repeats, we need the browser Console error and Supabase query result to identify the exact failing request.")),25000))
+    ]);
+  }catch(e){
+    msg("loginMsg",esc(e?.message||"An unexpected sign-in error occurred."),"error");
+  }finally{
+    if(btn)btn.disabled=false;
   }
-  await loadProfile(data.user);
 };
 
 $("forgotBtn").onclick=()=>{
