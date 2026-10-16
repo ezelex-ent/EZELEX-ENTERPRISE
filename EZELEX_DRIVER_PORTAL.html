@@ -415,6 +415,8 @@ let stockWeekRows=[];
 let selectedStockWeekId="";
 
 const $=id=>document.getElementById(id);
+function setText(id,value){const el=$(id);if(el)el.textContent=value==null?"":String(value);}
+function setValue(id,value){const el=$(id);if(el)el.value=value==null?"":String(value);}
 function msg(id,text,type=""){ $(id).innerHTML=text?`<div class="msg ${type}">${text}</div>`:""; }
 function today(){const d=new Date();return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");}
 function esc(v){return String(v??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[m]));}
@@ -471,11 +473,11 @@ async function ensureCurrentStockWeek(){
 function renderStockWeekControls(){
   const picker=$("stockWeekPicker");
   if(currentStockWeek){
-    $("weekRangeLabel").textContent=weekLabel(currentStockWeek);
+    setText("weekRangeLabel", weekLabel(currentStockWeek));
     const isOpen=currentStockWeek.status==="open";
-    $("weekStatusLabel").textContent=isOpen?"OPEN — add purchases and track sales":"CLOSED — archived and read-only";
+    setText("weekStatusLabel", isOpen?"OPEN — add purchases and track sales":"CLOSED — archived and read-only");
     $("closeStockWeekBtn").disabled=!isOpen;
-    $("closeStockWeekBtn").textContent=isOpen?"Close This Week (Sunday)":"Week Closed";
+    setText("closeStockWeekBtn", isOpen?"Close This Week (Sunday)":"Week Closed");
   }
   if(picker){
     const previous=selectedStockWeekId||picker.value||"";
@@ -710,29 +712,30 @@ async function loadProfile(user){
   profile=data;
   applyRoleNavigation(data.role);
 
-  // Populate driver identity before any onboarding gate so the page never falls
-  // back to the generic Worker label or blank identity fields.
-  $("workerName").textContent=data.full_name||user.user_metadata?.full_name||user.email?.split("@")[0]||"Driver";
-  $("workerId").textContent=data.worker_id||"—";
-  $("workerRole").textContent="Driver";
-  $("workerStatus").textContent=data.active?"Active":"Inactive";
-  $("saleDate").value=today();
-  $("stockDate").value=today();
-  if($("driverReportWeekStart")){const monday=mondayISO(today());$("driverReportWeekStart").value=monday;$("driverReportWeekEnd").value=sundayISO(monday);}
-  if($("creditDate"))$("creditDate").value=today();
+  // Populate only elements that exist in this dedicated driver layout. The old
+  // shared Worker Portal had additional sale/stock/profile fields; those IDs are
+  // not guaranteed to exist in the slim Driver Portal and must never abort login.
+  setText("workerName",data.full_name||user.user_metadata?.full_name||user.email?.split("@")[0]||"Driver");
+  setText("workerId",data.worker_id||"—");
+  setText("workerRole","Driver");
+  setText("workerStatus",data.active?"Active":"Inactive");
+  setValue("saleDate",today());
+  setValue("stockDate",today());
+  if($("driverReportWeekStart")){const monday=mondayISO(today());setValue("driverReportWeekStart",monday);setValue("driverReportWeekEnd",sundayISO(monday));}
+  if($("creditDate"))setValue("creditDate",today());
 
-  $("dashEmail").textContent=user.email||"—";
-  $("dashPhone").textContent=data.phone||"—";
-  $("profileWorkerId").textContent=data.worker_id||"—";
-  $("profileFullName").textContent=data.full_name||"—";
-  $("profilePhone").textContent=data.phone||"—";
-  $("profileRole").textContent=data.role||"—";
-  $("profileActive").textContent=data.active?"Active":"Inactive";
-  $("profileStart").textContent=dateOnly(data.contract_start);
-  $("profileEnd").textContent=dateOnly(data.contract_end);
-  $("profileEmail").textContent=user.email||"—";
-  $("contractStart").textContent=dateOnly(data.contract_start);
-  $("contractEnd").textContent=dateOnly(data.contract_end);
+  setText("dashEmail",user.email||"—");
+  setText("dashPhone",data.phone||"—");
+  setText("profileWorkerId",data.worker_id||"—");
+  setText("profileFullName",data.full_name||"—");
+  setText("profilePhone",data.phone||"—");
+  setText("profileRole","Driver");
+  setText("profileActive",data.active?"Active":"Inactive");
+  setText("profileStart",dateOnly(data.contract_start));
+  setText("profileEnd",dateOnly(data.contract_end));
+  setText("profileEmail",user.email||"—");
+  setText("contractStart",dateOnly(data.contract_start));
+  setText("contractEnd",dateOnly(data.contract_end));
 
   if(!hasDriverPhoto(user)){
     showDriverPhotoGate();
@@ -779,11 +782,11 @@ async function loadSales(){
     if(d>=weekStart)weekTotal+=amount;
     if(d>=monthStart)monthTotal+=amount;
   });
-  $("todaySales").textContent=money(todayTotal);
-  $("weekSales").textContent=money(weekTotal);
-  $("monthSales").textContent=money(monthTotal);
-  $("allSales").textContent=money(allTotal);
-  $("lastActivity").textContent=rows.length?dateOnly(rows[0].sale_date):"No sales recorded yet.";
+  setText("todaySales", money(todayTotal));
+  setText("weekSales", money(weekTotal));
+  setText("monthSales", money(monthTotal));
+  setText("allSales", money(allTotal));
+  setText("lastActivity", rows.length?dateOnly(rows[0].sale_date):"No sales recorded yet.");
 
   if(!rows.length){
     $("salesBody").innerHTML='<tr><td colspan="8">No sales recorded yet.</td></tr>';
@@ -811,16 +814,16 @@ function calculateStock(){
   const total=num("stockTotal"),capital=num("capitalAmount"),unitCost=num("costPerUnit"),purchase=total*unitCost,price=num("sellPrice"),sold=num("stockSold"),damage=num("stockDamage");
   const remaining=Math.max(0,total-sold-damage),revenue=sold*price,soldCost=sold*unitCost,damageValue=damage*unitCost,remainingValue=remaining*unitCost,profit=revenue-soldCost-damageValue,accounted=sold+damage,cash=capital+revenue-Number(editingStockOriginal?.credit_outstanding||0)-purchase;
   const outstandingCredit=(creditRows||[]).reduce((sum,c)=>sum+Math.max(0,Number(c.amount_due||0)-Number(c.amount_paid||0)),0);
-  $("calcTotal").textContent=total+" units";$("calcTotalValue").textContent=money(purchase);
-  $("calcSold").textContent=sold+" units";$("calcRevenue").textContent=money(revenue)+" revenue";
-  $("calcRemaining").textContent=remaining+" units";$("calcRemainingValue").textContent=money(remainingValue)+" stock value";
-  $("calcUnitCost").textContent=money(unitCost);$("calcSoldCost").textContent=money(soldCost);
-  $("calcDamageValue").textContent=money(damageValue);$("calcCapital").textContent=money(capital);$("calcCreditCapital").textContent=money(outstandingCredit);$("calcTotalCapital").textContent=money(capital+outstandingCredit);$("calcCashInHand").textContent=money(cash);$("calcSalesRevenue").textContent=money(revenue);
-  $("calcProfit").textContent=money(profit);$("calcAccounted").textContent=accounted+" units";
+  setText("calcTotal", total+" units");setText("calcTotalValue", money(purchase));
+  setText("calcSold", sold+" units");setText("calcRevenue", money(revenue)+" revenue");
+  setText("calcRemaining", remaining+" units");setText("calcRemainingValue", money(remainingValue)+" stock value");
+  setText("calcUnitCost", money(unitCost));setText("calcSoldCost", money(soldCost));
+  setText("calcDamageValue", money(damageValue));setText("calcCapital", money(capital));setText("calcCreditCapital", money(outstandingCredit));setText("calcTotalCapital", money(capital+outstandingCredit));setText("calcCashInHand", money(cash));setText("calcSalesRevenue", money(revenue));
+  setText("calcProfit", money(profit));setText("calcAccounted", accounted+" units");
   const card=$("profitCard");card.classList.toggle("profit",profit>=0);card.classList.toggle("loss",profit<0);
-  $("profitLabel").textContent=profit>0?"You are making a profit":profit<0?"You are currently making a loss":"Break-even";
+  setText("profitLabel", profit>0?"You are making a profit":profit<0?"You are currently making a loss":"Break-even");
   const over=accounted>total || cash<0;
-  $("calcAccountedNote").textContent=accounted>total?"Too many units accounted for — check your numbers.":cash<0?"Purchase cost exceeds starting capital plus recorded sales — check your figures.":"Sold + damage";
+  setText("calcAccountedNote", accounted>total?"Too many units accounted for — check your numbers.":cash<0?"Purchase cost exceeds starting capital plus recorded sales — check your figures.":"Sold + damage");
   $("saveStockBtn").disabled=total<=0||accounted>total||cash<0;
 }
 
@@ -840,9 +843,9 @@ async function loadStock(){
   });
   let units=0,value=0,revenue=0,profit=0,cash=0,purchased=0,soldWeek=0;
   rows.forEach(r=>{units+=Number(r.remaining_quantity||0);value+=Number(r.remaining_value||0);revenue+=Number(r.sales_revenue||0);profit+=Number(r.profit_loss||0);if(r.stock_type!=="carry_forward")purchased+=Number(r.total_quantity||0);soldWeek+=Number(r.sold_quantity||0);const cap=Number(r.capital_amount??r.purchase_total??0),pur=Number(r.purchase_total||0);cash+=Number(r.cash_in_hand??(cap+Number(r.sales_revenue||0)-Number(r.credit_outstanding||0)-pur));});
-  $("liveUnits").textContent=units.toLocaleString();$("liveValue").textContent=money(value);$("liveRevenue").textContent=money(revenue);$("liveProfit").textContent=money(profit);$("liveProfitLabel").textContent="selected week profit";
-  $("weekPurchased").textContent=purchased.toLocaleString();$("weekSold").textContent=soldWeek.toLocaleString();$("weekRemaining").textContent=units.toLocaleString();
-  const weekProfitCard=$("weekProfitCard");$("weekProfit").textContent=money(profit);weekProfitCard.classList.toggle("profit",profit>0);weekProfitCard.classList.toggle("loss",profit<0);$("weekProfitLabel").textContent=profit>0?"You're gaining this week":profit<0?"You're losing money this week":"Break-even so far";
+  setText("liveUnits", units.toLocaleString());setText("liveValue", money(value));setText("liveRevenue", money(revenue));setText("liveProfit", money(profit));setText("liveProfitLabel", "selected week profit");
+  setText("weekPurchased", purchased.toLocaleString());setText("weekSold", soldWeek.toLocaleString());setText("weekRemaining", units.toLocaleString());
+  const weekProfitCard=$("weekProfitCard");setText("weekProfit", money(profit));weekProfitCard.classList.toggle("profit",profit>0);weekProfitCard.classList.toggle("loss",profit<0);setText("weekProfitLabel", profit>0?"You're gaining this week":profit<0?"You're losing money this week":"Break-even so far");
   const viewingClosed=!!selectedWeekIsClosed();
   if(!rows.length){$("stockBody").innerHTML='<tr><td colspan="11">No stock records in this week yet.</td></tr>';}
   else $("stockBody").innerHTML=rows.map(r=>{const cap=Number(r.capital_amount??r.purchase_total??0),pur=Number(r.purchase_total||0),ci=Number(r.cash_in_hand??(cap+Number(r.sales_revenue||0)-Number(r.credit_outstanding||0)-pur));const rowWeek=String(r.week_id||"")===String(currentStockWeek?.id||"") || (!r.week_id&&mondayDateISO(r.stock_date||r.created_at||today())===mondayDateISO(today()));const editable=true;return `<tr><td>${esc(dateOnly(r.stock_date))}</td><td>${esc(r.product_service||"")}${r.stock_type==="carry_forward"?' <span class="badge">Opening balance</span>':''}</td><td>${esc(r.total_quantity??0)}</td><td>${esc(r.sold_quantity??0)}</td><td>${esc(r.damage_quantity??0)}</td><td>${esc(r.remaining_quantity??0)}</td><td>${money(cap)}</td><td>${money(pur)}</td><td>${money(ci)}</td><td>${money(r.profit_loss)}</td><td>${editable?`<button type="button" class="primary" onclick="editStock('${esc(r.id)}')">Edit</button>`:'<span class="badge">Archived</span>'}</td></tr>`;}).join("");
@@ -943,7 +946,7 @@ function renderStockHistory(){
   const dayTotals={};daily.forEach(x=>{if(!dayTotals[x.day])dayTotals[x.day]={units:0,value:0};dayTotals[x.day].units+=x.units;dayTotals[x.day].value+=x.value;});
   const days=Object.entries(dayTotals).sort((a,b)=>b[0].localeCompare(a[0]));
   const best=days.slice().sort((a,b)=>b[1].value-a[1].value)[0];
-  $("historyDaysCount").textContent=days.length;$("historyUnitsSold").textContent=soldTotal.toLocaleString();$("historyBestDay").textContent=best?best[0]+" ("+money(best[1].value)+")":"—";$("historySalesValue").textContent=money(valueTotal);
+  setText("historyDaysCount", days.length);setText("historyUnitsSold", soldTotal.toLocaleString());setText("historyBestDay", best?best[0]+" ("+money(best[1].value)+")":"—");setText("historySalesValue", money(valueTotal));
   drawDailyPerformanceChart(daily);
   $("stockHistoryBody").innerHTML=stockHistoryRows.length?stockHistoryRows.map(h=>`<tr><td>${esc(dateTime(h.changed_at))}</td><td>${esc(h.product_service||"")}</td><td>${esc(h.action||"Edited")}</td><td>${Number(h.sold_delta||0)>0?"+":""}${Number(h.sold_delta||0)}</td><td>${esc(h.sold_after??"—")}</td><td>${esc(h.damage_after??"—")}</td><td>${esc(h.remaining_after??"—")}</td><td>${esc(h.notes||"")}</td></tr>`).join(""):'<tr><td colspan="8">No stock edits recorded yet.</td></tr>';
 }
@@ -960,8 +963,8 @@ function updateStockFormCreditSummary(batchId){
   const rows=(creditRows||[]).filter(c=>String(c.stock_batch_id||"")===String(batchId||""));
   const outstanding=rows.reduce((sum,c)=>sum+Math.max(0,Number(c.amount_due||0)-Number(c.amount_paid||0)),0);
   const qty=rows.reduce((sum,c)=>sum+(Number(c.quantity||0)),0);
-  if($("stockFormCreditAmount"))$("stockFormCreditAmount").textContent=money(outstanding);
-  if($("stockFormCreditQuantity"))$("stockFormCreditQuantity").textContent=String(qty);
+  if($("stockFormCreditAmount"))setText("stockFormCreditAmount", money(outstanding));
+  if($("stockFormCreditQuantity"))setText("stockFormCreditQuantity", String(qty));
 }
 $("openStockCreditBtn")?.addEventListener("click",()=>{
   if(!editingStockId){
@@ -984,7 +987,7 @@ function startStockEdit(r){
   $("stockDate").value=dateOnly(r.stock_date)||today(); $("stockProduct").value=r.product_service||"";
   $("stockTotal").value=Number(r.total_quantity||0); $("capitalAmount").value=Number(r.capital_amount ?? r.purchase_total ?? 0); $("costPerUnit").value=Number(r.cost_per_unit ?? (Number(r.total_quantity||0)>0?Number(r.purchase_total||0)/Number(r.total_quantity||0):0));
   $("sellPrice").value=Number(r.selling_price_per_unit||0); $("stockSold").value=Number(r.sold_quantity||0); $("stockDamage").value=Number(r.damage_quantity||0); $("stockNotes").value=r.notes||"";
-  $("saveStockBtn").textContent="Update Stock Record"; $("cancelEditStockBtn").style.display="inline-block"; updateStockFormCreditSummary(r.id); calculateStock(); document.getElementById("stockForm").scrollIntoView({behavior:"smooth",block:"center"});
+  setText("saveStockBtn", "Update Stock Record"); $("cancelEditStockBtn").style.display="inline-block"; updateStockFormCreditSummary(r.id); calculateStock(); document.getElementById("stockForm").scrollIntoView({behavior:"smooth",block:"center"});
   msg("stockMsg","Editing stock batch. Update quantity, purchase cost per unit, sold or damage quantity, then save. ","success");
 }
 window.editStock=async function(id){
@@ -1000,7 +1003,7 @@ window.editStock=async function(id){
   }
 };
 function cancelStockEdit(){
-  editingStockId=""; editingStockOriginal=null; $("editingStockId").value=""; $("stockForm").reset(); $("stockDate").value=today(); $("stockSold").value=0; $("stockDamage").value=0; $("saveStockBtn").textContent="Save Stock Record"; $("cancelEditStockBtn").style.display="none"; $("deleteStockBtn").style.display="none"; updateStockFormCreditSummary(""); calculateStock(); msg("stockMsg","Edit cancelled","");
+  editingStockId=""; editingStockOriginal=null; $("editingStockId").value=""; $("stockForm").reset(); $("stockDate").value=today(); $("stockSold").value=0; $("stockDamage").value=0; setText("saveStockBtn", "Save Stock Record"); $("cancelEditStockBtn").style.display="none"; $("deleteStockBtn").style.display="none"; updateStockFormCreditSummary(""); calculateStock(); msg("stockMsg","Edit cancelled","");
 }
 $("cancelEditStockBtn").onclick=cancelStockEdit;
 $("deleteStockBtn").onclick=async()=>{
@@ -1014,7 +1017,7 @@ $("deleteStockBtn").onclick=async()=>{
   $("deleteStockBtn").disabled=false;
   if(error){msg("stockMsg","Stock record could not be deleted: "+error.message,"error");return;}
   editingStockId=""; editingStockOriginal=null; $("editingStockId").value=""; $("stockForm").reset(); $("stockDate").value=today(); $("stockSold").value=0; $("stockDamage").value=0;
-  $("saveStockBtn").textContent="Save Stock Record"; $("cancelEditStockBtn").style.display="none"; $("deleteStockBtn").style.display="none"; calculateStock();
+  setText("saveStockBtn", "Save Stock Record"); $("cancelEditStockBtn").style.display="none"; $("deleteStockBtn").style.display="none"; calculateStock();
   msg("stockMsg","Stock record deleted successfully. It has also been removed from the admin stock view.","success");
   await Promise.all([loadStock(),loadStockHistory()]);
 };
@@ -1067,7 +1070,7 @@ $("saveStockBtn").onclick=async()=>{
   }
   const savedStockDate=record.stock_date;
   msg("stockMsg",wasEditing?(window.stockHistoryWarning?"Stock updated successfully. However, edit history could not be saved: "+esc(window.stockHistoryWarning):"Stock updated successfully and edit history recorded."):"Stock record saved successfully and sent to Ezelex admin.","success");
-  editingStockId=""; editingStockOriginal=null; $("editingStockId").value=""; $("stockForm").reset(); $("stockDate").value=savedStockDate||today(); $("stockSold").value=0; $("stockDamage").value=0; $("saveStockBtn").textContent="Save Stock Record"; $("cancelEditStockBtn").style.display="none"; $("deleteStockBtn").style.display="none"; updateStockFormCreditSummary(""); calculateStock(); await Promise.all([loadStock(),loadStockHistory(),loadStockWeeks()]);
+  editingStockId=""; editingStockOriginal=null; $("editingStockId").value=""; $("stockForm").reset(); $("stockDate").value=savedStockDate||today(); $("stockSold").value=0; $("stockDamage").value=0; setText("saveStockBtn", "Save Stock Record"); $("cancelEditStockBtn").style.display="none"; $("deleteStockBtn").style.display="none"; updateStockFormCreditSummary(""); calculateStock(); await Promise.all([loadStock(),loadStockHistory(),loadStockWeeks()]);
   } catch(error) {
     console.error("Stock save/update failed:",error);
     msg("stockMsg","Stock record was not updated: "+esc(error?.message||String(error)),"error");
@@ -1133,8 +1136,8 @@ async function loadCredits(){
 }
 function renderCredits(){
   const open=creditRows.filter(c=>Number(c.amount_due||0)>Number(c.amount_paid||0));
-  $('creditOutstanding').textContent=money(open.reduce((n,c)=>n+Number(c.amount_due||0)-Number(c.amount_paid||0),0));
-  $('creditUnits').textContent=open.reduce((n,c)=>n+Number(c.quantity||0),0).toLocaleString();
+  setText("creditOutstanding", money(open.reduce((n,c)=>n+Number(c.amount_due||0)-Number(c.amount_paid||0),0)));
+  setText("creditUnits", open.reduce((n,c)=>n+Number(c.quantity||0),0).toLocaleString());
   $('creditBody').innerHTML=creditRows.length?creditRows.map(c=>{const bal=Math.max(0,Number(c.amount_due||0)-Number(c.amount_paid||0));return `<tr><td>${esc(dateOnly(c.credit_date))}</td><td>${esc(c.customer_name||'')}</td><td>${esc(c.product_service||'Eggs')}</td><td>${Number(c.quantity||0)}</td><td>${money(c.amount_due)}</td><td>${money(c.amount_paid)}</td><td><b>${money(bal)}</b></td><td>${bal<=0?'<span class="badge approved">PAID</span>':'<span class="badge pending">OUTSTANDING</span>'}</td><td>${bal>0?`<button class="primary" onclick="markCreditPaid('${esc(c.id)}')">Mark fully paid</button>`:'—'}</td></tr>`}).join(''):'<tr><td colspan="9">No credit sales recorded.</td></tr>';
 }
 $('creditQuantity')?.addEventListener('input',()=>{const r=liveStockRows.find(x=>x.id===$('creditStockBatch').value);if(r&&Number($('creditQuantity').value)>0)$('creditAmount').value=(Number($('creditQuantity').value)*Number(r.selling_price_per_unit||0)).toFixed(2);});
@@ -1485,8 +1488,8 @@ window.editSale=async function(id){
   $("amount").value=data.sale_amount??0;
   $("payment").value=data.payment_method||"";
   $("notes").value=data.notes||"";
-  $("saleFormTitle").textContent="Edit Sale";
-  $("saveSaleBtn").textContent="Update Sale";
+  setText("saleFormTitle", "Edit Sale");
+  setText("saveSaleBtn", "Update Sale");
   $("cancelSaleEditBtn").style.display="inline-block";
   window.scrollTo({top:$("sales").offsetTop||0,behavior:"smooth"});
 };
@@ -1508,8 +1511,8 @@ function cancelSaleEdit(){
   $("saleForm").reset();
   $("saleDate").value=today();
   $("quantity").value=1;
-  $("saleFormTitle").textContent="Record a Sale";
-  $("saveSaleBtn").textContent="Record Sale";
+  setText("saleFormTitle", "Record a Sale");
+  setText("saveSaleBtn", "Record Sale");
   $("cancelSaleEditBtn").style.display="none";
   msg("saleMsg","");
 }
