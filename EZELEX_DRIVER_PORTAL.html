@@ -417,7 +417,7 @@ let selectedStockWeekId="";
 const $=id=>document.getElementById(id);
 function setText(id,value){const el=$(id);if(el)el.textContent=value==null?"":String(value);}
 function setValue(id,value){const el=$(id);if(el)el.value=value==null?"":String(value);}
-function msg(id,text,type=""){ $(id).innerHTML=text?`<div class="msg ${type}">${text}</div>`:""; }
+function msg(id,text,type=""){ const el=$(id); if(!el){console.warn("Missing message container:",id);return;} el.innerHTML=text?`<div class="msg ${type}">${text}</div>`:""; }
 function today(){const d=new Date();return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");}
 function esc(v){return String(v??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[m]));}
 function money(v){return "GH₵"+Number(v||0).toLocaleString("en-GH",{minimumFractionDigits:2,maximumFractionDigits:2});}
