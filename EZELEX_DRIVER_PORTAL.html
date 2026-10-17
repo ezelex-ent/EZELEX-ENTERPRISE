@@ -86,6 +86,7 @@ th,td{padding:11px;border-bottom:1px solid #eee;text-align:left;font-size:14px}t
   <div class="driverMenuWrap hidden" id="driverMenuWrap">
     <button type="button" id="driverMenuToggle" class="primary" aria-expanded="false" aria-controls="driverMenu">☰ Menu</button>
     <nav id="driverMenu" class="driverMenu hidden" aria-label="Driver menu">
+      <button type="button" data-driver-go="recordSale">Record Sale</button>
       <button type="button" data-driver-go="contract">My Contract</button>
       <button type="button" data-driver-go="profile">Profile</button>
       <button type="button" data-driver-go="communication">Communication</button>
@@ -149,10 +150,11 @@ th,td{padding:11px;border-bottom:1px solid #eee;text-align:left;font-size:14px}t
       <strong>Status:</strong> <span id="workerStatus" class="badge">Checking…</span>
     </div>
     <div class="stats">
-      <div class="stat"><small>Today Sale</small><strong id="todaySales">GH₵0.00</strong></div>
-      <div class="stat"><small>This Week</small><strong id="weekSales">GH₵0.00</strong></div>
-      <div class="stat"><small>This Month</small><strong id="monthSales">GH₵0.00</strong></div>
-      <div class="stat"><small>All Time</small><strong id="allSales">GH₵0.00</strong></div>
+      <div class="stat"><small>Sale Recorded (approved)</small><strong id="driverSaleRecorded">GH₵0.00</strong><small>Approved weekly sales to date</small></div>
+      <div class="stat"><small>Owing This Week</small><strong id="driverOwing">GH₵0.00</strong><small>Weekly contract payment less confirmed payments this week</small></div>
+      <div class="stat"><small>Paid</small><strong id="driverPaid">GH₵0.00</strong><small>Confirmed payments to date</small></div>
+      <div class="stat"><small>Outstanding Balance</small><strong id="driverOutstanding">GH₵0.00</strong><small>Remaining contract balance</small></div>
+      <div class="stat"><small>Year End</small><strong id="driverYearEnd">—</strong><small>Contract end date</small></div>
     </div>
   </div>
 
@@ -168,6 +170,14 @@ th,td{padding:11px;border-bottom:1px solid #eee;text-align:left;font-size:14px}t
   </div>
 
   <section id="dashboard" class="section active">
+    <div class="panel">
+      <h2>Driver Overview</h2>
+      <p>Sale Recorded is the total of admin-approved weekly sales. Owing This Week is your fixed weekly contract payment minus payments confirmed by admin for this week. Paid includes confirmed payments only. Outstanding Balance is the total contract amount remaining after all credited payments. Pending payment claims do not reduce your balance.</p>
+      <div id="driverDashboardSummaryMsg" aria-live="polite"></div>
+    </div>
+  </section>
+
+  <section id="recordSale" class="section">
     <div class="panel" id="driverWeeklyReportPanel">
       <h2>🗓️ Submit Weekly Tricycle Report</h2>
       <p>Submit your weekly sales and the amount you are reporting as paid. Your report will remain pending until Ezelex Enterprise admin reviews it.</p>
@@ -184,14 +194,6 @@ th,td{padding:11px;border-bottom:1px solid #eee;text-align:left;font-size:14px}t
       <h3 style="margin-top:24px">My Submitted Weekly Reports</h3>
       <div class="tablebox"><table><thead><tr><th>Period</th><th>Sales</th><th>Payment</th><th>Status</th><th>Admin response</th></tr></thead><tbody id="driverWeeklyReportsBody"><tr><td colspan="5">Loading your reports…</td></tr></tbody></table></div>
     </div>
-    <div class="panel">
-      <h2>Driver Overview</h2>
-      <p>Use the weekly report form above to report sales and payments for your tricycle contract. Reports remain pending until admin reviews them.</p>
-      <div class="cardrow">
-        <div class="infoBox"><strong>Driver account</strong><br><span id="dashEmail">—</span><br><span id="dashPhone">—</span></div>
-        <div class="infoBox"><strong>Last activity</strong><br><span id="lastActivity">Loading...</span></div>
-      </div>
-  </div>
     <div class="panel">
       <h2>Recent Sales</h2>
       <div class="tablebox">
@@ -550,7 +552,7 @@ function applyRoleNavigation(role){
     ["sales","stock","stockHistory","credit"].forEach(id=>$(id)?.classList.add("hidden"));
     document.querySelectorAll(".tabs .tab").forEach(b=>b.classList.add("hidden"));
     document.querySelectorAll(".section").forEach(sec=>{sec.classList.remove("active");sec.classList.add("hidden");});
-    ["dashboard","profile","communication","contract"].forEach(id=>$(id)?.classList.remove("hidden"));
+    ["dashboard","recordSale","profile","communication","contract"].forEach(id=>$(id)?.classList.remove("hidden"));
     $("dashboard")?.classList.add("active");
     $("driverWeeklyReportPanel")?.classList.remove("hidden");
     // Remove any legacy worker sales/stock panels from the driver dashboard.
@@ -1193,6 +1195,37 @@ window.markCreditPaid=async id=>{
 };
 function mondayISO(value){const d=new Date(String(value).slice(0,10)+"T12:00:00");const day=d.getDay();d.setDate(d.getDate()-(day===0?6:day-1));return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");}
 function sundayISO(monday){const d=new Date(String(monday).slice(0,10)+"T12:00:00");d.setDate(d.getDate()+6);return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");}
+async function loadDriverDashboardSummary(){
+ if(!currentUser||!isDriverRole(profile?.role))return;
+ const summaryMsg=$("driverDashboardSummaryMsg");
+ const set=(id,v)=>{const el=$(id);if(el)el.textContent=money(v);};
+ try{
+  const [contractsResult,reportsResult]=await Promise.all([
+   db.from("tricycle_contracts").select("id,total_contract_amount,opening_paid_amount,contract_end_date,weekly_target,contract_start_date").eq("driver_user_id",currentUser.id),
+   db.from("tricycle_weekly_reports").select("id,driver_user_id,contract_id,sales_reported,payment_amount,status,week_start,week_end").eq("driver_user_id",currentUser.id)
+  ]);
+  const failed=[contractsResult,reportsResult].find(x=>x.error);
+  if(failed){if(summaryMsg)summaryMsg.innerHTML='<div class="msg error">Could not load driver balances: '+esc(failed.error.message)+'. Please ask admin to check database permissions.</div>';return;}
+  const contracts=contractsResult.data||[],reports=reportsResult.data||[];
+  const ids=new Set(contracts.map(c=>String(c.id)));
+  const reportsFor=reports.filter(r=>ids.has(String(r.contract_id))&&String(r.status||'').toLowerCase()==='approved');
+  const paymentResult=contracts.length?await db.from("tricycle_contract_payments").select("contract_id,amount,payment_date").in("contract_id",contracts.map(c=>c.id)).order("payment_date",{ascending:false}):{data:[],error:null};
+  if(paymentResult.error){if(summaryMsg)summaryMsg.innerHTML='<div class="msg error">Could not load confirmed payments: '+esc(paymentResult.error.message)+'. Your balance has not been recalculated.</div>';return;}
+  const payments=paymentResult.data||[];
+  const salesRecorded=reportsFor.reduce((n,r)=>n+Number(r.sales_reported||0),0);
+  const paid=contracts.reduce((n,c)=>n+Number(c.opening_paid_amount||0),0)+payments.reduce((n,p)=>n+Number(p.amount||0),0);
+  const outstanding=contracts.reduce((n,c)=>n+Math.max(0,Number(c.total_contract_amount||0)-Number(c.opening_paid_amount||0)-payments.filter(p=>String(p.contract_id)===String(c.id)).reduce((a,p)=>a+Number(p.amount||0),0)),0);
+  // Weekly contract obligation is distinct from sales. Count only payments actually credited in the current Monday–Sunday period.
+  const weekStart=mondayISO(today()), weekEnd=sundayISO(weekStart);
+  const weeklyDue=contracts.reduce((n,c)=>n+Number(c.weekly_target||0),0);
+  const paidThisWeek=payments.filter(p=>p.payment_date&&String(p.payment_date).slice(0,10)>=weekStart&&String(p.payment_date).slice(0,10)<=weekEnd).reduce((n,p)=>n+Number(p.amount||0),0);
+  const owing=Math.max(0,weeklyDue-paidThisWeek);
+  set('driverSaleRecorded',salesRecorded);set('driverOwing',owing);set('driverPaid',paid);set('driverOutstanding',outstanding);
+  const ends=contracts.map(c=>c.contract_end_date).filter(Boolean).sort();const yearEnd=$("driverYearEnd");if(yearEnd)yearEnd.textContent=ends.length?ends[ends.length-1]:"Not set";
+  if(summaryMsg)summaryMsg.textContent='Balances updated. Sale Recorded includes approved reports only. Paid and balance reductions use credited payments only; the weekly owing figure is based on the fixed weekly contract obligation.';
+ }catch(e){if(summaryMsg)summaryMsg.innerHTML='<div class="msg error">Could not load driver balances: '+esc(e.message||e)+'</div>';}
+}
+
 async function loadDriverWeeklyReports(){
  const body=$("driverWeeklyReportsBody"); if(!body||!currentUser)return;
  body.innerHTML='<tr><td colspan="5">Loading your reports…</td></tr>';
@@ -1661,13 +1694,14 @@ driverMenuToggle?.addEventListener("click",()=>{
 document.querySelectorAll("[data-driver-go]").forEach(btn=>btn.addEventListener("click",async()=>{
   if(!isDriverRole(profile?.role))return;
   const target=btn.dataset.driverGo;
-  if(!["dashboard","contract","profile","communication"].includes(target))return;
+  if(!["dashboard","recordSale","contract","profile","communication"].includes(target))return;
   document.querySelectorAll(".section").forEach(sec=>sec.classList.remove("active"));
   $(target)?.classList.add("active");
   document.querySelectorAll(".tabs .tab").forEach(b=>b.classList.remove("active"));
   document.querySelector(`.tabs .tab[data-tab="${target}"]`)?.classList.add("active");
   closeDriverMenu();
   if(target==="contract")await loadDriverContract();
+  if(target==="dashboard")await loadDriverDashboardSummary();
   if(target==="communication")await loadMessages();
   window.scrollTo({top:0,behavior:"smooth"});
 }));
