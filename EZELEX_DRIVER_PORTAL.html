@@ -427,14 +427,14 @@ function num(id){const n=Number($(id).value);return Number.isFinite(n)&&n>=0?n:0
 function dateOnly(v){return v?String(v).slice(0,10):"—";}
 
 function showLogin(){
-  $("loginSection").classList.remove("hidden");
-  $("portal").classList.add("hidden");
-  $("settingsBtn").classList.add("hidden");
+  $("loginSection")?.classList.remove("hidden");
+  $("portal")?.classList.add("hidden");
+  $("settingsBtn")?.classList.add("hidden");
 }
 function showPortal(){
-  $("loginSection").classList.add("hidden");
-  $("portal").classList.remove("hidden");
-  $("settingsBtn").classList.remove("hidden");
+  $("loginSection")?.classList.add("hidden");
+  $("portal")?.classList.remove("hidden");
+  $("settingsBtn")?.classList.remove("hidden");
 }
 
 function mondayDateISO(value=today()){
@@ -678,7 +678,7 @@ $("uploadProfilePhotoBtn")?.addEventListener("click",async()=>{
 
 function hasDriverPhoto(user=currentUser){return !!String(user?.user_metadata?.profile_photo_path||"").trim();}
 function showDriverPhotoGate(){
-  $("loginSection").classList.add("hidden");$("portal").classList.add("hidden");$("settingsBtn").classList.add("hidden");
+  $("loginSection")?.classList.add("hidden");$("portal")?.classList.add("hidden");$("settingsBtn")?.classList.add("hidden");
   $("driverPhotoGate")?.classList.remove("hidden");
 }
 function hideDriverPhotoGate(){ $("driverPhotoGate")?.classList.add("hidden"); }
@@ -852,7 +852,7 @@ function calculateStock(){
   setText("calcUnitCost", money(unitCost));setText("calcSoldCost", money(soldCost));
   setText("calcDamageValue", money(damageValue));setText("calcCapital", money(capital));setText("calcCreditCapital", money(outstandingCredit));setText("calcTotalCapital", money(capital+outstandingCredit));setText("calcCashInHand", money(cash));setText("calcSalesRevenue", money(revenue));
   setText("calcProfit", money(profit));setText("calcAccounted", accounted+" units");
-  const card=$("profitCard");card.classList.toggle("profit",profit>=0);card.classList.toggle("loss",profit<0);
+  const card=$("profitCard");if(card){card.classList.toggle("profit",profit>=0);card.classList.toggle("loss",profit<0);}
   setText("profitLabel", profit>0?"You are making a profit":profit<0?"You are currently making a loss":"Break-even");
   const over=accounted>total || cash<0;
   setText("calcAccountedNote", accounted>total?"Too many units accounted for — check your numbers.":cash<0?"Purchase cost exceeds starting capital plus recorded sales — check your figures.":"Sold + damage");
@@ -877,7 +877,7 @@ async function loadStock(){
   rows.forEach(r=>{units+=Number(r.remaining_quantity||0);value+=Number(r.remaining_value||0);revenue+=Number(r.sales_revenue||0);profit+=Number(r.profit_loss||0);if(r.stock_type!=="carry_forward")purchased+=Number(r.total_quantity||0);soldWeek+=Number(r.sold_quantity||0);const cap=Number(r.capital_amount??r.purchase_total??0),pur=Number(r.purchase_total||0);cash+=Number(r.cash_in_hand??(cap+Number(r.sales_revenue||0)-Number(r.credit_outstanding||0)-pur));});
   setText("liveUnits", units.toLocaleString());setText("liveValue", money(value));setText("liveRevenue", money(revenue));setText("liveProfit", money(profit));setText("liveProfitLabel", "selected week profit");
   setText("weekPurchased", purchased.toLocaleString());setText("weekSold", soldWeek.toLocaleString());setText("weekRemaining", units.toLocaleString());
-  const weekProfitCard=$("weekProfitCard");setText("weekProfit", money(profit));weekProfitCard.classList.toggle("profit",profit>0);weekProfitCard.classList.toggle("loss",profit<0);setText("weekProfitLabel", profit>0?"You're gaining this week":profit<0?"You're losing money this week":"Break-even so far");
+  const weekProfitCard=$("weekProfitCard");setText("weekProfit", money(profit));if(weekProfitCard){weekProfitCard.classList.toggle("profit",profit>0);weekProfitCard.classList.toggle("loss",profit<0);}setText("weekProfitLabel", profit>0?"You're gaining this week":profit<0?"You're losing money this week":"Break-even so far");
   const viewingClosed=!!selectedWeekIsClosed();
   if(!rows.length){$("stockBody").innerHTML='<tr><td colspan="11">No stock records in this week yet.</td></tr>';}
   else $("stockBody").innerHTML=rows.map(r=>{const cap=Number(r.capital_amount??r.purchase_total??0),pur=Number(r.purchase_total||0),ci=Number(r.cash_in_hand??(cap+Number(r.sales_revenue||0)-Number(r.credit_outstanding||0)-pur));const rowWeek=String(r.week_id||"")===String(currentStockWeek?.id||"") || (!r.week_id&&mondayDateISO(r.stock_date||r.created_at||today())===mondayDateISO(today()));const editable=true;return `<tr><td>${esc(dateOnly(r.stock_date))}</td><td>${esc(r.product_service||"")}${r.stock_type==="carry_forward"?' <span class="badge">Opening balance</span>':''}</td><td>${esc(r.total_quantity??0)}</td><td>${esc(r.sold_quantity??0)}</td><td>${esc(r.damage_quantity??0)}</td><td>${esc(r.remaining_quantity??0)}</td><td>${money(cap)}</td><td>${money(pur)}</td><td>${money(ci)}</td><td>${money(r.profit_loss)}</td><td>${editable?`<button type="button" class="primary" onclick="editStock('${esc(r.id)}')">Edit</button>`:'<span class="badge">Archived</span>'}</td></tr>`;}).join("");
@@ -903,15 +903,15 @@ function drawDailyPerformanceChart(daily){
   if(!ctx)return;
 
   if(!daily.length){
-    canvas.classList.add("hidden");
-    legend.classList.add("hidden");
-    empty.classList.remove("hidden");
+    canvas?.classList.add("hidden");
+    legend?.classList.add("hidden");
+    empty?.classList.remove("hidden");
     accessible.textContent="";
     return;
   }
-  canvas.classList.remove("hidden");
-  legend.classList.remove("hidden");
-  empty.classList.add("hidden");
+  canvas?.classList.remove("hidden");
+  legend?.classList.remove("hidden");
+  empty?.classList.add("hidden");
 
   // Display up to the latest 14 days in chronological order.
   const points=daily.slice().sort((a,b)=>a.day.localeCompare(b.day)).slice(-14);
@@ -1010,7 +1010,7 @@ $("openStockCreditBtn")?.addEventListener("click",()=>{
   document.querySelectorAll(".tab").forEach(b=>b.classList.remove("active"));
   document.querySelectorAll(".section").forEach(sec=>sec.classList.remove("active"));
   document.querySelector('.tab[data-tab="credit"]')?.classList.add("active");
-  $("credit").classList.add("active");
+  $("credit")?.classList.add("active");
   $("creditCustomer")?.focus();
   msg("creditMsg","Recording credit against: "+esc(batch.product_service||"Stock")+". Enter the customer and quantity below.","success");
 });
@@ -1644,11 +1644,11 @@ $("loginBtn").onclick=async()=>{
 };
 
 $("forgotBtn").onclick=()=>{
-  $("forgotBox").classList.remove("hidden");
+  $("forgotBox")?.classList.remove("hidden");
   $("resetEmail").value=$("email").value.trim();
   $("resetEmail").focus();
 };
-$("backLoginBtn").onclick=()=>{$("forgotBox").classList.add("hidden");$("resetMsg").innerHTML="";};
+$("backLoginBtn")?.addEventListener("click",()=>{$("forgotBox")?.classList.add("hidden");if($("resetMsg"))$("resetMsg").innerHTML="";});
 $("sendResetBtn").onclick=async()=>{
   const email=$("resetEmail").value.trim();
   if(!email){msg("resetMsg","Enter your worker email.","error");return;}
@@ -1667,7 +1667,7 @@ $("updatePasswordBtn").onclick=async()=>{
   const {error}=await db.auth.updateUser({password:p});
   if(error){msg("recoveryMsg",error.message,"error");return;}
   msg("recoveryMsg","Password updated successfully. You can now sign in.","success");
-  setTimeout(async()=>{await db.auth.signOut();passwordRecoveryMode=false;$("passwordRecovery").classList.add("hidden");showLogin();$("loginMsg").innerHTML='<div class="msg success">Password updated. Please sign in with your new password.</div>';},900);
+  setTimeout(async()=>{await db.auth.signOut();passwordRecoveryMode=false;$("passwordRecovery")?.classList.add("hidden");showLogin();$("loginMsg").innerHTML='<div class="msg success">Password updated. Please sign in with your new password.</div>';},900);
 };
 
 db.auth.onAuthStateChange((event,session)=>{
@@ -1716,7 +1716,7 @@ document.querySelectorAll(".tab").forEach(btn=>{
     if(!driver && btn.dataset.tab==="contract")return;
     document.querySelectorAll(".tab").forEach(b=>b.classList.remove("active"));
     document.querySelectorAll(".section").forEach(s=>s.classList.remove("active"));
-    btn.classList.add("active");$(btn.dataset.tab).classList.add("active");
+    btn.classList.add("active");$(btn.dataset.tab)?.classList.add("active");
     if(btn.dataset.tab==="contract")loadDriverContract();
   });
 });
