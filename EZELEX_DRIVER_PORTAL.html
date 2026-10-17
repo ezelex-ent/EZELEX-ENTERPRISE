@@ -575,20 +575,48 @@ async function loadDriverContract(){
       console.warn("Tricycle contract query failed:",r.error.message);return;
     }
     const rows=(r.data||[]).filter(c=>String(c.driver_user_id||"")===String(currentUser.id));
+    // Load payment ledger separately so the driver sees the same confirmed payments
+    // that the admin contract balance uses. Pending reports are not counted as paid.
+    const contractIds=rows.map(c=>c.id).filter(Boolean);
+    let paymentRows=[];
+    if(contractIds.length){
+      const payments=await db.from("tricycle_contract_payments")
+        .select("id,contract_id,amount,payment_date,source_type")
+        .in("contract_id",contractIds)
+        .order("payment_date",{ascending:false});
+      if(payments.error){
+        host.innerHTML='<div class="msg error">Your contract loaded, but confirmed payments could not be loaded: '+esc(payments.error.message)+'. Please contact admin.</div>';
+        console.warn("Tricycle payment ledger query failed:",payments.error.message);return;
+      }
+      paymentRows=payments.data||[];
+    }
     const banner=document.querySelector("#contract .stockNote");
     if(banner)banner.style.display=rows.length?"none":"block";
     if(!rows.length){host.innerHTML='<div class="driverContractCard"><h3>No contract linked yet</h3><p>Your driver login is working, but Ezelex Enterprise admin has not linked a tricycle contract to this account yet.</p><p>Once the contract is created and assigned to your driver account, return here and tap <strong>Refresh contract</strong>.</p><button type="button" class="primary" id="refreshDriverContract">Refresh contract</button></div>';$("refreshDriverContract")?.addEventListener("click",loadDriverContract);return;}
     const moneyVal=v=>"GH₵"+Number(v||0).toLocaleString("en-GH",{minimumFractionDigits:2,maximumFractionDigits:2});
     host.innerHTML=rows.map(c=>{
       const status=String(c.status||"pending").replace(/[_-]/g," ");
-      const total=Number(c.total_contract_amount??c.total_amount??0),paid=Number(c.opening_paid_amount||0);
+      const total=Number(c.total_contract_amount??c.total_amount??0);
+      const ledgerPaid=paymentRows.filter(p=>String(p.contract_id)===String(c.id)).reduce((sum,p)=>sum+Number(p.amount||0),0);
+      const openingPaid=Number(c.opening_paid_amount||0),paid=openingPaid+ledgerPaid;
+      const outstanding=Math.max(0,total-paid);
       const start=c.contract_start_date||c.contract_start, end=c.contract_end_date||c.contract_end;
+      const startDate=start?new Date(String(start).slice(0,10)+"T00:00:00"):null;
+      const endDate=end?new Date(String(end).slice(0,10)+"T00:00:00"):null;
+      const months=startDate&&endDate&&!Number.isNaN(startDate.getTime())&&!Number.isNaN(endDate.getTime())?Math.max(1,Math.round((endDate-startDate)/(86400000*30.4375))):Number(c.contract_duration_months||0);
+      const monthlyTarget=months>0?total/months:0;
+      const currentMonth=new Date().toISOString().slice(0,7);
+      const paidThisMonth=paymentRows.filter(p=>String(p.contract_id)===String(c.id)&&String(p.payment_date||"").slice(0,7)===currentMonth).reduce((sum,p)=>sum+Number(p.amount||0),0);
       return `<div class="driverContractCard">
         <h3>${esc(c.vehicle_registration||c.vehicle_id||"Tricycle contract")}</h3>
         <p><strong>Status:</strong> ${esc(status)}</p>
         <p><strong>Contract period:</strong> ${esc(dateOnly(start))} – ${esc(dateOnly(end))}</p>
         <p><strong>Contract amount:</strong> ${moneyVal(total)}</p>
-        <p><strong>Opening amount paid:</strong> ${moneyVal(paid)}</p>
+        <p><strong>Total amount paid:</strong> ${moneyVal(paid)}</p>
+        <p><strong>Outstanding balance:</strong> <strong>${moneyVal(outstanding)}</strong></p>
+        <p><strong>Estimated monthly target:</strong> ${moneyVal(monthlyTarget)}</p>
+        <p><strong>Payments recorded this month (${esc(currentMonth)}):</strong> ${moneyVal(paidThisMonth)}</p>
+        <p><strong>Opening amount paid:</strong> ${moneyVal(openingPaid)}</p>
         <p><strong>Weekly target:</strong> ${moneyVal(c.weekly_target??1400)}</p>
         <p><strong>Daily target:</strong> ${moneyVal(c.daily_target??200)}</p>
         ${c.admin_notes?`<p><strong>Admin notes:</strong> ${esc(c.admin_notes)}</p>`:""}
