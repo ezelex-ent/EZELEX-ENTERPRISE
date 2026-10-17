@@ -521,7 +521,7 @@ $("closeStockWeekBtn")?.addEventListener("click",closeCurrentStockWeek);
 $("stockWeekPicker")?.addEventListener("change",async()=>{selectedStockWeekId=$("stockWeekPicker").value||"";await loadStock();});
 
 // Password-recovery links must never render the authenticated dashboard behind the form.
-let passwordRecoveryMode = /(?:^|[&#?])type=recovery(?:&|$)/i.test(location.hash + "&" + location.search);
+let passwordRecoveryMode = /(?:^|[&#?])type=recovery(?:&|$)/i.test(location.hash + "&" + location.search) || new URLSearchParams(location.search).has("code") || new URLSearchParams(location.search).has("token_hash");
 function enforcePasswordRecoveryScreen(){
   $("loginSection")?.classList.add("hidden");
   $("portal")?.classList.add("hidden");
@@ -736,10 +736,12 @@ async function loadProfile(user){
     msg("loginMsg","This is the Driver Portal. Please sign in with an account assigned the Driver role.","error");
     return;
   }
-  if(data.active!==true){
-    await db.auth.signOut(); showLogin(); msg("loginMsg","Your driver account is inactive. Please contact Ezelex Enterprise admin.","error"); return;
-  }
   profile=data;
+  // Drivers must be able to finish password/photo onboarding while their account
+  // is pending activation. They still cannot access the dashboard until active.
+  if(data.active!==true && !(isDriverRole(data.role) && !hasDriverPhoto(user))){
+    await db.auth.signOut(); showLogin(); msg("loginMsg","Your driver account is awaiting admin activation. Please contact Ezelex Enterprise admin.","error"); return;
+  }
   applyRoleNavigation(data.role);
 
   // Populate only elements that exist in this dedicated driver layout. The old
@@ -777,8 +779,6 @@ async function loadProfile(user){
   if(isDriverRole(data.role)){
     msg("loginMsg","Profile verified. Loading your contract and weekly reports…");
     await loadDriverContract();
-    // Load dashboard totals immediately after login, not only when Dashboard is tapped again.
-    await loadDriverDashboardSummary();
     await loadDriverWeeklyReports();
     await loadMessages();
   }else{
@@ -1202,44 +1202,25 @@ async function loadDriverDashboardSummary(){
  const summaryMsg=$("driverDashboardSummaryMsg");
  const set=(id,v)=>{const el=$(id);if(el)el.textContent=money(v);};
  try{
-  // Use the same full contract rows as My Contract. Selecting guessed column names
-  // can make PostgREST reject the entire query and leave every card at GH₵0.00.
-  const contractsResult=await db.from("tricycle_contracts").select("*").eq("driver_user_id",currentUser.id);
-  if(contractsResult.error)throw new Error("Contract records: "+contractsResult.error.message);
-  const contracts=(contractsResult.data||[]).filter(c=>String(c.driver_user_id||"")===String(currentUser.id));
-  const ids=contracts.map(c=>c.id).filter(Boolean);
-  let reports=[],payments=[];
-  if(ids.length){
-   const [reportsResult,paymentsResult]=await Promise.all([
-    db.from("tricycle_weekly_reports").select("*").in("contract_id",ids),
-    db.from("tricycle_contract_payments").select("*").in("contract_id",ids)
-   ]);
-   if(reportsResult.error)throw new Error("Weekly reports: "+reportsResult.error.message);
-   if(paymentsResult.error)throw new Error("Payment records: "+paymentsResult.error.message);
-   reports=reportsResult.data||[];payments=paymentsResult.data||[];
-  }
-  const approvedReports=reports.filter(r=>String(r.status||"").trim().toLowerCase()==="approved");
-  const salesRecorded=approvedReports.reduce((n,r)=>n+Number(r.sales_reported??r.total_sales??r.sales_amount??0),0);
-  const openingPaid=contracts.reduce((n,c)=>n+Number(c.opening_paid_amount??c.opening_amount_paid??0),0);
-  const ledgerPaid=payments.reduce((n,p)=>n+Number(p.amount??p.payment_amount??0),0);
-  const paid=openingPaid+ledgerPaid;
-  // Owing is approved weekly sales not yet covered by credited payments. The
-  // contract balance is calculated independently from the total contract value.
+  const [contractsResult,reportsResult,paymentsResult]=await Promise.all([
+   db.from("tricycle_contracts").select("id,total_contract_amount,opening_paid_amount,contract_end_date").eq("driver_user_id",currentUser.id),
+   db.from("tricycle_weekly_reports").select("id,contract_id,sales_reported,payment_amount,status,week_end").eq("driver_user_id",currentUser.id),
+   db.from("tricycle_contract_payments").select("contract_id,amount,payment_date").order("payment_date",{ascending:false})
+  ]);
+  const failed=[contractsResult,reportsResult,paymentsResult].find(x=>x.error);
+  if(failed){if(summaryMsg)summaryMsg.innerHTML='<div class="msg error">Could not load driver balances: '+esc(failed.error.message)+'. Please ask admin to check database permissions.</div>';return;}
+  const contracts=contractsResult.data||[],reports=reportsResult.data||[],allPayments=paymentsResult.data||[];
+  const ids=new Set(contracts.map(c=>String(c.id)));
+  const reportsFor=reports.filter(r=>ids.has(String(r.contract_id))&&String(r.status||'').toLowerCase()==='approved');
+  const payments=allPayments.filter(p=>ids.has(String(p.contract_id)));
+  const salesRecorded=reportsFor.reduce((n,r)=>n+Number(r.sales_reported||0),0);
+  const paid=contracts.reduce((n,c)=>n+Number(c.opening_paid_amount||0),0)+payments.reduce((n,p)=>n+Number(p.amount||0),0);
   const owing=Math.max(0,salesRecorded-paid);
-  const outstanding=contracts.reduce((sum,c)=>{
-   const total=Number(c.total_contract_amount??c.total_amount??c.contract_amount??0);
-   const opening=Number(c.opening_paid_amount??c.opening_amount_paid??0);
-   const thisContractPaid=payments.filter(p=>String(p.contract_id)===String(c.id)).reduce((n,p)=>n+Number(p.amount??p.payment_amount??0),0);
-   return sum+Math.max(0,total-opening-thisContractPaid);
-  },0);
-  set("driverSaleRecorded",salesRecorded);set("driverOwing",owing);set("driverPaid",paid);set("driverOutstanding",outstanding);
-  const ends=contracts.map(c=>c.contract_end_date??c.contract_end).filter(Boolean).map(x=>String(x).slice(0,10)).sort();
-  const yearEnd=$("driverYearEnd");if(yearEnd)yearEnd.textContent=ends.length?ends[ends.length-1]:"Not set";
-  if(summaryMsg)summaryMsg.textContent=contracts.length?"Dashboard figures refreshed from your linked contract, approved reports and recorded contract payments.":"No tricycle contract is linked to this driver account. Please ask admin to check the contract's assigned driver account.";
- }catch(e){
-  console.error("Driver dashboard summary failed:",e);
-  if(summaryMsg)summaryMsg.innerHTML='<div class="msg error">Dashboard figures could not be loaded: '+esc(e.message||e)+'. The cards have not been confirmed; please share this message with Ezelex admin.</div>';
- }
+  const outstanding=contracts.reduce((n,c)=>n+Math.max(0,Number(c.total_contract_amount||0)-Number(c.opening_paid_amount||0)-payments.filter(p=>String(p.contract_id)===String(c.id)).reduce((a,p)=>a+Number(p.amount||0),0)),0);
+  set('driverSaleRecorded',salesRecorded);set('driverOwing',owing);set('driverPaid',paid);set('driverOutstanding',outstanding);
+  const ends=contracts.map(c=>c.contract_end_date).filter(Boolean).sort();const yearEnd=$("driverYearEnd");if(yearEnd)yearEnd.textContent=ends.length?ends[ends.length-1]:"Not set";
+  if(summaryMsg)summaryMsg.textContent='Balances updated. Only admin-approved weekly reports count as Sale Recorded; pending reports are excluded.';
+ }catch(e){if(summaryMsg)summaryMsg.innerHTML='<div class="msg error">Could not load driver balances: '+esc(e.message||e)+'</div>';}
 }
 
 async function loadDriverWeeklyReports(){
