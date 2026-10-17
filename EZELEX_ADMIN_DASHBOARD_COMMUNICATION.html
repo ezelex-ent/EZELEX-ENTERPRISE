@@ -190,7 +190,7 @@ async function adminCheck(){
  const {data:{session:s}}=await db.auth.getSession();session=s;if(!s){showLogin();return false}
  let {data}=await db.from("worker_profiles").select("*").eq("user_id",s.user.id).maybeSingle();
  if(!data||data.role!=="admin"||!data.active){await db.auth.signOut();showLogin();msg("loginMsg","This account does not have active EZELEX admin access.","error");return false}
- $("loginSection").classList.add("hidden");$("dashboard").classList.remove("hidden");$("logoutBtn").classList.add("hidden");$("menuToggle").classList.remove("hidden");$("adminEmail").textContent=s.user.email||"";await loadWorkers();await Promise.all([loadSales(),loadInventory(),loadStockHistory(),loadAdminCredits(),loadBusinessCapital()]);await loadCommunication();return true
+ $("loginSection").classList.add("hidden");$("dashboard").classList.remove("hidden");$("logoutBtn").classList.add("hidden");$("menuToggle").classList.remove("hidden");$("adminEmail").textContent=s.user.email||"";await loadWorkers();await Promise.all([loadSales(),loadInventory(),loadStockHistory(),loadAdminCredits(),loadBusinessCapital()]);await loadCommunication();await triLoadAll();return true
 }
 function showLogin(){$("loginSection").classList.remove("hidden");$("dashboard").classList.add("hidden");$("logoutBtn").classList.add("hidden")}
 async function loadWorkers(){
