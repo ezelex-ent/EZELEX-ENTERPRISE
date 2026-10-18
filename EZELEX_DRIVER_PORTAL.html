@@ -606,7 +606,8 @@ function applyRoleNavigation(role){
     $("dashboard")?.classList.add("active");
     $("driverWeeklyReportPanel")?.classList.remove("hidden");
     // Remove any legacy worker sales/stock panels from the driver dashboard.
-    $("dashboard")?.querySelector(".stats")?.classList.add("hidden");
+    // Keep driver financial summary cards visible. Hiding .stats here also hid all five cards.
+    $("dashboard")?.querySelector(".stats")?.classList.remove("hidden");
     $("dashboard")?.querySelectorAll(".panel").forEach(panel=>{
       const heading=panel.querySelector("h2")?.textContent?.trim().toLowerCase()||"";
       if(heading.includes("recent sales")||heading.includes("sales history")||heading.includes("live stock")||heading.includes("record sale")||heading.includes("worker stock"))panel.classList.add("hidden");
