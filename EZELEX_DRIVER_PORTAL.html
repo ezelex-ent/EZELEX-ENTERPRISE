@@ -417,6 +417,16 @@ let stockWeekRows=[];
 let selectedStockWeekId="";
 
 const $=id=>document.getElementById(id);
+// Keep the driver page usable if a non-essential control is missing from this layout.
+window.addEventListener("error", (event)=>{
+  console.error("Driver Portal script error:", event.error || event.message);
+  const login=$("loginSection"), portal=$("portal"), gate=$("driverPhotoGate");
+  if(login) login.classList.remove("hidden");
+  if(portal) portal.classList.add("hidden");
+  if(gate) gate.classList.add("hidden");
+  const box=$("loginMsg");
+  if(box) box.innerHTML='<div class="msg error">The Driver Portal hit a loading error. Please refresh the page. If it continues, contact admin with this message: '+String(event.message||"Page loading error").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;", "'":"&#039;"}[c]))+'</div>';
+});
 function setText(id,value){const el=$(id);if(el)el.textContent=value==null?"":String(value);}
 function setValue(id,value){const el=$(id);if(el)el.value=value==null?"":String(value);}
 function msg(id,text,type=""){ const el=$(id); if(!el){console.warn("Missing message container:",id);return;} el.innerHTML=text?`<div class="msg ${type}">${text}</div>`:""; }
@@ -1055,8 +1065,8 @@ window.editStock=async function(id){
 function cancelStockEdit(){
   editingStockId=""; editingStockOriginal=null; $("editingStockId").value=""; $("stockForm").reset(); $("stockDate").value=today(); $("stockSold").value=0; $("stockDamage").value=0; setText("saveStockBtn", "Save Stock Record"); $("cancelEditStockBtn").style.display="none"; $("deleteStockBtn").style.display="none"; updateStockFormCreditSummary(""); calculateStock(); msg("stockMsg","Edit cancelled","");
 }
-$("cancelEditStockBtn").onclick=cancelStockEdit;
-$("deleteStockBtn").onclick=async()=>{
+if($("cancelEditStockBtn")) $("cancelEditStockBtn").onclick=cancelStockEdit;
+if($("deleteStockBtn")) $("deleteStockBtn").onclick=async()=>{
   if(!editingStockId){msg("stockMsg","Open a stock record with Edit before deleting it.","error");return;}
   const product=$("stockProduct").value.trim()||"this stock record";
   if(!confirm(`Delete the stock record for "${product}"? This will remove it from your stock records and the admin dashboard too. This action cannot be undone.`))return;
@@ -1071,7 +1081,7 @@ $("deleteStockBtn").onclick=async()=>{
   msg("stockMsg","Stock record deleted successfully. It has also been removed from the admin stock view.","success");
   await Promise.all([loadStock(),loadStockHistory()]);
 };
-$("saveStockBtn").onclick=async()=>{
+if($("saveStockBtn")) $("saveStockBtn").onclick=async()=>{
   const saveButton=$("saveStockBtn");
   if(saveButton.disabled)return;
   saveButton.disabled=true;
@@ -1548,8 +1558,8 @@ async function shareSalesReport(){
   }
 }
 
-$("pdfReportBtn").onclick=downloadSalesPDF;
-$("shareReportBtn").onclick=shareSalesReport;
+if($("pdfReportBtn")) $("pdfReportBtn").onclick=downloadSalesPDF;
+if($("shareReportBtn")) $("shareReportBtn").onclick=shareSalesReport;
 
 window.editSale=async function(id){
   const {data,error}=await db.from("sales").select("*").eq("id",id).eq("worker_id",currentUser.id).maybeSingle();
@@ -1593,7 +1603,7 @@ function cancelSaleEdit(){
   msg("saleMsg","");
 }
 
-$("cancelSaleEditBtn").onclick=cancelSaleEdit;
+if($("cancelSaleEditBtn")) $("cancelSaleEditBtn").onclick=cancelSaleEdit;
 
 $("saleForm").onsubmit=async(e)=>{
   e.preventDefault();
@@ -1626,7 +1636,7 @@ $("saleForm").onsubmit=async(e)=>{
   await loadSales();
 };
 
-$("loginBtn").onclick=async()=>{
+if($("loginBtn")) $("loginBtn").onclick=async()=>{
   const btn=$("loginBtn");
   const email=$("email").value.trim();
   const password=$("password").value;
@@ -1661,13 +1671,13 @@ $("loginBtn").onclick=async()=>{
   }
 };
 
-$("forgotBtn").onclick=()=>{
+if($("forgotBtn")) $("forgotBtn").onclick=()=>{
   $("forgotBox").classList.remove("hidden");
   $("resetEmail").value=$("email").value.trim();
   $("resetEmail").focus();
 };
-$("backLoginBtn").onclick=()=>{$("forgotBox").classList.add("hidden");$("resetMsg").innerHTML="";};
-$("sendResetBtn").onclick=async()=>{
+if($("backLoginBtn")) $("backLoginBtn").onclick=()=>{$("forgotBox").classList.add("hidden");$("resetMsg").innerHTML="";};
+if($("sendResetBtn")) $("sendResetBtn").onclick=async()=>{
   const email=$("resetEmail").value.trim();
   if(!email){msg("resetMsg","Enter your worker email.","error");return;}
   msg("resetMsg","Sending reset link...");
@@ -1676,7 +1686,7 @@ $("sendResetBtn").onclick=async()=>{
   msg("resetMsg","Password reset link sent. Check your email and follow the link.","success");
 };
 
-$("updatePasswordBtn").onclick=async()=>{
+if($("updatePasswordBtn")) $("updatePasswordBtn").onclick=async()=>{
   const p=$("newPassword").value;
   const c=$("confirmPassword").value;
   if(p.length<6){msg("recoveryMsg","Password must be at least 6 characters.","error");return;}
