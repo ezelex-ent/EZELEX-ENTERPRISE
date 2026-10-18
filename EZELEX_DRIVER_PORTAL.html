@@ -837,9 +837,7 @@ async function loadProfile(user){
   await loadProfilePhoto();
   if(isDriverRole(data.role)){
     msg("loginMsg","Profile verified. Loading your contract and weekly reports…");
-    await loadDriverContract();
-    await loadDriverWeeklyReports();
-    await loadMessages();
+    await Promise.all([loadDriverContract(),loadDriverWeeklyReports(),loadDriverDashboardSummary(),loadMessages()]);
   }else{
     await ensureCurrentStockWeek();
     await loadStockWeeks();
@@ -1260,26 +1258,43 @@ async function loadDriverDashboardSummary(){
  if(!currentUser||!isDriverRole(profile?.role))return;
  const summaryMsg=$("driverDashboardSummaryMsg");
  const set=(id,v)=>{const el=$(id);if(el)el.textContent=money(v);};
+ const showError=(message)=>{if(summaryMsg)summaryMsg.innerHTML='<div class="msg error">Dashboard figures could not be refreshed: '+esc(message)+' . Please contact admin if this continues.</div>';};
  try{
-  const [contractsResult,reportsResult,paymentsResult]=await Promise.all([
-   db.from("tricycle_contracts").select("id,total_contract_amount,opening_paid_amount,contract_end_date").eq("driver_user_id",currentUser.id),
-   db.from("tricycle_weekly_reports").select("id,contract_id,sales_reported,payment_amount,status,week_end").eq("driver_user_id",currentUser.id),
-   db.from("tricycle_contract_payments").select("contract_id,amount,payment_date").order("payment_date",{ascending:false})
-  ]);
-  const failed=[contractsResult,reportsResult,paymentsResult].find(x=>x.error);
-  if(failed){if(summaryMsg)summaryMsg.innerHTML='<div class="msg error">Could not load driver balances: '+esc(failed.error.message)+'. Please ask admin to check database permissions.</div>';return;}
-  const contracts=contractsResult.data||[],reports=reportsResult.data||[],allPayments=paymentsResult.data||[];
-  const ids=new Set(contracts.map(c=>String(c.id)));
-  const reportsFor=reports.filter(r=>ids.has(String(r.contract_id))&&String(r.status||'').toLowerCase()==='approved');
-  const payments=allPayments.filter(p=>ids.has(String(p.contract_id)));
-  const salesRecorded=reportsFor.reduce((n,r)=>n+Number(r.sales_reported||0),0);
-  const paid=contracts.reduce((n,c)=>n+Number(c.opening_paid_amount||0),0)+payments.reduce((n,p)=>n+Number(p.amount||0),0);
-  const owing=Math.max(0,salesRecorded-paid);
-  const outstanding=contracts.reduce((n,c)=>n+Math.max(0,Number(c.total_contract_amount||0)-Number(c.opening_paid_amount||0)-payments.filter(p=>String(p.contract_id)===String(c.id)).reduce((a,p)=>a+Number(p.amount||0),0)),0);
+  // Use the same contract columns/ownership filter as My Tricycle Contract.
+  const contractsResult=await db.from("tricycle_contracts").select("*").eq("driver_user_id",currentUser.id).order("created_at",{ascending:false}).limit(10);
+  if(contractsResult.error){showError(contractsResult.error.message);return;}
+  const contracts=(contractsResult.data||[]).filter(c=>String(c.driver_user_id||"")===String(currentUser.id));
+  const ids=contracts.map(c=>c.id).filter(Boolean);
+  let reports=[],payments=[];
+  if(ids.length){
+   const [reportsResult,paymentsResult]=await Promise.all([
+    db.from("tricycle_weekly_reports").select("id,contract_id,driver_user_id,sales_reported,payment_amount,status,week_end").eq("driver_user_id",currentUser.id).in("contract_id",ids),
+    db.from("tricycle_contract_payments").select("id,contract_id,amount,payment_date,source_type").in("contract_id",ids).order("payment_date",{ascending:false})
+   ]);
+   if(reportsResult.error){showError(reportsResult.error.message);return;}
+   if(paymentsResult.error){showError(paymentsResult.error.message);return;}
+   reports=reportsResult.data||[];payments=paymentsResult.data||[];
+  }
+  const contractIds=new Set(ids.map(String));
+  const approved=reports.filter(r=>contractIds.has(String(r.contract_id))&&String(r.status||"").toLowerCase()==="approved");
+  const salesRecorded=approved.reduce((sum,r)=>sum+Number(r.sales_reported||0),0);
+  // Contract-paid includes opening amount plus payment ledger, matching My Tricycle Contract.
+  const paid=contracts.reduce((sum,c)=>sum+Number(c.opening_paid_amount||0),0)+payments.reduce((sum,p)=>sum+Number(p.amount||0),0);
+  // Weekly owing is approved reported sales less payments submitted against those reports;
+  // keep it separate from the total remaining contract balance.
+  const approvedReportPayments=approved.reduce((sum,r)=>sum+Number(r.payment_amount||0),0);
+  const owing=Math.max(0,salesRecorded-approvedReportPayments);
+  const outstanding=contracts.reduce((sum,c)=>{
+   const total=Number(c.total_contract_amount??c.total_amount??0);
+   const opening=Number(c.opening_paid_amount||0);
+   const ledger=payments.filter(p=>String(p.contract_id)===String(c.id)).reduce((n,p)=>n+Number(p.amount||0),0);
+   return sum+Math.max(0,total-opening-ledger);
+  },0);
   set('driverSaleRecorded',salesRecorded);set('driverOwing',owing);set('driverPaid',paid);set('driverOutstanding',outstanding);
-  const ends=contracts.map(c=>c.contract_end_date).filter(Boolean).sort();const yearEnd=$("driverYearEnd");if(yearEnd)yearEnd.textContent=ends.length?ends[ends.length-1]:"Not set";
-  if(summaryMsg)summaryMsg.textContent='Balances updated. Only admin-approved weekly reports count as Sale Recorded; pending reports are excluded.';
- }catch(e){if(summaryMsg)summaryMsg.innerHTML='<div class="msg error">Could not load driver balances: '+esc(e.message||e)+'</div>';}
+  const ends=contracts.map(c=>c.contract_end_date||c.contract_end).filter(Boolean).map(x=>String(x).slice(0,10)).sort();
+  const yearEnd=$("driverYearEnd");if(yearEnd)yearEnd.textContent=ends.length?dateOnly(ends[ends.length-1]):"Not set";
+  if(summaryMsg)summaryMsg.innerHTML=contracts.length?'Figures refreshed from your linked contract and approved weekly reports.':'<div class="msg error">No contract is linked to this driver login yet.</div>';
+ }catch(e){showError(e?.message||String(e));}
 }
 
 async function loadDriverWeeklyReports(){
