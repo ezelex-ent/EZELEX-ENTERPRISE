@@ -530,11 +530,22 @@ function enforcePasswordRecoveryScreen(){
   $("passwordRecovery")?.classList.remove("hidden");
 }
 async function start(){
-  if(passwordRecoveryMode){ enforcePasswordRecoveryScreen(); return; }
-  const {data:{session}}=await db.auth.getSession();
-  if(passwordRecoveryMode){ enforcePasswordRecoveryScreen(); return; }
-  if(!session){showLogin();return;}
-  await loadProfile(session.user);
+  try {
+    if(passwordRecoveryMode){ enforcePasswordRecoveryScreen(); return; }
+    const {data:{session},error}=await db.auth.getSession();
+    if(error) throw error;
+    if(passwordRecoveryMode){ enforcePasswordRecoveryScreen(); return; }
+    if(!session){showLogin();return;}
+    await loadProfile(session.user);
+  } catch(err) {
+    console.error("Driver portal startup failed:",err);
+    // Never leave the user with a blank white page if a startup request fails.
+    $("portal")?.classList.add("hidden");
+    $("driverPhotoGate")?.classList.add("hidden");
+    $("passwordRecovery")?.classList.add("hidden");
+    $("loginSection")?.classList.remove("hidden");
+    msg("loginMsg","The Driver Portal could not finish loading. Please refresh the page and sign in again. "+esc(err?.message||"Temporary connection error."),"error");
+  }
 }
 
 const isDriverRole = value => String(value||"").trim().toLowerCase().replace(/[ _-]/g,"")==="driver";
@@ -725,9 +736,17 @@ async function loadProfile(user){
     .eq("user_id",user.id).maybeSingle();
 
   if(error||!data||String(data.role||"").toLowerCase()==="admin"){
+    if(error){
+      console.error("Driver profile lookup failed:",error);
+      $("loginSection")?.classList.remove("hidden");
+      $("portal")?.classList.add("hidden");
+      $("driverPhotoGate")?.classList.add("hidden");
+      msg("loginMsg","Could not load your driver profile. Please refresh and try again. "+esc(error.message),"error");
+      return;
+    }
     await db.auth.signOut();
     showLogin();
-    msg("loginMsg",error?"Could not load your driver profile: "+esc(error.message):"No driver profile is linked to this login. Please ask admin to check the Driver ID and account link.","error");
+    msg("loginMsg","No driver profile is linked to this login. Please ask admin to check the Driver ID and account link.","error");
     return;
   }
   // Dedicated Driver Portal: worker accounts cannot enter this file.
