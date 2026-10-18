@@ -677,6 +677,7 @@ $("uploadProfilePhotoBtn")?.addEventListener("click",async()=>{
 
 
 function hasDriverPhoto(user=currentUser){return !!String(user?.user_metadata?.profile_photo_path||"").trim();}
+function driverOnboardingEmailSent(user=currentUser){return !!String(user?.user_metadata?.driver_onboarding_email_sent_at||"").trim();}
 function showDriverPhotoGate(){
   $("loginSection").classList.add("hidden");$("portal").classList.add("hidden");$("settingsBtn").classList.add("hidden");
   $("driverPhotoGate")?.classList.remove("hidden");
@@ -767,9 +768,9 @@ async function loadProfile(user){
   setText("contractStart",dateOnly(data.contract_start));
   setText("contractEnd",dateOnly(data.contract_end));
 
-  if(!hasDriverPhoto(user)){
+  if(!hasDriverPhoto(user) || !driverOnboardingEmailSent(user)){
     showDriverPhotoGate();
-    return; // Keep identity and driver-only navigation available while photo setup is required.
+    return; // Do not open the dashboard until photo setup and the follow-up email are complete.
   }
   hideDriverPhotoGate();
   showPortal();
