@@ -207,12 +207,13 @@ th,td{padding:11px;border-bottom:1px solid #eee;text-align:left;font-size:14px}t
         <div><label for="driverReportWeekEnd">Week ending (Sunday)</label><input id="driverReportWeekEnd" type="date" required></div>
         <div><label for="driverReportSales">Total sales reported (GH₵)</label><input id="driverReportSales" type="number" min="0" step="0.01" required></div>
         <div><label for="driverReportPayment">Payment submitted (GH₵)</label><input id="driverReportPayment" type="number" min="0" step="0.01" required></div>
+        <div><label for="driverReportShortage">Shortage / Owing this week (GH₵)</label><input id="driverReportShortage" type="number" min="0" step="0.01" value="0" required><small>Enter the part of the weekly assigned amount not covered by payment.</small></div>
         <div><label for="driverReportReference">Payment reference (optional)</label><input id="driverReportReference" maxlength="200" placeholder="Mobile Money / receipt reference"></div>
         <div class="full"><label for="driverReportNotes">Notes for admin (optional)</label><textarea id="driverReportNotes" maxlength="2000" placeholder="Add any details about this week's report"></textarea></div>
         <div class="full"><button class="primary" id="submitDriverWeeklyReport" type="submit">Submit Weekly Report for Approval</button></div>
       </form>
       <h3 style="margin-top:24px">My Submitted Weekly Reports</h3>
-      <div class="tablebox"><table><thead><tr><th>Period</th><th>Sales</th><th>Payment</th><th>Status</th><th>Admin response</th></tr></thead><tbody id="driverWeeklyReportsBody"><tr><td colspan="5">Loading your reports…</td></tr></tbody></table></div>
+      <div class="tablebox"><table><thead><tr><th>Period</th><th>Sales</th><th>Payment</th><th>Shortage / Owing</th><th>Status</th><th>Admin response</th></tr></thead><tbody id="driverWeeklyReportsBody"><tr><td colspan="6">Loading your reports…</td></tr></tbody></table></div>
     </div>
     <div class="panel">
       <h2>Recent Sales</h2>
@@ -606,7 +607,7 @@ function applyRoleNavigation(role){
     $("dashboard")?.classList.add("active");
     $("driverWeeklyReportPanel")?.classList.remove("hidden");
     // Remove any legacy worker sales/stock panels from the driver dashboard.
-    // Keep driver financial summary cards visible. Hiding .stats here also hid all five cards.
+    // Financial summary cards must remain visible on the driver dashboard.
     $("dashboard")?.querySelector(".stats")?.classList.remove("hidden");
     $("dashboard")?.querySelectorAll(".panel").forEach(panel=>{
       const heading=panel.querySelector("h2")?.textContent?.trim().toLowerCase()||"";
@@ -1283,24 +1284,25 @@ async function loadDriverDashboardSummary(){
 
 async function loadDriverWeeklyReports(){
  const body=$("driverWeeklyReportsBody"); if(!body||!currentUser)return;
- body.innerHTML='<tr><td colspan="5">Loading your reports…</td></tr>';
- const r=await db.from("tricycle_weekly_reports").select("id,driver_user_id,contract_id,week_start,week_end,sales_reported,payment_amount,status,rejection_reason,driver_notes,submitted_at").eq("driver_user_id",currentUser.id).order("submitted_at",{ascending:false});
+ body.innerHTML='<tr><td colspan="6">Loading your reports…</td></tr>';
+ const r=await db.from("tricycle_weekly_reports").select("id,driver_user_id,contract_id,week_start,week_end,sales_reported,payment_amount,shortage_amount,status,rejection_reason,driver_notes,submitted_at").eq("driver_user_id",currentUser.id).order("submitted_at",{ascending:false});
  if(r.error){body.innerHTML='<tr><td colspan="5">Could not load reports: '+esc(r.error.message)+'</td></tr>';return;}
  const rows=(r.data||[]).filter(x=>String(x.driver_user_id)===String(currentUser.id));
- body.innerHTML=rows.length?rows.map(x=>'<tr><td>'+esc(dateOnly(x.week_start))+ ' – '+esc(dateOnly(x.week_end))+'</td><td>'+money(x.sales_reported)+'</td><td>'+money(x.payment_amount)+'</td><td>'+esc(x.status||"pending")+'</td><td>'+esc(x.rejection_reason||"—")+'</td></tr>').join(''):'<tr><td colspan="5">No weekly reports submitted yet.</td></tr>';
+ body.innerHTML=rows.length?rows.map(x=>'<tr><td>'+esc(dateOnly(x.week_start))+ ' – '+esc(dateOnly(x.week_end))+'</td><td>'+money(x.sales_reported)+'</td><td>'+money(x.payment_amount)+'</td><td>'+money(x.shortage_amount)+'</td><td>'+esc(x.status||"pending")+'</td><td>'+esc(x.rejection_reason||"—")+'</td></tr>').join(''):'<tr><td colspan="6">No weekly reports submitted yet.</td></tr>';
 }
 $("driverReportWeekStart")?.addEventListener("change",()=>{const a=$("driverReportWeekStart").value;if(a){const monday=mondayISO(a);$("driverReportWeekStart").value=monday;$("driverReportWeekEnd").value=sundayISO(monday);}});
 $("driverWeeklyReportForm")?.addEventListener("submit",async event=>{
  event.preventDefault(); if(!currentUser||!profile||!isDriverRole(profile.role)){msg("driverReportMsg","Please sign in with your driver account first.","error");return;}
- const weekStart=$("driverReportWeekStart").value,weekEnd=$("driverReportWeekEnd").value,sales=Number($("driverReportSales").value),payment=Number($("driverReportPayment").value);
+ const weekStart=$("driverReportWeekStart").value,weekEnd=$("driverReportWeekEnd").value,sales=Number($("driverReportSales").value),payment=Number($("driverReportPayment").value),shortage=Number($("driverReportShortage").value);
  if(!weekStart||!weekEnd||weekEnd<weekStart||weekStart!==mondayISO(weekStart)||weekEnd!==sundayISO(weekStart)){msg("driverReportMsg","Choose a complete Monday–Sunday week.","error");return;}
- if(!Number.isFinite(sales)||sales<0||!Number.isFinite(payment)||payment<0){msg("driverReportMsg","Sales and payment must be zero or greater.","error");return;}
+ if(!Number.isFinite(sales)||sales<0||!Number.isFinite(payment)||payment<0||!Number.isFinite(shortage)||shortage<0){msg("driverReportMsg","Sales, payment and shortage must be zero or greater.","error");return;}
+ if(Math.abs((payment+shortage)-sales)>0.009){msg("driverReportMsg","Payment submitted plus shortage / owing must equal total sales reported for the week.","error");return;}
  const contractResult=await db.from("tricycle_contracts").select("id,driver_user_id").eq("driver_user_id",currentUser.id).order("created_at",{ascending:false}).limit(1);
  if(contractResult.error){msg("driverReportMsg","Could not verify your contract: "+esc(contractResult.error.message),"error");return;}
  const owned=(contractResult.data||[]).filter(c=>String(c.driver_user_id||"")===String(currentUser.id));
  if(!owned.length){msg("driverReportMsg","You need an active tricycle contract linked to your driver account before submitting a weekly report. Please contact admin.","error");return;}
  const btn=$("submitDriverWeeklyReport");btn.disabled=true;
- const payload={contract_id:owned[0].id,driver_user_id:currentUser.id,week_start:weekStart,week_end:weekEnd,sales_reported:sales,payment_amount:payment,payment_reference:$("driverReportReference").value.trim()||null,driver_notes:$("driverReportNotes").value.trim()||null,status:"pending",submitted_at:new Date().toISOString()};
+ const payload={contract_id:owned[0].id,driver_user_id:currentUser.id,week_start:weekStart,week_end:weekEnd,sales_reported:sales,payment_amount:payment,shortage_amount:shortage,payment_reference:$("driverReportReference").value.trim()||null,driver_notes:$("driverReportNotes").value.trim()||null,status:"pending",submitted_at:new Date().toISOString()};
  try{
   const existing=await db.from("tricycle_weekly_reports").select("id,status").eq("driver_user_id",currentUser.id).eq("contract_id",owned[0].id).eq("week_start",weekStart).eq("week_end",weekEnd).maybeSingle();
   if(existing.error)throw new Error(existing.error.message);
@@ -1308,7 +1310,7 @@ $("driverWeeklyReportForm")?.addEventListener("submit",async event=>{
   const saved=await db.from("tricycle_weekly_reports").insert(payload);
   if(saved.error)throw new Error(saved.error.message);
   msg("driverReportMsg","Weekly report submitted. It is now pending admin review.","success");
-  $("driverReportSales").value="";$("driverReportPayment").value="";$("driverReportReference").value="";$("driverReportNotes").value="";
+  $("driverReportSales").value="";$("driverReportPayment").value="";$("driverReportShortage").value="0";$("driverReportReference").value="";$("driverReportNotes").value="";
   await loadDriverWeeklyReports();
  }catch(e){msg("driverReportMsg","Report was not saved: "+esc(e.message||e),"error");}
  finally{btn.disabled=false;}
