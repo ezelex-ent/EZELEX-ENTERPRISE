@@ -4,6 +4,26 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Ezelex Enterprise — Driver Portal</title>
+<script>
+/* Independent first-paint safeguard: this runs before any external library. */
+(function(){
+  window.addEventListener('error', function(ev){
+    if(!ev || !ev.message) return;
+    var box=document.getElementById('loginMsg');
+    if(box){ box.innerHTML='<div style="background:#fee4e2;color:#912018;padding:12px;border-radius:8px;margin:10px 0">The Driver Portal encountered a loading problem. Please refresh once. If it continues, the website file or a required service library may not have loaded.</div>'; }
+  }, true);
+  window.addEventListener('unhandledrejection', function(){
+    var box=document.getElementById('loginMsg');
+    if(box && !box.textContent.trim()) box.innerHTML='<div style="background:#fee4e2;color:#912018;padding:12px;border-radius:8px;margin:10px 0">A portal request failed to load. Please refresh once and try again.</div>';
+  });
+  window.setTimeout(function(){
+    var login=document.getElementById('loginSection');
+    var box=document.getElementById('loginMsg');
+    if(login) login.classList.remove('hidden');
+    if(!window.supabase && box){ box.innerHTML='<div style="background:#fee4e2;color:#912018;padding:12px;border-radius:8px;margin:10px 0">The login screen loaded, but the secure sign-in library did not load. Check the internet connection and refresh. If this persists, the CDN may be blocked.</div>'; }
+  }, 4000);
+})();
+</script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <style>
@@ -403,7 +423,14 @@ th,td{padding:11px;border-bottom:1px solid #eee;text-align:left;font-size:14px}t
 <script>
 const SUPABASE_URL="https://hweczhwoggmsrwhkktrx.supabase.co";
 const SUPABASE_PUBLISHABLE_KEY="sb_publishable_q52vf7tvpI4ho9FkGfZhvw_xdUv_bni";
-const {createClient}=supabase;
+if(!window.supabase || typeof window.supabase.createClient !== "function"){
+  const login=document.getElementById("loginSection");
+  if(login) login.classList.remove("hidden");
+  const box=document.getElementById("loginMsg");
+  if(box) box.innerHTML='<div class="msg error">The secure sign-in library did not load. Please check your connection and refresh the page.</div>';
+  throw new Error("Supabase sign-in library unavailable");
+}
+const {createClient}=window.supabase;
 const db=createClient(SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY);
 let profile=null;
 let currentUser=null;
