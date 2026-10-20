@@ -731,10 +731,18 @@ $("uploadProfilePhotoBtn")?.addEventListener("click",async()=>{
 function hasDriverPhoto(user=currentUser){return !!String(user?.user_metadata?.profile_photo_path||"").trim();}
 function driverOnboardingEmailSent(user=currentUser){return !!String(user?.user_metadata?.driver_onboarding_email_sent_at||"").trim();}
 function showDriverPhotoGate(){
-  $("loginSection")?.classList.add("hidden");$("portal")?.classList.add("hidden");$("settingsBtn")?.classList.add("hidden");
-  $("driverPhotoGate")?.classList.remove("hidden");
+  // Password setup has already authenticated the driver. Show ONLY the required
+  // photo setup screen; keep the sign-in form and dashboard out of view.
+  const login=$("loginSection"), portal=$("portal"), settings=$("settingsBtn"), gate=$("driverPhotoGate");
+  login?.classList.add("hidden"); if(login) login.style.display="none";
+  portal?.classList.add("hidden"); if(portal) portal.style.display="none";
+  settings?.classList.add("hidden"); if(settings) settings.style.display="none";
+  if(gate){gate.classList.remove("hidden");gate.style.display="block";}
 }
-function hideDriverPhotoGate(){ $("driverPhotoGate")?.classList.add("hidden"); }
+function hideDriverPhotoGate(){
+  const gate=$("driverPhotoGate");
+  gate?.classList.add("hidden"); if(gate) gate.style.display="none";
+}
 async function saveDriverGatePhoto(){
   const file=$("gatePhotoInput")?.files?.[0];
   if(!file){msg("gatePhotoMsg","Please take or choose a profile photo to continue.","error");return;}
@@ -756,9 +764,15 @@ async function saveDriverGatePhoto(){
     const response=await fetch(SUPABASE_URL+"/functions/v1/send-driver-onboarding-complete",{method:"POST",headers:{"Authorization":"Bearer "+session.access_token,"apikey":SUPABASE_PUBLISHABLE_KEY,"Content-Type":"application/json"},body:JSON.stringify({})});
     const result=await response.json().catch(()=>({}));
     if(!response.ok||!result.success)throw new Error(result.error||"Could not send your driver setup email. Contact admin.");
+    // Mark onboarding as complete after the existing onboarding email succeeds,
+    // so loadProfile routes the signed-in driver directly into their profile.
+    const onboardingCompletedAt = new Date().toISOString();
+    const completionMeta = await db.auth.updateUser({data:{driver_onboarding_email_sent_at: onboardingCompletedAt}});
+    if(completionMeta.error) console.warn("Could not persist onboarding completion metadata:", completionMeta.error.message);
+    currentUser.user_metadata={...(currentUser.user_metadata||{}),profile_photo_path:path,driver_onboarding_email_sent_at:onboardingCompletedAt};
     hideDriverPhotoGate();
     await loadProfile(currentUser);
-    msg("profilePhotoMsg",result.already_sent?"Photo saved. Your driver setup email was already sent.":"Photo saved. Your driver contract and payment information have been emailed to you.","success");
+    msg("profilePhotoMsg",result.already_sent?"Photo saved. Your driver setup email was already sent. Opening your driver profile…":"Photo saved. Your driver contract and payment information have been emailed to you. Opening your driver profile…","success");
   }catch(e){msg("gatePhotoMsg",esc(e.message||e),"error");}
   finally{btn.disabled=false;}
 }
@@ -830,14 +844,16 @@ async function loadProfile(user){
 
   if(!hasDriverPhoto(user) || !driverOnboardingEmailSent(user)){
     showDriverPhotoGate();
-    return; // Do not open the dashboard until photo setup and the follow-up email are complete.
+    return; // Photo setup screen only; do not show sign-in or dashboard behind it.
   }
   hideDriverPhotoGate();
   showPortal();
   await loadProfilePhoto();
   if(isDriverRole(data.role)){
     msg("loginMsg","Profile verified. Loading your contract and weekly reports…");
-    await Promise.all([loadDriverContract(),loadDriverWeeklyReports(),loadDriverDashboardSummary(),loadMessages()]);
+    await loadDriverContract();
+    await loadDriverWeeklyReports();
+    await loadMessages();
   }else{
     await ensureCurrentStockWeek();
     await loadStockWeeks();
@@ -1258,43 +1274,26 @@ async function loadDriverDashboardSummary(){
  if(!currentUser||!isDriverRole(profile?.role))return;
  const summaryMsg=$("driverDashboardSummaryMsg");
  const set=(id,v)=>{const el=$(id);if(el)el.textContent=money(v);};
- const showError=(message)=>{if(summaryMsg)summaryMsg.innerHTML='<div class="msg error">Dashboard figures could not be refreshed: '+esc(message)+' . Please contact admin if this continues.</div>';};
  try{
-  // Use the same contract columns/ownership filter as My Tricycle Contract.
-  const contractsResult=await db.from("tricycle_contracts").select("*").eq("driver_user_id",currentUser.id).order("created_at",{ascending:false}).limit(10);
-  if(contractsResult.error){showError(contractsResult.error.message);return;}
-  const contracts=(contractsResult.data||[]).filter(c=>String(c.driver_user_id||"")===String(currentUser.id));
-  const ids=contracts.map(c=>c.id).filter(Boolean);
-  let reports=[],payments=[];
-  if(ids.length){
-   const [reportsResult,paymentsResult]=await Promise.all([
-    db.from("tricycle_weekly_reports").select("id,contract_id,driver_user_id,sales_reported,payment_amount,status,week_end").eq("driver_user_id",currentUser.id).in("contract_id",ids),
-    db.from("tricycle_contract_payments").select("id,contract_id,amount,payment_date,source_type").in("contract_id",ids).order("payment_date",{ascending:false})
-   ]);
-   if(reportsResult.error){showError(reportsResult.error.message);return;}
-   if(paymentsResult.error){showError(paymentsResult.error.message);return;}
-   reports=reportsResult.data||[];payments=paymentsResult.data||[];
-  }
-  const contractIds=new Set(ids.map(String));
-  const approved=reports.filter(r=>contractIds.has(String(r.contract_id))&&String(r.status||"").toLowerCase()==="approved");
-  const salesRecorded=approved.reduce((sum,r)=>sum+Number(r.sales_reported||0),0);
-  // Contract-paid includes opening amount plus payment ledger, matching My Tricycle Contract.
-  const paid=contracts.reduce((sum,c)=>sum+Number(c.opening_paid_amount||0),0)+payments.reduce((sum,p)=>sum+Number(p.amount||0),0);
-  // Weekly owing is approved reported sales less payments submitted against those reports;
-  // keep it separate from the total remaining contract balance.
-  const approvedReportPayments=approved.reduce((sum,r)=>sum+Number(r.payment_amount||0),0);
-  const owing=Math.max(0,salesRecorded-approvedReportPayments);
-  const outstanding=contracts.reduce((sum,c)=>{
-   const total=Number(c.total_contract_amount??c.total_amount??0);
-   const opening=Number(c.opening_paid_amount||0);
-   const ledger=payments.filter(p=>String(p.contract_id)===String(c.id)).reduce((n,p)=>n+Number(p.amount||0),0);
-   return sum+Math.max(0,total-opening-ledger);
-  },0);
+  const [contractsResult,reportsResult,paymentsResult]=await Promise.all([
+   db.from("tricycle_contracts").select("id,total_contract_amount,opening_paid_amount,contract_end_date").eq("driver_user_id",currentUser.id),
+   db.from("tricycle_weekly_reports").select("id,contract_id,sales_reported,payment_amount,status,week_end").eq("driver_user_id",currentUser.id),
+   db.from("tricycle_contract_payments").select("contract_id,amount,payment_date").order("payment_date",{ascending:false})
+  ]);
+  const failed=[contractsResult,reportsResult,paymentsResult].find(x=>x.error);
+  if(failed){if(summaryMsg)summaryMsg.innerHTML='<div class="msg error">Could not load driver balances: '+esc(failed.error.message)+'. Please ask admin to check database permissions.</div>';return;}
+  const contracts=contractsResult.data||[],reports=reportsResult.data||[],allPayments=paymentsResult.data||[];
+  const ids=new Set(contracts.map(c=>String(c.id)));
+  const reportsFor=reports.filter(r=>ids.has(String(r.contract_id))&&String(r.status||'').toLowerCase()==='approved');
+  const payments=allPayments.filter(p=>ids.has(String(p.contract_id)));
+  const salesRecorded=reportsFor.reduce((n,r)=>n+Number(r.sales_reported||0),0);
+  const paid=contracts.reduce((n,c)=>n+Number(c.opening_paid_amount||0),0)+payments.reduce((n,p)=>n+Number(p.amount||0),0);
+  const owing=Math.max(0,salesRecorded-paid);
+  const outstanding=contracts.reduce((n,c)=>n+Math.max(0,Number(c.total_contract_amount||0)-Number(c.opening_paid_amount||0)-payments.filter(p=>String(p.contract_id)===String(c.id)).reduce((a,p)=>a+Number(p.amount||0),0)),0);
   set('driverSaleRecorded',salesRecorded);set('driverOwing',owing);set('driverPaid',paid);set('driverOutstanding',outstanding);
-  const ends=contracts.map(c=>c.contract_end_date||c.contract_end).filter(Boolean).map(x=>String(x).slice(0,10)).sort();
-  const yearEnd=$("driverYearEnd");if(yearEnd)yearEnd.textContent=ends.length?dateOnly(ends[ends.length-1]):"Not set";
-  if(summaryMsg)summaryMsg.innerHTML=contracts.length?'Figures refreshed from your linked contract and approved weekly reports.':'<div class="msg error">No contract is linked to this driver login yet.</div>';
- }catch(e){showError(e?.message||String(e));}
+  const ends=contracts.map(c=>c.contract_end_date).filter(Boolean).sort();const yearEnd=$("driverYearEnd");if(yearEnd)yearEnd.textContent=ends.length?ends[ends.length-1]:"Not set";
+  if(summaryMsg)summaryMsg.textContent='Balances updated. Only admin-approved weekly reports count as Sale Recorded; pending reports are excluded.';
+ }catch(e){if(summaryMsg)summaryMsg.innerHTML='<div class="msg error">Could not load driver balances: '+esc(e.message||e)+'</div>';}
 }
 
 async function loadDriverWeeklyReports(){
@@ -1322,26 +1321,9 @@ $("driverWeeklyReportForm")?.addEventListener("submit",async event=>{
   const existing=await db.from("tricycle_weekly_reports").select("id,status").eq("driver_user_id",currentUser.id).eq("contract_id",owned[0].id).eq("week_start",weekStart).eq("week_end",weekEnd).maybeSingle();
   if(existing.error)throw new Error(existing.error.message);
   if(existing.data)throw new Error("A report already exists for this contract and week. Please contact admin if it needs correction.");
-  const saved=await db.from("tricycle_weekly_reports").insert(payload).select("id").single();
+  const saved=await db.from("tricycle_weekly_reports").insert(payload);
   if(saved.error)throw new Error(saved.error.message);
-  // Notify admin immediately after the report is safely saved. Email failure must not undo or mislabel the saved report.
-  let adminEmailSent=false, emailError="";
-  try{
-    const sessionResult=await db.auth.getSession();
-    const accessToken=sessionResult?.data?.session?.access_token;
-    if(!accessToken)throw new Error("Your sign-in session could not be verified for the admin notification.");
-    const notifyResponse=await fetch(SUPABASE_URL+"/functions/v1/notify-admin-driver-weekly-report",{
-      method:"POST",
-      headers:{"Authorization":"Bearer "+accessToken,"apikey":SUPABASE_PUBLISHABLE_KEY,"Content-Type":"application/json"},
-      body:JSON.stringify({report_id:saved.data.id})
-    });
-    const notifyResult=await notifyResponse.json().catch(()=>({}));
-    if(!notifyResponse.ok||notifyResult.success!==true)throw new Error(notifyResult.error||("Notification request failed ("+notifyResponse.status+")."));
-    adminEmailSent=true;
-  }catch(notifyErr){emailError=notifyErr?.message||String(notifyErr);console.error("Admin weekly-report email notification failed:",emailError);}
-  msg("driverReportMsg",adminEmailSent
-    ?"Weekly report submitted successfully and is pending admin review. Admin has been emailed."
-    :"Weekly report was saved and is pending admin review, but the admin email could not be confirmed. Please contact admin if urgent.",adminEmailSent?"success":"error");
+  msg("driverReportMsg","Weekly report submitted. It is now pending admin review.","success");
   $("driverReportSales").value="";$("driverReportPayment").value="";$("driverReportShortage").value="0";$("driverReportReference").value="";$("driverReportNotes").value="";
   await loadDriverWeeklyReports();
  }catch(e){msg("driverReportMsg","Report was not saved: "+esc(e.message||e),"error");}
