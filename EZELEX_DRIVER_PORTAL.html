@@ -18,9 +18,15 @@
   });
   window.setTimeout(function(){
     var login=document.getElementById('loginSection');
+    var portal=document.getElementById('portal');
+    var gate=document.getElementById('driverPhotoGate');
     var box=document.getElementById('loginMsg');
-    if(login) login.classList.remove('hidden');
-    if(!window.supabase && box){ box.innerHTML='<div style="background:#fee4e2;color:#912018;padding:12px;border-radius:8px;margin:10px 0">The login screen loaded, but the secure sign-in library did not load. Check the internet connection and refresh. If this persists, the CDN may be blocked.</div>'; }
+    /* Only reveal login as a fallback when neither the authenticated dashboard
+       nor required photo-setup gate is being displayed. */
+    var dashboardVisible=portal && !portal.classList.contains('hidden');
+    var photoSetupVisible=gate && !gate.classList.contains('hidden');
+    if(login && !dashboardVisible && !photoSetupVisible) login.classList.remove('hidden');
+    if(!window.supabase && box && !dashboardVisible && !photoSetupVisible){ box.innerHTML='<div style="background:#fee4e2;color:#912018;padding:12px;border-radius:8px;margin:10px 0">The login screen loaded, but the secure sign-in library did not load. Check the internet connection and refresh. If this persists, the CDN may be blocked.</div>'; }
   }, 4000);
 })();
 </script>
@@ -446,7 +452,13 @@ let selectedStockWeekId="";
 
 const $=id=>document.getElementById(id);
 // Never allow a missing optional UI element to prevent the login screen from rendering.
-document.addEventListener("DOMContentLoaded",()=>{ $("loginSection")?.classList.remove("hidden"); });
+document.addEventListener("DOMContentLoaded",()=>{
+  // Do not force the sign-in form back on top of a valid session's dashboard.
+  const portal=$("portal"), gate=$("driverPhotoGate"), login=$("loginSection");
+  const dashboardVisible=portal && !portal.classList.contains("hidden");
+  const photoSetupVisible=gate && !gate.classList.contains("hidden");
+  if(login && !dashboardVisible && !photoSetupVisible) login.classList.remove("hidden");
+});
 // Keep the driver page usable if a non-essential control is missing from this layout.
 window.addEventListener("error", (event)=>{
   console.error("Driver Portal script error:", event.error || event.message);
@@ -731,18 +743,10 @@ $("uploadProfilePhotoBtn")?.addEventListener("click",async()=>{
 function hasDriverPhoto(user=currentUser){return !!String(user?.user_metadata?.profile_photo_path||"").trim();}
 function driverOnboardingEmailSent(user=currentUser){return !!String(user?.user_metadata?.driver_onboarding_email_sent_at||"").trim();}
 function showDriverPhotoGate(){
-  // Password setup has already authenticated the driver. Show ONLY the required
-  // photo setup screen; keep the sign-in form and dashboard out of view.
-  const login=$("loginSection"), portal=$("portal"), settings=$("settingsBtn"), gate=$("driverPhotoGate");
-  login?.classList.add("hidden"); if(login) login.style.display="none";
-  portal?.classList.add("hidden"); if(portal) portal.style.display="none";
-  settings?.classList.add("hidden"); if(settings) settings.style.display="none";
-  if(gate){gate.classList.remove("hidden");gate.style.display="block";}
+  $("loginSection")?.classList.add("hidden");$("portal")?.classList.add("hidden");$("settingsBtn")?.classList.add("hidden");
+  $("driverPhotoGate")?.classList.remove("hidden");
 }
-function hideDriverPhotoGate(){
-  const gate=$("driverPhotoGate");
-  gate?.classList.add("hidden"); if(gate) gate.style.display="none";
-}
+function hideDriverPhotoGate(){ $("driverPhotoGate")?.classList.add("hidden"); }
 async function saveDriverGatePhoto(){
   const file=$("gatePhotoInput")?.files?.[0];
   if(!file){msg("gatePhotoMsg","Please take or choose a profile photo to continue.","error");return;}
@@ -764,15 +768,9 @@ async function saveDriverGatePhoto(){
     const response=await fetch(SUPABASE_URL+"/functions/v1/send-driver-onboarding-complete",{method:"POST",headers:{"Authorization":"Bearer "+session.access_token,"apikey":SUPABASE_PUBLISHABLE_KEY,"Content-Type":"application/json"},body:JSON.stringify({})});
     const result=await response.json().catch(()=>({}));
     if(!response.ok||!result.success)throw new Error(result.error||"Could not send your driver setup email. Contact admin.");
-    // Mark onboarding as complete after the existing onboarding email succeeds,
-    // so loadProfile routes the signed-in driver directly into their profile.
-    const onboardingCompletedAt = new Date().toISOString();
-    const completionMeta = await db.auth.updateUser({data:{driver_onboarding_email_sent_at: onboardingCompletedAt}});
-    if(completionMeta.error) console.warn("Could not persist onboarding completion metadata:", completionMeta.error.message);
-    currentUser.user_metadata={...(currentUser.user_metadata||{}),profile_photo_path:path,driver_onboarding_email_sent_at:onboardingCompletedAt};
     hideDriverPhotoGate();
     await loadProfile(currentUser);
-    msg("profilePhotoMsg",result.already_sent?"Photo saved. Your driver setup email was already sent. Opening your driver profile…":"Photo saved. Your driver contract and payment information have been emailed to you. Opening your driver profile…","success");
+    msg("profilePhotoMsg",result.already_sent?"Photo saved. Your driver setup email was already sent.":"Photo saved. Your driver contract and payment information have been emailed to you.","success");
   }catch(e){msg("gatePhotoMsg",esc(e.message||e),"error");}
   finally{btn.disabled=false;}
 }
@@ -844,7 +842,7 @@ async function loadProfile(user){
 
   if(!hasDriverPhoto(user) || !driverOnboardingEmailSent(user)){
     showDriverPhotoGate();
-    return; // Photo setup screen only; do not show sign-in or dashboard behind it.
+    return; // Do not open the dashboard until photo setup and the follow-up email are complete.
   }
   hideDriverPhotoGate();
   showPortal();
