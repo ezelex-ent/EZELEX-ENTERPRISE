@@ -33,6 +33,16 @@ textarea{min-height:90px;resize:vertical}
 .menuItem{display:block;width:100%;min-height:44px;text-align:left;background:#fff;color:#17202a;padding:12px;border-radius:8px;margin:2px 0;font-weight:700;font-size:15px;touch-action:manipulation}
 .menuItem:hover,.menuItem:focus{background:#f1f5f9;outline:2px solid #cbd5e1}
 .menuItem.active{background:#e5e7eb}
+.stockSubmenu{display:none;margin:2px 0 8px 10px;padding:6px;border-left:3px solid #2563eb;background:#f8fafc;border-radius:8px}
+.stockSubmenu.open{display:block}
+.stockSubItem{display:block;width:100%;text-align:left;border:0;border-radius:7px;padding:10px 12px;margin:3px 0;background:#fff;color:#1e293b;font-weight:700;font-size:14px;min-height:42px}
+.stockSubItem:hover,.stockSubItem:focus{background:#dbeafe;outline:2px solid #93c5fd}
+.stockSubItem.active{background:#dbeafe;color:#1d4ed8}
+.stock-subsection{display:none}
+.stock-subsection.active{display:block}
+#weeklyStockPanel h2,.stock-subsection h2{padding:10px 12px;border-radius:8px;color:#fff;background:linear-gradient(90deg,#1d4ed8,#0f766e);font-size:clamp(18px,2.4vw,23px)}
+#globalToast{position:fixed;right:16px;bottom:18px;z-index:9999;max-width:min(420px,calc(100vw - 32px));padding:13px 17px;border-radius:10px;background:#067647;color:#fff;box-shadow:0 10px 28px #0003;font-weight:700;opacity:0;transform:translateY(12px);pointer-events:none;transition:opacity .2s,transform .2s}
+#globalToast.show{opacity:1;transform:translateY(0)}
 .menuDivider{height:1px;background:#e5e7eb;margin:7px 4px}
 .section{display:none}.section.active{display:block}
 .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:18px}
@@ -69,6 +79,7 @@ th,td{padding:11px;border-bottom:1px solid #eee;text-align:left;font-size:14px}t
 </style>
 </head>
 <body>
+<div id="globalToast" role="status" aria-live="polite"></div>
 
 <header>
   <div>
@@ -115,8 +126,13 @@ th,td{padding:11px;border-bottom:1px solid #eee;text-align:left;font-size:14px}t
     <button id="menuToggle" class="menuToggle" type="button" aria-expanded="false" aria-controls="workerMenu">☰ Menu</button>
     <nav id="workerMenu" class="menuPopup" aria-label="Worker portal menu">
       <button type="button" class="menuItem active" data-tab="dashboard">Dashboard</button>
-      <button type="button" class="menuItem" data-tab="sales">Record Sale</button>
-      <button type="button" class="menuItem" data-tab="stock">Live Stock</button>
+      <button type="button" id="stockMenuToggle" class="menuItem" aria-expanded="false" aria-controls="stockSubmenu">📦 Live Stock ▾</button>
+      <div id="stockSubmenu" class="stockSubmenu" aria-label="Live Stock sections">
+        <button type="button" class="stockSubItem" data-stock-view="weekly">🗓️ Weekly Stock Book (Monday–Sunday)</button>
+        <button type="button" class="stockSubItem" data-stock-view="live">📊 Live Stock & Profits</button>
+        <button type="button" class="stockSubItem" data-stock-view="manage">➕ Add / Edit Stock Record</button>
+        <button type="button" class="stockSubItem" data-stock-view="records">📋 My Stock Records</button>
+      </div>
       <button type="button" class="menuItem" data-tab="stockHistory">Edit History</button>
       <button type="button" class="menuItem" data-tab="credit">On-Credit</button>
       <button type="button" class="menuItem" data-tab="settings">Settings</button>
@@ -151,6 +167,25 @@ th,td{padding:11px;border-bottom:1px solid #eee;text-align:left;font-size:14px}t
         <div class="infoBox"><strong>Last activity</strong><br><span id="lastActivity">Loading...</span></div>
       </div>
   </div>
+    <div class="panel" id="weeklyStockPanel">
+      <h2>🗓️ Weekly Stock Book (Monday–Sunday)</h2>
+      <div class="stockNote">All purchases and stock batches you add during this business week are grouped under one weekly book. You can keep adding crates as business grows. The previous weeks stay saved for history and all-time reports; the Profit/Loss calculation is preserved.</div>
+      <div id="weeklyStockMsg"></div>
+      <div class="stockGrid">
+        <div class="stockCard"><small>Current Week</small><strong id="weekRangeLabel">Loading…</strong><div id="weekStatusLabel">Checking weekly book</div></div>
+        <div class="stockCard"><small>Crates Purchased This Week</small><strong id="weekPurchased">0</strong><div>All additions this week</div></div>
+        <div class="stockCard"><small>Crates Sold This Week</small><strong id="weekSold">0</strong><div>Across this week's batches</div></div>
+        <div class="stockCard"><small>Crates Remaining This Week</small><strong id="weekRemaining">0</strong><div>Live weekly stock</div></div>
+        <div class="stockCard" id="weekProfitCard"><small>Profit/Loss This Week</small><strong id="weekProfit">GH₵0.00</strong><div id="weekProfitLabel">Weekly result</div></div>
+      </div>
+      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:12px">
+        <label for="stockWeekPicker" style="margin:0">View week history</label><select id="stockWeekPicker" style="max-width:250px"><option value="">Current week</option></select>
+        <button id="closeStockWeekBtn" type="button" class="danger">Close This Week (Sunday)</button>
+      </div>
+      <p class="stockNote" style="margin-top:10px">Closing a week archives it; it does not delete stock, sales, credit, or profit records. A new Monday automatically gets a fresh weekly book.</p>
+    </div>
+
+
     <div class="panel">
       <h2>Recent Sales</h2>
       <div class="tablebox">
@@ -160,7 +195,7 @@ th,td{padding:11px;border-bottom:1px solid #eee;text-align:left;font-size:14px}t
     </div>
   </section>
 
-  <section id="sales" class="section">
+  <section id="sales" class="section hidden" aria-hidden="true">
     <div class="panel">
       <h2 id="saleFormTitle">Record a Sale</h2>
       <div id="saleMsg"></div>
@@ -189,26 +224,8 @@ th,td{padding:11px;border-bottom:1px solid #eee;text-align:left;font-size:14px}t
   </section>
 
   <section id="stock" class="section">
-    <div class="panel" id="weeklyStockPanel">
-      <h2>🗓️ Weekly Stock Book (Monday–Sunday)</h2>
-      <div class="stockNote">All purchases and stock batches you add during this business week are grouped under one weekly book. You can keep adding crates as business grows. The previous weeks stay saved for history and all-time reports; the Profit/Loss calculation is preserved.</div>
-      <div id="weeklyStockMsg"></div>
-      <div class="stockGrid">
-        <div class="stockCard"><small>Current Week</small><strong id="weekRangeLabel">Loading…</strong><div id="weekStatusLabel">Checking weekly book</div></div>
-        <div class="stockCard"><small>Crates Purchased This Week</small><strong id="weekPurchased">0</strong><div>All additions this week</div></div>
-        <div class="stockCard"><small>Crates Sold This Week</small><strong id="weekSold">0</strong><div>Across this week's batches</div></div>
-        <div class="stockCard"><small>Crates Remaining This Week</small><strong id="weekRemaining">0</strong><div>Live weekly stock</div></div>
-        <div class="stockCard" id="weekProfitCard"><small>Profit/Loss This Week</small><strong id="weekProfit">GH₵0.00</strong><div id="weekProfitLabel">Weekly result</div></div>
-      </div>
-      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:12px">
-        <label for="stockWeekPicker" style="margin:0">View week history</label><select id="stockWeekPicker" style="max-width:250px"><option value="">Current week</option></select>
-        <button id="closeStockWeekBtn" type="button" class="danger">Close This Week (Sunday)</button>
-      </div>
-      <p class="stockNote" style="margin-top:10px">Closing a week archives it; it does not delete stock, sales, credit, or profit records. A new Monday automatically gets a fresh weekly book.</p>
-    </div>
-
-    <div class="panel">
-      <h2>📦 Live Stock & Profit</h2>
+    <div class="panel stock-subsection active" id="liveStockPanel" data-stock-panel="live">
+      <h2>📦 Live Stock & Profits</h2>
       <div class="stockNote"><strong>Live central stock:</strong> saved stock batches are loaded from Ezelex records. The summary below is calculated from the stock records belonging to your worker account.</div>
       <div id="stockLiveMsg"></div>
       <div class="stockGrid">
@@ -219,8 +236,8 @@ th,td{padding:11px;border-bottom:1px solid #eee;text-align:left;font-size:14px}t
       </div>
     </div>
 
-    <div class="panel">
-      <h2>Add / Edit Stock Record</h2>
+    <div class="panel stock-subsection" id="manageStockPanel" data-stock-panel="manage">
+      <h2>➕ Add / Edit Stock Record</h2>
       <div id="stockMsg"></div>
       <input type="hidden" id="editingStockId" value="">
       <form id="stockForm" class="grid">
@@ -261,8 +278,8 @@ th,td{padding:11px;border-bottom:1px solid #eee;text-align:left;font-size:14px}t
       <div style="margin-top:15px"><button id="saveStockBtn" class="primary" type="button">Save Stock Record</button> <button id="cancelEditStockBtn" type="button" style="display:none">Cancel Edit</button> <button id="deleteStockBtn" type="button" class="danger" style="display:none">Delete Stock Record</button></div>
     </div>
 
-    <div class="panel">
-      <h2>My Stock Records</h2><div class="stockNote">Enter your starting capital and purchase cost per unit. Total purchase cost is calculated automatically as quantity × unit cost. <strong>Cash In Hand = Starting Capital + Sales Revenue − Total Purchase Cost</strong>. Damage is tracked separately and is not treated as cash spent.</div>
+    <div class="panel stock-subsection" id="myStockRecordsPanel" data-stock-panel="records">
+      <h2>📋 My Stock Records</h2><div class="stockNote">Enter your starting capital and purchase cost per unit. Total purchase cost is calculated automatically as quantity × unit cost. <strong>Cash In Hand = Starting Capital + Sales Revenue − Total Purchase Cost</strong>. Damage is tracked separately and is not treated as cash spent.</div>
       <div class="tablebox"><table><thead><tr><th>Date</th><th>Product</th><th>Total</th><th>Sold</th><th>Damage</th><th>Remaining</th><th>Capital</th><th>Purchase</th><th>Cash In Hand</th><th>Profit/Loss</th><th>Actions</th></tr></thead>
       <tbody id="stockBody"><tr><td colspan="11">Loading...</td></tr></tbody></table></div>
     </div>
@@ -378,7 +395,17 @@ let stockWeekRows=[];
 let selectedStockWeekId="";
 
 const $=id=>document.getElementById(id);
-function msg(id,text,type=""){ $(id).innerHTML=text?`<div class="msg ${type}">${text}</div>`:""; }
+let toastTimer=null;
+function showSuccessToast(text){
+  const toast=$("globalToast"); if(!toast)return;
+  toast.textContent=String(text??"").replace(/<[^>]*>/g,"").trim();
+  toast.classList.add("show");
+  clearTimeout(toastTimer); toastTimer=setTimeout(()=>toast.classList.remove("show"),3200);
+}
+function msg(id,text,type=""){
+  const target=$(id); if(target)target.innerHTML=text?`<div class="msg ${type}">${text}</div>`:"";
+  if(type==="success"&&text)showSuccessToast(text);
+}
 function today(){const d=new Date();return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");}
 function esc(v){return String(v??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[m]));}
 function money(v){return "GH₵"+Number(v||0).toLocaleString("en-GH",{minimumFractionDigits:2,maximumFractionDigits:2});}
@@ -550,7 +577,7 @@ async function loadSales(){
   const {data,error}=await salesForWorker();
   if(error){
     msg("saleMsg","Could not load your sales: "+error.message,"error");
-    $("salesBody").innerHTML='<tr><td colspan="8">Could not load sales.</td></tr>';
+    if($("salesBody"))$("salesBody").innerHTML='<tr><td colspan="8">Could not load sales.</td></tr>';
     return;
   }
   const rows=data||[];
@@ -575,11 +602,11 @@ async function loadSales(){
   $("lastActivity").textContent=rows.length?dateOnly(rows[0].sale_date):"No sales recorded yet.";
 
   if(!rows.length){
-    $("salesBody").innerHTML='<tr><td colspan="8">No sales recorded yet.</td></tr>';
-    $("recentSalesBody").innerHTML='<tr><td colspan="6">No sales recorded yet.</td></tr>';
+    if($("salesBody"))$("salesBody").innerHTML='<tr><td colspan="8">No sales recorded yet.</td></tr>';
+    if($("recentSalesBody"))$("recentSalesBody").innerHTML='<tr><td colspan="6">No sales recorded yet.</td></tr>';
     return;
   }
-  $("salesBody").innerHTML=rows.map(s=>{
+  if($("salesBody"))$("salesBody").innerHTML=rows.map(s=>{
     const st=String(s.status||"pending").toLowerCase();
     const pending=(st==="pending"||!s.status);
     const deletable=pending||st==="rejected";
@@ -1361,20 +1388,51 @@ menuToggle?.addEventListener("click",()=>{
   workerMenu.classList.toggle("open",open);menuToggle.setAttribute("aria-expanded",String(open));
 });
 document.addEventListener("click",event=>{
-  if(workerMenu && menuToggle && !workerMenu.contains(event.target) && !menuToggle.contains(event.target)) closeWorkerMenu();
+  if(workerMenu && menuToggle && !workerMenu.contains(event.target) && !menuToggle.contains(event.target)){
+    closeWorkerMenu();
+    stockSubmenu?.classList.remove("open"); stockMenuToggle?.setAttribute("aria-expanded","false");
+  }
 });
+const stockMenuToggle=$("stockMenuToggle");
+const stockSubmenu=$("stockSubmenu");
+stockMenuToggle?.addEventListener("click",()=>{
+  const open=!stockSubmenu.classList.contains("open");
+  stockSubmenu.classList.toggle("open",open);
+  stockMenuToggle.setAttribute("aria-expanded",String(open));
+});
+function activateMainSection(tab){
+  document.querySelectorAll(".menuItem[data-tab]").forEach(b=>b.classList.remove("active"));
+  document.querySelectorAll(".section").forEach(section=>section.classList.remove("active"));
+  const button=document.querySelector(`.menuItem[data-tab="${tab}"]`);
+  if(button)button.classList.add("active");
+  if(typeof stockMenuToggle!=="undefined"&&stockMenuToggle)stockMenuToggle.classList.toggle("active",tab==="stock");
+  const section=$(tab); if(section)section.classList.add("active");
+  if(tab==="stock")loadStock();
+  if(tab==="stockHistory")loadStockHistory();
+  if(tab==="credit")loadCredits();
+  if(tab==="communication")loadMessages();
+}
 document.querySelectorAll(".menuItem[data-tab]").forEach(btn=>{
   btn.addEventListener("click",()=>{
-    document.querySelectorAll(".menuItem[data-tab]").forEach(b=>b.classList.remove("active"));
-    document.querySelectorAll(".section").forEach(section=>section.classList.remove("active"));
-    btn.classList.add("active");
-    const section=$(btn.dataset.tab); if(section)section.classList.add("active");
+    activateMainSection(btn.dataset.tab);
     closeWorkerMenu();
-    if(btn.dataset.tab==="sales") loadSales();
-    if(btn.dataset.tab==="stock") loadStock();
-    if(btn.dataset.tab==="stockHistory") loadStockHistory();
-    if(btn.dataset.tab==="credit") loadCredits();
-    if(btn.dataset.tab==="communication") loadMessages();
+  });
+});
+document.querySelectorAll(".stockSubItem[data-stock-view]").forEach(btn=>{
+  btn.addEventListener("click",()=>{
+    const view=btn.dataset.stockView;
+    document.querySelectorAll(".stockSubItem").forEach(b=>b.classList.toggle("active",b===btn));
+    document.querySelectorAll("[data-stock-panel]").forEach(panel=>panel.classList.toggle("active",panel.dataset.stockPanel===view));
+    stockSubmenu?.classList.remove("open"); stockMenuToggle?.setAttribute("aria-expanded","false");
+    closeWorkerMenu();
+    if(view==="weekly"){
+      activateMainSection("dashboard");
+      setTimeout(()=>$("weeklyStockPanel")?.scrollIntoView({behavior:"smooth",block:"start"}),50);
+    }else{
+      activateMainSection("stock");
+      if(view==="live"||view==="records"||view==="manage")loadStock();
+      setTimeout(()=>$(view==="live"?"liveStockPanel":view==="manage"?"manageStockPanel":"myStockRecordsPanel")?.scrollIntoView({behavior:"smooth",block:"start"}),50);
+    }
   });
 });
 $("menuLogout")?.addEventListener("click",async()=>{
