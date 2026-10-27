@@ -8,15 +8,15 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <style>
 *{box-sizing:border-box}
-body{margin:0;font-family:Arial,sans-serif;background:#f4f6f8;color:#17202a}
-header{background:#111827;color:#fff;padding:14px clamp(12px,4vw,5%);display:flex;justify-content:space-between;align-items:center;gap:12px;position:sticky;top:0;z-index:10;min-width:0}
+body{margin:0;font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;background:#f3f5f8;color:#172033;line-height:1.5} h1,h2,h3,h4{line-height:1.25;letter-spacing:-.02em} h2{font-size:clamp(19px,2.5vw,25px);color:#172b4d;margin-top:0} p{line-height:1.65}
+header{background:linear-gradient(110deg,#10233f,#173b63);color:#fff;padding:16px clamp(12px,4vw,5%);display:flex;justify-content:space-between;align-items:center;gap:12px;position:sticky;top:0;z-index:10;min-width:0;box-shadow:0 4px 16px #10233f24}
 header h1{margin:0;font-size:22px}
 header small{display:block;color:#cbd5e1;margin-top:4px}
 button{border:0;border-radius:8px;padding:11px 16px;cursor:pointer;font-weight:700}
 .primary{background:#111827;color:#fff}.danger{background:#b42318;color:#fff}.secondary{background:#e5e7eb;color:#111827}
 .wrap{max-width:1150px;margin:25px auto;padding:0 16px}
 .login{max-width:430px;margin:60px auto;background:#fff;padding:30px;border-radius:14px;box-shadow:0 8px 30px #0001}
-.panel{background:#fff;padding:21px;border-radius:12px;margin-bottom:18px;box-shadow:0 3px 15px #0000000d}
+.panel{background:#fff;padding:clamp(16px,2.5vw,24px);border:1px solid #e4e9f0;border-radius:16px;margin-bottom:20px;box-shadow:0 8px 24px #14213d0a}
 .grid{display:grid;grid-template-columns:1fr 1fr;gap:15px}
 label{font-weight:700;font-size:14px;display:block}
 input,select,textarea{width:100%;padding:12px;margin:7px 0 14px;border:1px solid #d5dbe1;border-radius:8px;font-size:15px}
@@ -40,25 +40,25 @@ textarea{min-height:90px;resize:vertical}
 .stockSubItem.active{background:#dbeafe;color:#1d4ed8}
 .stock-subsection{display:none}
 .stock-subsection.active{display:block}
-#weeklyStockPanel h2,.stock-subsection h2{padding:10px 12px;border-radius:8px;color:#fff;background:linear-gradient(90deg,#1d4ed8,#0f766e);font-size:clamp(18px,2.4vw,23px)}
+#weeklyStockPanel h2,.stock-subsection h2{padding:13px 15px;border-radius:10px;color:#fff;background:linear-gradient(100deg,#174a8b,#087e80);font-size:clamp(18px,2.4vw,23px)}
 #globalToast{position:fixed;right:16px;bottom:18px;z-index:9999;max-width:min(420px,calc(100vw - 32px));padding:13px 17px;border-radius:10px;background:#067647;color:#fff;box-shadow:0 10px 28px #0003;font-weight:700;opacity:0;transform:translateY(12px);pointer-events:none;transition:opacity .2s,transform .2s}
 #globalToast.show{opacity:1;transform:translateY(0)}
 .menuDivider{height:1px;background:#e5e7eb;margin:7px 4px}
 .section{display:none}.section.active{display:block}
 .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:18px}
-.stat{background:#f8fafc;border:1px solid #e5e7eb;border-radius:12px;padding:15px}
+.stat{background:#fff;border:1px solid #dce4ee;border-top:3px solid #2563a6;border-radius:12px;padding:16px;min-width:0;overflow-wrap:anywhere}
 .stat small{display:block;color:#64748b;font-weight:700;margin-bottom:6px}.stat strong{font-size:21px}
 .stockGrid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px;margin:15px 0}
-.stockCard{background:#f8fafc;border:1px solid #e5e7eb;border-radius:12px;padding:15px}
+.stockCard{background:#fff;border:1px solid #dce4ee;border-radius:12px;padding:16px;min-width:0;overflow-wrap:anywhere}
 .stockCard small{display:block;color:#64748b;font-weight:700;margin-bottom:6px}.stockCard strong{font-size:20px}
 .resultGrid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:15px}
 .resultCard{border-radius:12px;padding:16px;border:1px solid #e5e7eb;background:#fff}
 .resultCard h3{margin:0 0 7px;font-size:14px;color:#475569}.resultCard strong{font-size:21px}
-.profit{background:#ecfdf3;border-color:#a7f3d0}.loss{background:#fff1f2;border-color:#fecdd3}
+.profit{background:#dcfce7!important;border-color:#16a34a!important;color:#14532d}.profit strong,.profit h3,.profit .live{color:#166534!important}.loss{background:#fee2e2!important;border-color:#dc2626!important;color:#7f1d1d}.loss strong,.loss h3,.loss .live{color:#991b1b!important}
 .live{font-size:13px;color:#475569;margin-top:8px}
-.stockNote{background:#fffbeb;border:1px solid #fde68a;padding:12px;border-radius:10px;font-size:13px;line-height:1.5}
+.stockNote{background:#f4f8fc;border:1px solid #d7e3f0;padding:14px;border-radius:10px;font-size:14px;line-height:1.6;color:#334155}
 .tablebox{overflow:auto}table{width:100%;border-collapse:collapse;min-width:700px}
-th,td{padding:11px;border-bottom:1px solid #eee;text-align:left;font-size:14px}th{background:#f8fafc}
+th,td{padding:12px;border-bottom:1px solid #e6ebf1;text-align:left;font-size:14px}th{background:#f1f5f9;color:#263b53;font-weight:750}
 .badge{display:inline-block;padding:5px 9px;border-radius:99px;background:#dcfae6;color:#067647;font-size:12px;font-weight:700}
 .cardrow{display:grid;grid-template-columns:repeat(2,1fr);gap:15px}
 .infoBox{background:#f8fafc;border-radius:10px;padding:14px;line-height:1.7}
@@ -75,7 +75,7 @@ th,td{padding:11px;border-bottom:1px solid #eee;text-align:left;font-size:14px}t
 @media(max-width:700px){#dailyPerformanceChart{height:270px}.dailyChartPanel{padding:8px}}
 
 @media(max-width:900px){.stats,.stockGrid{grid-template-columns:1fr 1fr}.resultGrid{grid-template-columns:1fr 1fr}}
-@media(max-width:700px){header{padding:12px 14px}header h1{font-size:18px}.grid,.cardrow{grid-template-columns:1fr}.full{grid-column:auto}.login{margin:24px 12px;padding:22px}.wrap{padding:0 10px;margin:14px auto}.panel{padding:15px;border-radius:10px}.stats,.stockGrid,.resultGrid{grid-template-columns:1fr}.menuWrap{margin-bottom:10px}.menuPopup{width:min(340px,calc(100vw - 20px));right:0;max-height:65vh}.menuToggle{min-width:104px}.tablebox{max-width:100%;-webkit-overflow-scrolling:touch}button{min-height:44px}input,select,textarea{font-size:16px}}
+@media(max-width:700px){header{padding:14px 14px}header h1{font-size:18px}.grid,.cardrow{grid-template-columns:1fr}.full{grid-column:auto}.login{margin:24px 12px;padding:22px}.wrap{padding:0 10px;margin:14px auto}.panel{padding:15px;border-radius:10px}.stats,.stockGrid,.resultGrid{grid-template-columns:1fr}.menuWrap{margin-bottom:10px}.menuPopup{width:min(340px,calc(100vw - 20px));right:0;max-height:65vh}.menuToggle{min-width:104px}.tablebox{max-width:100%;-webkit-overflow-scrolling:touch}button{min-height:44px}input,select,textarea{font-size:16px}}
 </style>
 </head>
 <body>
@@ -123,15 +123,15 @@ th,td{padding:11px;border-bottom:1px solid #eee;text-align:left;font-size:14px}t
 
 <main id="portal" class="wrap hidden">
   <div class="menuWrap">
-    <button id="menuToggle" class="menuToggle" type="button" aria-expanded="false" aria-controls="workerMenu">☰ Menu</button>
+    <button id="menuToggle" class="menuToggle" type="button" aria-expanded="false" aria-controls="workerMenu"> Menu</button>
     <nav id="workerMenu" class="menuPopup" aria-label="Worker portal menu">
       <button type="button" class="menuItem active" data-tab="dashboard">Dashboard</button>
-      <button type="button" id="stockMenuToggle" class="menuItem" aria-expanded="false" aria-controls="stockSubmenu">📦 Live Stock ▾</button>
+      <button type="button" id="stockMenuToggle" class="menuItem" aria-expanded="false" aria-controls="stockSubmenu"> Live Stock ▾</button>
       <div id="stockSubmenu" class="stockSubmenu" aria-label="Live Stock sections">
-        <button type="button" class="stockSubItem" data-stock-view="weekly">🗓️ Weekly Stock Book (Monday–Sunday)</button>
-        <button type="button" class="stockSubItem" data-stock-view="live">📊 Live Stock & Profits</button>
-        <button type="button" class="stockSubItem" data-stock-view="manage">➕ Add / Edit Stock Record</button>
-        <button type="button" class="stockSubItem" data-stock-view="records">📋 My Stock Records</button>
+        <button type="button" class="stockSubItem" data-stock-view="weekly"> Weekly Stock Book (Monday–Sunday)</button>
+        <button type="button" class="stockSubItem" data-stock-view="live"> Live Stock & Profits</button>
+        <button type="button" class="stockSubItem" data-stock-view="manage"> Add / Edit Stock Record</button>
+        <button type="button" class="stockSubItem" data-stock-view="records"> My Stock Records</button>
       </div>
       <button type="button" class="menuItem" data-tab="stockHistory">Edit History</button>
       <button type="button" class="menuItem" data-tab="credit">On-Credit</button>
@@ -144,31 +144,31 @@ th,td{padding:11px;border-bottom:1px solid #eee;text-align:left;font-size:14px}t
     </nav>
   </div>
   <div class="panel">
-    <h2>Welcome, <span id="workerName">Worker</span> 👋</h2>
+    <h2>Welcome, <span id="workerName">Worker</span> </h2>
     <div class="workerInfo">
       <strong>Worker ID:</strong> <span id="workerId">—</span> &nbsp; | &nbsp;
       <strong>Role:</strong> <span id="workerRole">—</span> &nbsp; | &nbsp;
       <strong>Status:</strong> <span id="workerStatus" class="badge">—</span>
     </div>
     <div class="stats">
-      <div class="stat"><small>Today Sale</small><strong id="todaySales">GH₵0.00</strong></div>
-      <div class="stat"><small>This Week</small><strong id="weekSales">GH₵0.00</strong></div>
-      <div class="stat"><small>This Month</small><strong id="monthSales">GH₵0.00</strong></div>
-      <div class="stat"><small>All Time</small><strong id="allSales">GH₵0.00</strong></div>
+      <div class="stat"><small>Total Crates Bought</small><strong id="todaySales">0</strong></div>
+      <div class="stat"><small>Total Crates Sold</small><strong id="weekSales">0</strong></div>
+      <div class="stat" id="dashboardProfitCard"><small>Live Profit/Loss</small><strong id="monthSales">GH₵0.00</strong></div>
+      <div class="stat"><small>Cash In Hand</small><strong id="allSales">GH₵0.00</strong></div>
     </div>
   </div>
 
   <section id="dashboard" class="section active">
     <div class="panel">
-      <h2>Worker Overview</h2>
-      <p>Your sales are sent to the central Ezelex Enterprise admin dashboard. Stock records are also saved centrally.</p>
+      <h2>Live Stock &amp; Profit Database</h2>
+      <p>Your live stock quantities, cash position and profit/loss are shown below. Records remain connected to the Ezelex Enterprise system.</p>
       <div class="cardrow">
         <div class="infoBox"><strong>Worker account</strong><br><span id="dashEmail">—</span><br><span id="dashPhone">—</span></div>
         <div class="infoBox"><strong>Last activity</strong><br><span id="lastActivity">Loading...</span></div>
       </div>
   </div>
     <div class="panel" id="weeklyStockPanel">
-      <h2>🗓️ Weekly Stock Book (Monday–Sunday)</h2>
+      <h2> Weekly Stock Book (Monday–Sunday)</h2>
       <div class="stockNote">All purchases and stock batches you add during this business week are grouped under one weekly book. You can keep adding crates as business grows. The previous weeks stay saved for history and all-time reports; the Profit/Loss calculation is preserved.</div>
       <div id="weeklyStockMsg"></div>
       <div class="stockGrid">
@@ -214,8 +214,8 @@ th,td{padding:11px;border-bottom:1px solid #eee;text-align:left;font-size:14px}t
     <div class="panel">
       <h2>My Sales History</h2>
       <div style="display:flex;gap:10px;flex-wrap:wrap;margin:0 0 15px">
-        <button id="pdfReportBtn" class="primary" type="button">📄 Download PDF Report</button>
-        <button id="shareReportBtn" type="button">📤 Share Report</button>
+        <button id="pdfReportBtn" class="primary" type="button"> Download PDF Report</button>
+        <button id="shareReportBtn" type="button"> Share Report</button>
       </div>
       <div id="reportMsg"></div>
       <div class="tablebox"><table><thead><tr><th>Date</th><th>Customer</th><th>Product/Service</th><th>Qty</th><th>Amount (GHS)</th><th>Payment</th><th>Notes</th><th>Status / Action</th></tr></thead>
@@ -225,7 +225,7 @@ th,td{padding:11px;border-bottom:1px solid #eee;text-align:left;font-size:14px}t
 
   <section id="stock" class="section">
     <div class="panel stock-subsection active" id="liveStockPanel" data-stock-panel="live">
-      <h2>📦 Live Stock & Profits</h2>
+      <h2> Live Stock & Profits</h2>
       <div class="stockNote"><strong>Live central stock:</strong> saved stock batches are loaded from Ezelex records. The summary below is calculated from the stock records belonging to your worker account.</div>
       <div id="stockLiveMsg"></div>
       <div class="stockGrid">
@@ -237,7 +237,7 @@ th,td{padding:11px;border-bottom:1px solid #eee;text-align:left;font-size:14px}t
     </div>
 
     <div class="panel stock-subsection" id="manageStockPanel" data-stock-panel="manage">
-      <h2>➕ Add / Edit Stock Record</h2>
+      <h2> Add / Edit Stock Record</h2>
       <div id="stockMsg"></div>
       <input type="hidden" id="editingStockId" value="">
       <form id="stockForm" class="grid">
@@ -279,7 +279,7 @@ th,td{padding:11px;border-bottom:1px solid #eee;text-align:left;font-size:14px}t
     </div>
 
     <div class="panel stock-subsection" id="myStockRecordsPanel" data-stock-panel="records">
-      <h2>📋 My Stock Records</h2><div class="stockNote">Enter your starting capital and purchase cost per unit. Total purchase cost is calculated automatically as quantity × unit cost. <strong>Cash In Hand = Starting Capital + Sales Revenue − Total Purchase Cost</strong>. Damage is tracked separately and is not treated as cash spent.</div>
+      <h2> My Stock Records</h2><div class="stockNote">Enter your starting capital and purchase cost per unit. Total purchase cost is calculated automatically as quantity × unit cost. <strong>Cash In Hand = Starting Capital + Sales Revenue − Total Purchase Cost</strong>. Damage is tracked separately and is not treated as cash spent.</div>
       <div class="tablebox"><table><thead><tr><th>Date</th><th>Product</th><th>Total</th><th>Sold</th><th>Damage</th><th>Remaining</th><th>Capital</th><th>Purchase</th><th>Cash In Hand</th><th>Profit/Loss</th><th>Actions</th></tr></thead>
       <tbody id="stockBody"><tr><td colspan="11">Loading...</td></tr></tbody></table></div>
     </div>
@@ -288,7 +288,7 @@ th,td{padding:11px;border-bottom:1px solid #eee;text-align:left;font-size:14px}t
 
   <section id="credit" class="section">
     <div class="panel" id="creditPanel">
-      <h2>🧾 On-Credit Egg Sales</h2>
+      <h2> On-Credit Egg Sales</h2>
       <p class="stockNote">Record crates given to a customer who has not paid yet. Credit sales count as sold and earned profit, but unpaid money is excluded from Cash In Hand until the customer pays. Ezelex admin can see outstanding credit.</p>
       <div id="creditMsg"></div>
       <form id="creditForm" class="grid">
@@ -307,7 +307,7 @@ th,td{padding:11px;border-bottom:1px solid #eee;text-align:left;font-size:14px}t
 
   <section id="stockHistory" class="section">
     <div class="panel">
-      <h2>📅 Stock Edit & Daily Sales History</h2>
+      <h2> Stock Edit & Daily Sales History</h2>
       <p>Each stock batch keeps one record. Every time you update its sold or damaged quantity, the date, time and quantity change are recorded here for you and Ezelex admin.</p>
       <div id="stockHistoryMsg"></div>
       <div class="stockGrid">
@@ -360,7 +360,7 @@ th,td{padding:11px;border-bottom:1px solid #eee;text-align:left;font-size:14px}t
 
   <section id="communication" class="section">
     <div class="panel">
-      <h2>📩 Communication</h2>
+      <h2> Communication</h2>
       <p>Messages and announcements from Ezelex Enterprise will appear here when the communication records are available.</p>
       <div id="messagesBody"><div class="message">No messages yet.</div></div>
     </div>
@@ -368,7 +368,7 @@ th,td{padding:11px;border-bottom:1px solid #eee;text-align:left;font-size:14px}t
 
   <section id="contract" class="section">
     <div class="panel">
-      <h2>📄 My Contract</h2>
+      <h2> My Contract</h2>
       <div class="infoBox">
         <strong>Contract Start:</strong> <span id="contractStart">—</span><br>
         <strong>Contract End:</strong> <span id="contractEnd">—</span>
@@ -595,10 +595,6 @@ async function loadSales(){
     if(d>=weekStart)weekTotal+=amount;
     if(d>=monthStart)monthTotal+=amount;
   });
-  $("todaySales").textContent=money(todayTotal);
-  $("weekSales").textContent=money(weekTotal);
-  $("monthSales").textContent=money(monthTotal);
-  $("allSales").textContent=money(allTotal);
   $("lastActivity").textContent=rows.length?dateOnly(rows[0].sale_date):"No sales recorded yet.";
 
   if(!rows.length){
@@ -634,7 +630,7 @@ function calculateStock(){
   $("calcUnitCost").textContent=money(unitCost);$("calcSoldCost").textContent=money(soldCost);
   $("calcDamageValue").textContent=money(damageValue);$("calcCapital").textContent=money(capital);$("calcCreditCapital").textContent=money(outstandingCredit);$("calcTotalCapital").textContent=money(capital+outstandingCredit);$("calcCashInHand").textContent=money(cash);$("calcSalesRevenue").textContent=money(revenue);
   $("calcProfit").textContent=money(profit);$("calcAccounted").textContent=accounted+" units";
-  const card=$("profitCard");card.classList.toggle("profit",profit>=0);card.classList.toggle("loss",profit<0);
+  const card=$("profitCard");card.classList.toggle("profit",profit>0);card.classList.toggle("loss",profit<0);
   $("profitLabel").textContent=profit>0?"You are making a profit":profit<0?"You are currently making a loss":"Break-even";
   const over=accounted>total || cash<0;
   $("calcAccountedNote").textContent=accounted>total?"Too many units accounted for — check your numbers.":cash<0?"Purchase cost exceeds starting capital plus recorded sales — check your figures.":"Sold + damage";
@@ -645,6 +641,13 @@ async function loadStock(){
   const {data,error}=await selectWorkerRows("worker_stock_batches","*",{column:"stock_date",ascending:false});
   if(error){$("stockBody").innerHTML='<tr><td colspan="11">Stock records could not be loaded.</td></tr>';msg("stockLiveMsg","Could not load live stock: "+error.message,"error");return;}
   const allRows=data||[]; liveStockRows=allRows;
+  const dashBought=allRows.reduce((sum,r)=>sum+(r.stock_type==="carry_forward"?0:Number(r.total_quantity||0)),0);
+  const dashSold=allRows.reduce((sum,r)=>sum+Number(r.sold_quantity||0),0);
+  const dashProfit=allRows.reduce((sum,r)=>sum+Number(r.profit_loss||0),0);
+  const dashCash=allRows.reduce((sum,r)=>sum+Number(r.cash_in_hand??(Number(r.capital_amount??r.purchase_total??0)+Number(r.sales_revenue||0)-Number(r.credit_outstanding||0)-Number(r.purchase_total||0))),0);
+  $("todaySales").textContent=dashBought.toLocaleString(); $("weekSales").textContent=dashSold.toLocaleString();
+  $("monthSales").textContent=money(dashProfit); $("allSales").textContent=money(dashCash);
+  const dashboardProfitCard=$("dashboardProfitCard"); dashboardProfitCard?.classList.toggle("profit",dashProfit>0); dashboardProfitCard?.classList.toggle("loss",dashProfit<0);
   const chosenWeekId=selectedStockWeekId||currentStockWeek?.id||"";
   const chosenWeek=stockWeekRows.find(w=>String(w.id)===String(chosenWeekId))||currentStockWeek;
   const chosenStart=chosenWeek?.week_start||mondayDateISO(today());
@@ -805,12 +808,20 @@ function startStockEdit(r){
   msg("stockMsg","Editing stock batch. Update quantity, purchase cost per unit, sold or damage quantity, then save. ","success");
 }
 window.editStock=async function(id){
-  const {data:errorWeekData}=await db.from("worker_stock_batches").select("week_id").eq("id",id).eq("worker_id",currentUser.id).maybeSingle();
-  const week=stockWeekRows.find(w=>String(w.id)===String(errorWeekData?.week_id||""));
+  if(!currentUser||!profile){msg("stockMsg","Please sign in again before editing stock.","error");return;}
+  // Existing records may use either the authenticated UUID or the legacy worker ID as owner key.
+  let result=await db.from("worker_stock_batches").select("*").eq("id",id).eq("worker_id",currentUser.id).maybeSingle();
+  if(!result.data&&!result.error&&profile.worker_id){result=await db.from("worker_stock_batches").select("*").eq("id",id).eq("worker_id",profile.worker_id).maybeSingle();}
+  if(result.error||!result.data){msg("stockMsg","Could not open that stock record. Please refresh and try again.","error");return;}
+  const data=result.data;
+  const week=stockWeekRows.find(w=>String(w.id)===String(data.week_id||""));
   if(week&&week.status==="closed"){msg("stockMsg","This weekly stock book is closed and archived. It is kept for reporting and cannot be edited.","error");return;}
-  if(errorWeekData?.week_id&&String(errorWeekData.week_id)!==String(currentStockWeek?.id||"")){msg("stockMsg","Only the current week's stock can be edited. Older weekly books are archived for reporting.","error");return;}
-  const {data,error}=await db.from("worker_stock_batches").select("*").eq("id",id).eq("worker_id",currentUser.id).maybeSingle();
-  if(error||!data){msg("stockMsg","Could not open that stock record for editing.","error");return;} startStockEdit(data);
+  if(data.week_id&&String(data.week_id)!==String(currentStockWeek?.id||"")){msg("stockMsg","Only the current week's stock can be edited. Older weekly books are archived for reporting.","error");return;}
+  activateMainSection("stock");
+  document.querySelectorAll(".stockSubItem").forEach(b=>b.classList.toggle("active",b.dataset.stockView==="manage"));
+  document.querySelectorAll("[data-stock-panel]").forEach(panel=>panel.classList.toggle("active",panel.dataset.stockPanel==="manage"));
+  startStockEdit(data);
+  setTimeout(()=>$("manageStockPanel")?.scrollIntoView({behavior:"smooth",block:"start"}),50);
 };
 function cancelStockEdit(){
   editingStockId=""; editingStockOriginal=null; $("editingStockId").value=""; $("stockForm").reset(); $("stockDate").value=today(); $("stockSold").value=0; $("stockDamage").value=0; $("saveStockBtn").textContent="Save Stock Record"; $("cancelEditStockBtn").style.display="none"; $("deleteStockBtn").style.display="none"; updateStockFormCreditSummary(""); calculateStock(); msg("stockMsg","Edit cancelled","");
