@@ -40,30 +40,33 @@ table{width:100%;border-collapse:collapse;min-width:1050px}th,td{padding:11px;bo
 .employee-form h3{margin-top:0}
 @media(max-width:650px){.employee-submenu{display:grid;grid-template-columns:1fr}.employee-form{padding:12px}}
 
-/* Admin-only contract workspace refinement */
-.menu-group-toggle{display:flex!important;justify-content:space-between;align-items:center;background:#f4f7fb!important;color:#10243e!important;border:1px solid #e0e7ef!important;font-weight:800!important;margin-top:4px}
-.menu-subgroup{padding:5px 0 7px 10px;border-left:2px solid #d8b15b;margin:3px 0 7px 8px}
-.admin-menu .menu-subgroup button{font-size:13px;padding:10px 12px;border-radius:7px;color:#34445a}
-.admin-menu .menu-subgroup button:hover{background:#eaf1f8;outline:1px solid #c8d6e5}
-.tri-navigation{border:1px solid #dbe4ee;background:linear-gradient(145deg,#fff,#f5f8fc)}
+/* Admin-only contract workspace: restrained navy, slate and gold */
+.menu-group-toggle{display:flex!important;justify-content:space-between;align-items:center;gap:12px;width:100%;background:linear-gradient(110deg,#10243e,#1e3857)!important;color:#fff!important;border:1px solid #344b66!important;border-left:4px solid #c8a454!important;font-weight:800!important;margin:8px 0 5px!important;padding:13px 14px!important;border-radius:9px!important;box-shadow:0 3px 10px rgba(16,36,62,.10)}
+.menu-group-toggle:hover,.menu-group-toggle[aria-expanded="true"]{background:linear-gradient(110deg,#183452,#28496d)!important;outline:2px solid rgba(200,164,84,.24)}
+.menu-group-mark{display:inline-flex;align-items:center;justify-content:center;min-width:24px;height:24px;border:1px solid rgba(255,255,255,.28);border-radius:6px;color:#f0d38b;font-size:18px;line-height:1}
+.menu-subgroup{padding:7px 0 9px 12px;border-left:2px solid #c8a454;margin:3px 0 10px 9px;background:#f7f9fc;border-radius:0 9px 9px 0}
+.admin-menu .menu-subgroup button{display:block;width:100%;text-align:left;font-size:13px;line-height:1.35;padding:11px 12px;margin:3px 0;border-radius:7px;color:#263b53;background:transparent;border:1px solid transparent;white-space:normal}
+.admin-menu .menu-subgroup button:hover,.admin-menu .menu-subgroup button.active{background:#fff;border-color:#d5b66b;color:#10243e;box-shadow:0 3px 10px rgba(16,36,62,.07)}
+.tri-navigation{border:1px solid #dbe4ee;background:linear-gradient(145deg,#fff,#f5f8fc);border-radius:16px;box-shadow:0 8px 24px rgba(16,36,62,.05)}
 .tri-navigation-heading .eyebrow{font-size:11px;letter-spacing:1.8px;font-weight:900;color:#9a7426}
-.tri-navigation-heading h2{margin:7px 0}
+.tri-navigation-heading h2{margin:7px 0;color:#142b45}
 .tri-navigation-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
-.tri-nav-card{display:flex;flex-direction:column;align-items:flex-start;text-align:left;gap:7px;padding:17px;background:#fff;border:1px solid #d9e2ec;border-left:4px solid #c49a3a;border-radius:12px;color:#152b45;min-height:88px;transition:transform .15s,box-shadow .15s,border-color .15s}
+.tri-nav-card{display:flex;flex-direction:column;align-items:flex-start;text-align:left;gap:7px;padding:18px;background:#fff;border:1px solid #d9e2ec;border-left:4px solid #c49a3a;border-radius:12px;color:#152b45;min-height:90px;transition:transform .15s,box-shadow .15s,border-color .15s;cursor:pointer}
 .tri-nav-card strong{font-size:15px}.tri-nav-card span{font-size:12px;color:#667085;font-weight:500}
-.tri-nav-card:hover,.tri-nav-card.active{border-color:#c49a3a;box-shadow:0 8px 20px #102a4310;transform:translateY(-1px)}
-.tri-panel{border-top:3px solid #d0a548}
-@media(max-width:650px){.tri-navigation-grid{grid-template-columns:1fr}.tri-nav-card{min-height:70px;padding:14px}.tri-navigation-heading h2{font-size:20px}}
+.tri-nav-card:hover,.tri-nav-card.active{border-color:#c49a3a;box-shadow:0 8px 20px rgba(16,42,67,.08);transform:translateY(-1px)}
+.tri-panel{border-top:3px solid #d0a548;border-radius:12px;scroll-margin-top:18px}
+#tricycle .tri-panel h2{color:#142b45}
+@media(max-width:650px){.tri-navigation-grid{grid-template-columns:1fr}.tri-nav-card{min-height:70px;padding:14px}.tri-navigation-heading h2{font-size:20px}.admin-menu .menu-subgroup button{font-size:14px;padding:12px}.menu-group-toggle{padding:14px!important}}
 </style>
 </head>
 <body>
-<header><div class="brand"><div class="logo">EZ</div><div><h1>Ezelex Enterprise</h1><small>Administrator Dashboard</small></div></div><div class="header-actions"><button id="menuToggle" class="menu-toggle hidden" aria-expanded="false" aria-controls="adminMenu">☰ Open Menu</button><button id="logoutBtn" class="danger hidden">Log out</button><div id="adminMenu" class="admin-menu hidden" role="menu"><button data-section="capital">Business Capital</button><button type="button" class="menu-group-toggle" data-menu-group="tricycleGroup" aria-expanded="false">Tricycle Contract <span>＋</span></button>
+<header><div class="brand"><div class="logo">EZ</div><div><h1>Ezelex Enterprise</h1><small>Administrator Dashboard</small></div></div><div class="header-actions"><button id="menuToggle" class="menu-toggle hidden" aria-expanded="false" aria-controls="adminMenu">☰ Open Menu</button><button id="logoutBtn" class="danger hidden">Log out</button><div id="adminMenu" class="admin-menu hidden" role="menu"><button data-section="capital">Business Capital</button><button type="button" class="menu-group-toggle" data-menu-group="tricycleGroup" aria-expanded="false"><span class="menu-group-label">Tricycle Contract</span><span class="menu-group-mark" aria-hidden="true">＋</span></button>
 <div id="tricycleGroup" class="menu-subgroup hidden">
 <button type="button" data-tri-panel="triCreatePanel">Create Tricycle Contract</button>
 <button type="button" data-tri-panel="triHistoricalPanel">Record Historical Payment</button>
 <button type="button" data-tri-panel="triCalendarPanel">Payment Ledger Calendar</button>
 </div>
-<button type="button" class="menu-group-toggle" data-menu-group="databaseGroup" aria-expanded="false">Database Management <span>＋</span></button>
+<button type="button" class="menu-group-toggle" data-menu-group="databaseGroup" aria-expanded="false"><span class="menu-group-label">Database Management</span><span class="menu-group-mark" aria-hidden="true">＋</span></button>
 <div id="databaseGroup" class="menu-subgroup hidden">
 <button type="button" data-tri-panel="triManagementPanel">Tricycle Contract Management</button>
 <button type="button" data-tri-panel="triPrivatePanel">Private Tricycle Profit (Admin Only)</button>
@@ -207,7 +210,6 @@ table{width:100%;border-collapse:collapse;min-width:1050px}th,td{padding:11px;bo
  <div class="section tri-panel" id="triCalendarPanel"><h2>Payment Ledger Calendar</h2><p class="muted">Choose a contract and month. Click any date to see payments recorded for that day and the daily target from the contract start date.</p><div class="toolbar"><select id="triCalendarContract" style="max-width:340px"><option value="">Select contract</option></select><button class="soft" id="triCalPrev">‹ Previous month</button><input id="triCalendarMonth" type="month" style="max-width:190px"><button class="soft" id="triCalNext">Next month ›</button></div><div id="triCalendar" class="tri-calendar"></div><div id="triCalendarDayDetail" class="msg">Choose a date in the calendar to view details.</div></div>
  <div class="section tri-panel" id="triOwingPanel"><h2>Owing / Weekly Shortfalls</h2><p class="muted">The expected amount is GH₵200 per contract day (GH₵1,400 for a seven-day period). When a report records less than the target, the difference is shown as owing. This is a tracking estimate and does not itself change the contract balance.</p><div class="cards" style="grid-template-columns:repeat(2,1fr)"><div class="card"><div class="label">Total Recorded Shortfall</div><div class="value" id="triOwingTotal">GH₵0.00</div></div><div class="card"><div class="label">Periods Below Target</div><div class="value" id="triOwingCount">0</div></div></div><div class="tablebox"><table><thead><tr><th>Driver</th><th>Period</th><th>Expected</th><th>Recorded</th><th>Owing</th><th>Report Status</th></tr></thead><tbody id="triOwingBody"></tbody></table></div></div>
  <div class="section tri-panel" id="triLedgerPanel"><h2>Full Payment Ledger</h2><p class="muted">Includes historical payments and payments confirmed by weekly report approval.</p><div class="tablebox"><table><thead><tr><th>Date</th><th>Driver / Vehicle</th><th>Amount</th><th>Type</th><th>Method</th><th>Reference</th><th>Notes</th></tr></thead><tbody id="triPaymentsBody"><tr><td colspan="7" class="empty">Loading payments...</td></tr></tbody></table></div></div>
-</section>Date</th><th>Driver / Vehicle</th><th>Amount</th><th>Type</th><th>Method</th><th>Reference</th><th>Notes</th></tr></thead><tbody id="triPaymentsBody"><tr><td colspan="7" class="empty">Loading payments...</td></tr></tbody></table></div></div>
 </section>
 
 <section id="profile" class="page hidden"><div class="section"><h2>Admin Profile</h2><div class="profile"><div class="avatar">AD</div><div><h2>EZELEX Administrator</h2><p><b>Admin ID:</b> ADMIN001</p><p><b>Email:</b> <span id="adminEmail">—</span></p><p><b>Status:</b> <span class="badge approved">ACTIVE</span></p><p class="muted">EZELEX ENTERPRISE • Administrator Account</p></div></div></div></section>
@@ -460,7 +462,7 @@ document.querySelectorAll("[data-tri-panel]").forEach(b=>b.addEventListener("cli
 document.querySelectorAll("[data-menu-group]").forEach(b=>b.addEventListener("click",()=>{
  const group=$(b.dataset.menuGroup);const open=group.classList.contains("hidden");
  group.classList.toggle("hidden",!open);b.setAttribute("aria-expanded",String(open));
- const mark=b.querySelector("span");if(mark)mark.textContent=open?"−":"＋";
+ const mark=b.querySelector(".menu-group-mark");if(mark)mark.textContent=open?"−":"＋";
 }));
 
 $("menuToggle").onclick=()=>{const open=$("adminMenu").classList.toggle("hidden")===false;$("menuToggle").setAttribute("aria-expanded",String(open));$("menuToggle").textContent=open?"✕ Close Menu":"☰ Open Menu"};
