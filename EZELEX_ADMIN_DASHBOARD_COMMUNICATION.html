@@ -40,26 +40,39 @@ table{width:100%;border-collapse:collapse;min-width:1050px}th,td{padding:11px;bo
 .employee-form h3{margin-top:0}
 @media(max-width:650px){.employee-submenu{display:grid;grid-template-columns:1fr}.employee-form{padding:12px}}
 
-/* EZELEX Admin: refined contract navigation and responsive workspace */
-.admin-menu-group{margin:3px 0;border-bottom:1px solid #edf1f6;padding-bottom:4px}
-.admin-menu-parent{display:flex!important;align-items:center;justify-content:space-between;gap:12px;width:100%;text-align:left;background:#f5f7fb!important;color:#14243a!important;font-weight:800!important;border:1px solid #e2e8f0!important;border-radius:10px!important;padding:13px 14px!important}
-.admin-menu-parent:hover,.admin-menu-parent:focus{background:#eaf0f8!important;outline:2px solid #d6b56d!important}
-.menu-chevron{color:#a47b24;font-size:17px;transition:transform .18s ease}
-.admin-menu-parent[aria-expanded="true"] .menu-chevron{transform:rotate(180deg)}
-.admin-submenu{padding:5px 0 5px 10px;display:grid;gap:4px}
-.admin-submenu button{border-left:3px solid #d6b56d!important;border-radius:7px!important;background:#fff!important;color:#34445a!important;padding:10px 11px 10px 13px!important;font-size:13px!important;line-height:1.35;white-space:normal}
-.admin-submenu button:hover,.admin-submenu button:focus{background:#f3f6fa!important;border-left-color:#172b46!important;outline:1px solid #e0e7ef!important}
-.admin-submenu button.active{background:#eaf0f8!important;color:#10233d!important;font-weight:800}
-.tri-admin-panel{border:1px solid #e1e7ef!important;border-radius:15px!important;padding:clamp(14px,2vw,24px)!important;background:linear-gradient(180deg,#fff 0%,#fbfcfe 100%)!important;box-shadow:0 8px 26px rgba(15,35,60,.06)!important;margin-bottom:18px!important;min-width:0}
+/* Admin-only contract navigation: restrained navy, slate and gold; responsive on mobile/laptop. */
+.admin-menu-group{margin:4px 0;border:1px solid #e4e9f0;border-radius:10px;overflow:hidden;background:#f8fafc}
+.admin-menu .admin-menu-group-toggle{display:flex;align-items:center;justify-content:space-between;background:#eef2f7;color:#172b46;font-weight:750;border-left:3px solid #c7a45b}
+.admin-menu .admin-menu-chevron{transition:transform .18s ease;color:#a17d31}
+.admin-menu-group-toggle[aria-expanded="true"] .admin-menu-chevron{transform:rotate(180deg)}
+.admin-submenu{padding:5px 7px 7px 13px;background:#fff;display:grid;gap:4px}
+.admin-submenu.hidden{display:none!important}
+.admin-menu .admin-submenu button{font-size:13px;line-height:1.35;padding:10px 11px;border-left:2px solid #d7e0eb;background:#fff;color:#33445b}
+.admin-menu .admin-submenu button:hover,.admin-menu .admin-submenu button:focus{background:#f4f7fb;border-left-color:#c7a45b}
+.tri-admin-panel{border:1px solid #e3e8ef!important;border-radius:15px!important;background:linear-gradient(180deg,#fff 0%,#fbfcfe 100%)!important;box-shadow:0 8px 26px rgba(15,35,60,.06)!important;margin-bottom:18px!important;min-width:0}
 .tri-admin-panel>h2{color:#172b46!important;letter-spacing:-.02em;border-bottom:2px solid #e6c879;padding-bottom:12px;margin-top:0!important}
 .tri-admin-panel .muted{line-height:1.6}
 #tricycle .cards .card{border-top:3px solid #d6b56d}
 @media(max-width:650px){.admin-menu{left:0;right:0;width:min(360px,calc(100vw - 24px));margin-left:auto}.admin-submenu{padding-left:5px}.admin-submenu button{min-height:44px}.tri-admin-panel{padding:13px!important;border-radius:12px!important}#tricycle .cards{grid-template-columns:1fr!important}}
-
 </style>
 </head>
 <body>
-<header><div class="brand"><div class="logo">EZ</div><div><h1>Ezelex Enterprise</h1><small>Administrator Dashboard</small></div></div><div class="header-actions"><button id="menuToggle" class="menu-toggle hidden" aria-expanded="false" aria-controls="adminMenu">☰ Open Menu</button><button id="logoutBtn" class="danger hidden">Log out</button><div id="adminMenu" class="admin-menu hidden" role="menu"><button data-section="capital">Business Capital</button><div class="admin-menu-group"><button type="button" id="tricycleMenuToggle" class="admin-menu-parent" aria-expanded="false" aria-controls="tricycleSubmenu"><span>Tricycle Contract</span><span class="menu-chevron">▾</span></button><div id="tricycleSubmenu" class="admin-submenu hidden"><button type="button" data-tri-panel="triCreatePanel">Create Tricycle Contract</button><button type="button" data-tri-panel="triHistoricalPanel">Record Historical Payment</button><button type="button" data-tri-panel="triCalendarPanel">Payment Ledger Calendar</button></div></div><div class="admin-menu-group"><button type="button" id="databaseMenuToggle" class="admin-menu-parent" aria-expanded="false" aria-controls="databaseSubmenu"><span>Database Management</span><span class="menu-chevron">▾</span></button><div id="databaseSubmenu" class="admin-submenu hidden"><button type="button" data-tri-panel="triManagementPanel">Tricycle Contract Management</button><button type="button" data-tri-panel="triPrivatePanel">Private Tricycle Profit (Admin Only)</button><button type="button" data-tri-panel="triRegisterPanel">Contract Register &amp; Balances</button><button type="button" data-tri-panel="triReportsPanel">Weekly Report — Review &amp; Approval</button><button type="button" data-tri-panel="triOwingPanel">Owing / Weekly Shortfalls</button><button type="button" data-tri-panel="triLedgerPanel">Full Payment Ledger</button></div></div><button data-section="stock">Stock and Profit</button><button data-section="credits">On-Credit Sales</button><button data-section="stockHistory">Edit History</button><button data-section="sales">Legacy Sales Cleanup</button><button data-section="workers">Create Employee Accounts</button><button data-section="communication">Communication Centre</button><button data-section="profile">Admin Profile</button><button data-section="security">Change Password</button><button id="menuLogout" class="menu-logout">Log Out</button><button data-section="overview">Back to Dashboard</button></div></div></header>
+<header><div class="brand"><div class="logo">EZ</div><div><h1>Ezelex Enterprise</h1><small>Administrator Dashboard</small></div></div><div class="header-actions"><button id="menuToggle" class="menu-toggle hidden" aria-expanded="false" aria-controls="adminMenu">☰ Open Menu</button><button id="logoutBtn" class="danger hidden">Log out</button><div id="adminMenu" class="admin-menu hidden" role="menu">
+<button data-section="capital">Business Capital</button>
+<div class="admin-menu-group"><button type="button" class="admin-menu-group-toggle" aria-expanded="false" aria-controls="triContractSubmenu">Tricycle Contract <span class="admin-menu-chevron">▾</span></button><div id="triContractSubmenu" class="admin-submenu hidden">
+<button type="button" data-tri-panel="triCreatePanel">Create Tricycle Contract</button>
+<button type="button" data-tri-panel="triHistoricalPanel">Record Historical Payment</button>
+<button type="button" data-tri-panel="triCalendarPanel">Payment Ledger Calendar</button>
+</div></div>
+<div class="admin-menu-group"><button type="button" class="admin-menu-group-toggle" aria-expanded="false" aria-controls="triDatabaseSubmenu">Database Management <span class="admin-menu-chevron">▾</span></button><div id="triDatabaseSubmenu" class="admin-submenu hidden">
+<button type="button" data-tri-panel="triManagementPanel">Tricycle Contract Management</button>
+<button type="button" data-tri-panel="triPrivatePanel">Private Tricycle Profit (Admin Only)</button>
+<button type="button" data-tri-panel="triRegisterPanel">Contract Register &amp; Balances</button>
+<button type="button" data-tri-panel="triReportsPanel">Weekly Report — Review &amp; Approval</button>
+<button type="button" data-tri-panel="triOwingPanel">Owing / Weekly Shortfalls</button>
+<button type="button" data-tri-panel="triLedgerPanel">Full Payment Ledger</button>
+</div></div>
+<button data-section="stock">Stock and Profit</button><button data-section="credits">On-Credit Sales</button><button data-section="stockHistory">Edit History</button><button data-section="sales">Legacy Sales Cleanup</button><button data-section="workers">Create Employee Accounts</button><button data-section="communication">Communication Centre</button><button data-section="profile">Admin Profile</button><button data-section="security">Change Password</button><button id="menuLogout" class="menu-logout">Log Out</button><button data-section="overview">Back to Dashboard</button></div></div></header>
 
 <section id="loginSection" class="login">
 <h2>Admin Login</h2><p class="muted">Sign in with your EZELEX administrator account.</p><div id="loginMsg"></div>
@@ -424,26 +437,23 @@ $("refreshBtn").onclick=async()=>{await loadWorkers();await Promise.all([loadSal
 $("refreshWorkers").onclick=loadWorkers;$("applyFilters").onclick=applyFilters;$("statusFilter").onchange=applyFilters;$("workerFilter").onchange=applyFilters;$("refreshInventory").onclick=loadInventory;$("applyInvFilters").onclick=applyInvFilters;$("invWorkerFilter").onchange=applyInvFilters
 const _loadWorkersWithDeleteSelect=loadWorkers;loadWorkers=async function(){await _loadWorkersWithDeleteSelect();populateDeleteWorkerSelect()};
 function navigateAdminSection(section){document.querySelectorAll(".page").forEach(p=>p.classList.add("hidden"));const target=$(section);if(target)target.classList.remove("hidden");document.querySelectorAll(".dashboard-nav button").forEach(x=>x.classList.toggle("active",x.dataset.section===section));$("adminMenu").classList.add("hidden");$("menuToggle").setAttribute("aria-expanded","false");$("menuToggle").textContent="☰ Open Menu";if(section==="workers")window.scrollTo({top:0,behavior:"smooth"})}
-
-// Contract submenu navigation: only one existing contract section is shown at a time.
-function selectTriPanel(panelId){
-  navigateAdminSection("tricycle");
-  document.querySelectorAll("#tricycle .tri-admin-panel").forEach(p=>p.classList.toggle("hidden",p.id!==panelId));
-  document.querySelectorAll("[data-tri-panel]").forEach(b=>b.classList.toggle("active",b.dataset.triPanel===panelId));
-  const target=$(panelId); if(target) target.scrollIntoView({behavior:"smooth",block:"start"});
-  // Keep both groups available for easy switching after a destination is selected.
-  $("tricycleSubmenu").classList.remove("hidden"); $("databaseSubmenu").classList.remove("hidden");
-  $("tricycleMenuToggle").setAttribute("aria-expanded","true"); $("databaseMenuToggle").setAttribute("aria-expanded","true");
-}
-function toggleAdminSubmenu(toggleId, submenuId){
- const btn=$(toggleId), sub=$(submenuId); const opening=sub.classList.contains("hidden");
- sub.classList.toggle("hidden",!opening); btn.setAttribute("aria-expanded",String(opening));
-}
-$("tricycleMenuToggle").addEventListener("click",()=>toggleAdminSubmenu("tricycleMenuToggle","tricycleSubmenu"));
-$("databaseMenuToggle").addEventListener("click",()=>toggleAdminSubmenu("databaseMenuToggle","databaseSubmenu"));
-document.querySelectorAll("[data-tri-panel]").forEach(b=>b.addEventListener("click",()=>selectTriPanel(b.dataset.triPanel)));
-
 document.querySelectorAll("[data-section]").forEach(b=>b.onclick=()=>navigateAdminSection(b.dataset.section));
+// Contract menu: toggle the two expandable groups and display only the selected existing contract panel.
+function openTriPanel(panelId){
+  navigateAdminSection('tricycle');
+  const panels=['triManagementPanel','triCreatePanel','triRegisterPanel','triPrivatePanel','triHistoricalPanel','triReportsPanel','triCalendarPanel','triOwingPanel','triLedgerPanel'];
+  panels.forEach(id=>{const el=$(id);if(el)el.classList.toggle('hidden',id!==panelId)});
+  document.querySelectorAll('[data-tri-panel]').forEach(b=>b.classList.toggle('active',b.dataset.triPanel===panelId));
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+document.querySelectorAll('.admin-menu-group-toggle').forEach(btn=>btn.addEventListener('click',()=>{
+  const target=$(btn.getAttribute('aria-controls'));
+  const expanded=btn.getAttribute('aria-expanded')==='true';
+  btn.setAttribute('aria-expanded',String(!expanded));
+  if(target)target.classList.toggle('hidden',expanded);
+}));
+document.querySelectorAll('[data-tri-panel]').forEach(btn=>btn.addEventListener('click',()=>openTriPanel(btn.dataset.triPanel)));
+
 $("menuToggle").onclick=()=>{const open=$("adminMenu").classList.toggle("hidden")===false;$("menuToggle").setAttribute("aria-expanded",String(open));$("menuToggle").textContent=open?"✕ Close Menu":"☰ Open Menu"};
 document.addEventListener("click",e=>{if(!e.target.closest(".header-actions")){$("adminMenu").classList.add("hidden");$("menuToggle").setAttribute("aria-expanded","false");$("menuToggle").textContent="☰ Open Menu"}});
 const originalShowLogin=showLogin;showLogin=function(){originalShowLogin();$("menuToggle").classList.add("hidden");$("adminMenu").classList.add("hidden")};
@@ -504,12 +514,6 @@ window.triRejectReport=async id=>{const r=triReports.find(x=>String(x.id)===Stri
 $('triRefresh').onclick=triLoadAll;$('triLoadReports').onclick=triLoadAll;$('triReportFilter').onchange=triRenderReports;$('triCalendarContract').onchange=triRenderCalendar;$('triCalendarMonth').onchange=triRenderCalendar;$('triCalPrev').onclick=()=>{const x=new Date(($('triCalendarMonth').value||new Date().toISOString().slice(0,7))+'-01T00:00:00');x.setMonth(x.getMonth()-1);$('triCalendarMonth').value=x.toISOString().slice(0,7);triRenderCalendar()};$('triCalNext').onclick=()=>{const x=new Date(($('triCalendarMonth').value||new Date().toISOString().slice(0,7))+'-01T00:00:00');x.setMonth(x.getMonth()+1);$('triCalendarMonth').value=x.toISOString().slice(0,7);triRenderCalendar()};
 
 adminCheck();
-</script>
-<script>
-
-// Initial default state: show the management summary only when the tricycle workspace is entered.
-(function(){const ps=document.querySelectorAll("#tricycle .tri-admin-panel");ps.forEach((p,i)=>p.classList.toggle("hidden",i!==0));})();
-
 </script>
 </body>
 </html>
