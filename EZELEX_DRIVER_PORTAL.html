@@ -100,6 +100,73 @@ th,td{padding:11px;border-bottom:1px solid #eee;text-align:left;font-size:14px}t
 .photoPreview{width:104px;height:104px;border-radius:50%;object-fit:cover;background:#e5e7eb;border:3px solid #e5e7eb;display:block;margin:10px 0}
 .driverContractCard{border:1px solid #e5e7eb;border-radius:12px;padding:16px;margin:12px 0;background:#f8fafc}
 @media(max-width:600px){header{padding:14px 12px;align-items:center}header h1{font-size:19px}.tabs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}.tab{padding:10px 8px;font-size:13px}.panel{padding:15px}.workerInfo{overflow-wrap:anywhere}.photoPreview{width:88px;height:88px}}
+
+
+/* EZELEX professional visual refresh — CSS only; existing driver logic and markup preserved */
+:root{--ez-navy:#10233f;--ez-blue:#1761a8;--ez-teal:#087e80;--ez-ink:#172033;--ez-muted:#64748b;--ez-border:#dce5ef;--ez-bg:#f3f6fa;--ez-green:#16804a;--ez-red:#c62828}
+html{scroll-behavior:smooth;background:var(--ez-bg)}
+body{font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;background:linear-gradient(180deg,#eef4fb 0,#f5f7fb 260px,var(--ez-bg) 100%);color:var(--ez-ink);line-height:1.55}
+h1,h2,h3,h4{line-height:1.25;letter-spacing:-.02em}
+header{background:linear-gradient(112deg,#10233f 0%,#174a78 62%,#087e80 125%);padding:16px clamp(12px,4vw,5%);gap:12px;box-shadow:0 5px 20px #10233f24;border-bottom:3px solid #2cb5ad}
+header h1{font-size:clamp(18px,2.2vw,24px);letter-spacing:-.025em}
+header small{color:#dceaf8}
+.wrap{width:min(1150px,100%);margin:24px auto;padding:0 clamp(10px,2vw,18px)}
+.panel,.login{border:1px solid #e0e8f1;border-radius:16px;background:#fff;box-shadow:0 8px 26px #173b6310}
+.panel{padding:clamp(16px,2.4vw,24px);margin-bottom:20px}
+.login{padding:clamp(22px,4vw,32px)}
+button{min-height:42px;border-radius:10px;transition:transform .15s ease,box-shadow .15s ease,filter .15s ease;touch-action:manipulation}
+button:hover{filter:brightness(1.04);box-shadow:0 4px 12px #10233f15}
+button:active{transform:translateY(1px)}
+.primary{background:linear-gradient(110deg,#174a8b,#087e80);color:#fff}
+.secondary{background:#eaf0f7;color:#17324f}
+.danger{background:#b42318;color:#fff}
+input,select,textarea{border:1px solid #d4deea;border-radius:10px;background:#fff;color:var(--ez-ink);min-height:44px;transition:border-color .15s,box-shadow .15s}
+input:focus,select:focus,textarea:focus{outline:none;border-color:#3284c5;box-shadow:0 0 0 3px #3284c522}
+label{color:#263b53;line-height:1.45}
+.tabs{gap:8px;margin-bottom:20px}
+.tabs .tab{background:#e8eef6;color:#25405d;border:1px solid #dbe5f0;border-radius:10px;min-height:44px}
+.tabs .tab.active{background:linear-gradient(110deg,#174a8b,#087e80);color:#fff;border-color:transparent;box-shadow:0 4px 12px #174a8b24}
+.driverMenu{width:min(290px,calc(100vw - 24px));padding:9px;border:1px solid #dce5ef;border-radius:14px;box-shadow:0 16px 40px #10233f2b;gap:6px;max-height:min(72vh,560px);overflow:auto}
+.driverMenu button{background:#f3f7fb;color:#193653;border:1px solid transparent;border-radius:9px;min-height:44px}
+.driverMenu button:hover{background:#e4eff9;border-color:#c7dced}
+.driverMenu .menuLogout{background:#b42318;color:#fff}
+.stat,.stockCard,.resultCard,.driverContractCard,.infoBox,.dailyChartPanel{border-radius:14px;box-shadow:0 4px 15px #10233f08}
+.stat{background:#fff;border:1px solid #dce4ee;border-top:3px solid #2879b8;min-width:0;overflow-wrap:anywhere;padding:16px}
+.stat small,.stockCard small{color:#60758b}
+.stockCard{background:#fff;border:1px solid #dce4ee;min-width:0;overflow-wrap:anywhere}
+.resultCard{border:1px solid #dce5ef}
+.profit{background:#dcfce7!important;border-color:#16a34a!important;color:#14532d}
+.profit strong,.profit h3,.profit .live{color:#166534!important}
+.loss{background:#fee2e2!important;border-color:#dc2626!important;color:#7f1d1d}
+.loss strong,.loss h3,.loss .live{color:#991b1b!important}
+.driverContractCard{background:linear-gradient(135deg,#f7fbff,#eef7f8);border-color:#d4e4ef}
+.photoPreview{border-color:#c7d9ea;box-shadow:0 4px 14px #10233f18}
+.msg,.message{border-radius:11px}
+.success{background:#dcfae6;color:#067647;border:1px solid #a7f3d0}
+.error{background:#fee4e2;color:#912018;border:1px solid #fecaca}
+.badge{letter-spacing:.01em}
+.tablebox{border:1px solid #e3eaf2;border-radius:12px;background:#fff}
+table{border-collapse:separate;border-spacing:0;min-width:700px}
+th{background:#edf3f9;color:#203b58}
+th:first-child{border-top-left-radius:8px}th:last-child{border-top-right-radius:8px}
+th,td{padding:12px;border-bottom:1px solid #e6edf4}
+@media(max-width:700px){
+ header{padding:13px 12px;align-items:center;gap:8px}
+ header h1{font-size:18px;overflow-wrap:anywhere}
+ .wrap{margin:14px auto;padding:0 10px}
+ .panel{padding:15px;margin-bottom:14px;border-radius:13px}
+ .login{margin:24px 12px;padding:22px}
+ .tabs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}
+ .tabs .tab{padding:10px 8px;font-size:13px;min-width:0;overflow-wrap:anywhere}
+ .grid,.cardrow{grid-template-columns:minmax(0,1fr)}
+ .stats,.stockGrid,.resultGrid{grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
+ .stat,.stockCard,.resultCard{padding:12px;min-width:0;overflow-wrap:anywhere}
+ .stat strong,.stockCard strong,.resultCard strong{font-size:clamp(16px,4.5vw,21px);overflow-wrap:anywhere}
+ .driverMenu{max-width:calc(100vw - 24px)}
+ input,select,textarea{font-size:16px}
+}
+@media(max-width:420px){.stats,.stockGrid,.resultGrid{grid-template-columns:minmax(0,1fr)}header h1{font-size:17px}.wrap{padding:0 8px}.panel{padding:13px}}
+@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}*,*::before,*::after{transition:none!important;animation:none!important}}
 </style>
 </head>
 <body>
