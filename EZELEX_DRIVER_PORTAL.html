@@ -161,7 +161,14 @@ table{border-collapse:separate;border-spacing:0;min-width:700px}
 th{background:#edf3f9;color:#203b58}
 th:first-child{border-top-left-radius:8px}th:last-child{border-top-right-radius:8px}
 th,td{padding:12px;border-bottom:1px solid #e6edf4}
+/* Isolated menu-view layout: keep dashboard summary on the dashboard only. */
+.driver-section-dashboard-nav{display:flex;justify-content:flex-start;align-items:center;margin:0 0 10px;position:relative;z-index:1}
+.driver-section-dashboard-nav.hidden{display:none!important}
+.driver-dashboard-return{padding:7px 13px!important;font-size:13px!important;min-height:34px;border-radius:9px!important}
+#driverWelcomePanel.view-hidden,#portal .tabs.view-hidden{display:none!important}
 @media(max-width:700px){
+ .driver-section-dashboard-nav{margin:0 0 8px}
+ .driver-dashboard-return{padding:7px 11px!important}
  header{padding:13px 12px;align-items:center;gap:8px}
  header h1{font-size:18px;overflow-wrap:anywhere}
  .wrap{margin:14px auto;padding:0 10px}
@@ -248,7 +255,7 @@ th,td{padding:12px;border-bottom:1px solid #e6edf4}
 </section>
 
 <main id="portal" class="wrap hidden">
-  <div class="panel">
+  <div class="panel" id="driverWelcomePanel">
     <h2>Welcome, <span id="workerName">Driver</span> 👋</h2>
     <div class="workerInfo">
       <strong>Driver ID:</strong> <span id="workerId">Loading…</span> &nbsp; | &nbsp;
@@ -274,6 +281,10 @@ th,td{padding:12px;border-bottom:1px solid #e6edf4}
     <button class="tab" data-tab="contract" id="driverContractTab">My Contract</button>
     <button class="tab" data-tab="profile">My Profile</button>
     <button class="tab" data-tab="communication">Communication</button>
+  </div>
+
+  <div id="driverSectionDashboardNav" class="driver-section-dashboard-nav hidden">
+    <button type="button" class="secondary driver-dashboard-return" id="driverReturnDashboard">← Dashboard</button>
   </div>
 
   <section id="dashboard" class="section active">
@@ -1589,17 +1600,26 @@ async function loadDriverApprovalHistory(){
 $("refreshApprovalHistory")?.addEventListener("click",loadDriverApprovalHistory);
 $("driverPendingCard")?.addEventListener("click",()=>openDriverSection("approvalHistory"));
 $("driverPendingCard")?.addEventListener("keydown",event=>{if(event.key==='Enter'||event.key===' '){event.preventDefault();openDriverSection("approvalHistory");}});
-function openDriverSection(target){
- if(!isDriverRole(profile?.role)||!['dashboard','approvalHistory'].includes(target))return;
+function setDriverSectionView(target){
+ const dashboard=(target==='dashboard');
+ const welcome=$("driverWelcomePanel"),tabs=document.querySelector('#portal .tabs'),nav=$("driverSectionDashboardNav");
+ welcome?.classList.toggle('view-hidden',!dashboard);
+ tabs?.classList.toggle('view-hidden',!dashboard);
+ nav?.classList.toggle('hidden',dashboard);
  document.querySelectorAll('.section').forEach(sec=>sec.classList.remove('active'));
  $(target)?.classList.add('active');
  document.querySelectorAll('.tabs .tab').forEach(b=>b.classList.remove('active'));
  document.querySelector('.tabs .tab[data-tab="'+target+'"]')?.classList.add('active');
+}
+function openDriverSection(target){
+ if(!isDriverRole(profile?.role)||!['dashboard','approvalHistory'].includes(target))return;
+ setDriverSectionView(target);
  closeDriverMenu();
  if(target==='approvalHistory')loadDriverApprovalHistory();
  if(target==='dashboard')loadDriverDashboardSummary();
  window.scrollTo({top:0,behavior:'smooth'});
 }
+$("driverReturnDashboard")?.addEventListener('click',()=>openDriverSection('dashboard'));
 $("driverReportWeekStart")?.addEventListener("change",()=>{const a=$("driverReportWeekStart").value;if(a){const monday=mondayISO(a);$("driverReportWeekStart").value=monday;$("driverReportWeekEnd").value=sundayISO(monday);}});
 $("driverWeeklyReportForm")?.addEventListener("submit",async event=>{
  event.preventDefault(); if(!currentUser||!profile||!isDriverRole(profile.role)){msg("driverReportMsg","Please sign in with your driver account first.","error");return;}
@@ -2087,10 +2107,7 @@ document.querySelectorAll("[data-driver-go]").forEach(btn=>btn.addEventListener(
   if(!isDriverRole(profile?.role))return;
   const target=btn.dataset.driverGo;
   if(!["dashboard","recordSale","contract","paymentHistory","approvalHistory","profile","communication"].includes(target))return;
-  document.querySelectorAll(".section").forEach(sec=>sec.classList.remove("active"));
-  $(target)?.classList.add("active");
-  document.querySelectorAll(".tabs .tab").forEach(b=>b.classList.remove("active"));
-  document.querySelector(`.tabs .tab[data-tab="${target}"]`)?.classList.add("active");
+  setDriverSectionView(target);
   closeDriverMenu();
   if(target==="contract")await loadDriverContract();
   if(target==="paymentHistory")await loadDriverPaymentHistory();
@@ -2111,9 +2128,7 @@ document.querySelectorAll(".tab").forEach(btn=>{
     const driver=isDriverRole(profile?.role);
     if(driver && ["sales","stock","stockHistory","credit"].includes(btn.dataset.tab))return;
     if(!driver && btn.dataset.tab==="contract")return;
-    document.querySelectorAll(".tab").forEach(b=>b.classList.remove("active"));
-    document.querySelectorAll(".section").forEach(s=>s.classList.remove("active"));
-    btn.classList.add("active");$(btn.dataset.tab).classList.add("active");
+    setDriverSectionView(btn.dataset.tab);
     if(btn.dataset.tab==="contract")loadDriverContract();
   });
 });
