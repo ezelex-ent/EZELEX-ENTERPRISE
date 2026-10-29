@@ -142,6 +142,7 @@ label{color:#263b53;line-height:1.45}
 .driverMenu .menuLogout{background:#b42318;color:#fff}
 .stat,.stockCard,.resultCard,.driverContractCard,.infoBox,.dailyChartPanel{border-radius:14px;box-shadow:0 4px 15px #10233f08}
 .stat{background:#fff;border:1px solid #dce4ee;border-top:3px solid #2879b8;min-width:0;overflow-wrap:anywhere;padding:16px}
+.statAction{cursor:pointer;border-top-color:#d97706;background:#fffaf0;transition:box-shadow .15s ease,transform .15s ease}.statAction:hover,.statAction:focus-visible{outline:3px solid #d977062b;box-shadow:0 7px 20px #d977061f;transform:translateY(-1px)}.statAction strong{color:#b45309}.statAction.status-approved{background:#ecfdf3;border-color:#86efac;border-top-color:#16a34a}.statAction.status-approved strong,.statAction.status-approved small:first-child{color:#166534}.statAction.status-rejected{background:#fff1f2;border-color:#fecdd3;border-top-color:#dc2626}.statAction.status-rejected strong,.statAction.status-rejected small:first-child{color:#b91c1c}.statAction.status-pending{background:#fffaf0;border-top-color:#d97706}.approval-status{display:inline-block;padding:3px 9px;border-radius:999px;font-size:12px;font-weight:700}.approval-status.approved{background:#dcfce7;color:#166534}.approval-status.rejected{background:#fee2e2;color:#991b1b}.approval-status.pending{background:#fef3c7;color:#92400e}
 .stat small,.stockCard small{color:#60758b}
 .stockCard{background:#fff;border:1px solid #dce4ee;min-width:0;overflow-wrap:anywhere}
 .resultCard{border:1px solid #dce5ef}
@@ -191,6 +192,7 @@ th,td{padding:12px;border-bottom:1px solid #e6edf4}
     <nav id="driverMenu" class="driverMenu hidden" aria-label="Driver menu">
       <button type="button" data-driver-go="recordSale">Record Sale</button>
       <button type="button" data-driver-go="paymentHistory">Payment History Calendar</button>
+      <button type="button" data-driver-go="approvalHistory">Approval/Reject History</button>
       <button type="button" data-driver-go="contract">My Contract</button>
       <button type="button" data-driver-go="profile">Profile</button>
       <button type="button" data-driver-go="communication">Communication</button>
@@ -255,7 +257,8 @@ th,td{padding:12px;border-bottom:1px solid #e6edf4}
     </div>
     <div class="stats">
       <div class="stat"><small>Sale Recorded (approved)</small><strong id="driverSaleRecorded">GH₵0.00</strong><small>Approved weekly amounts recorded to date</small></div>
-      <div class="stat"><small>Owing</small><strong id="driverOwing">GH₵0.00</strong><small>Weekly shortfalls against the assigned target</small></div>
+      <div class="stat statAction status-pending" id="driverPendingCard" role="button" tabindex="0" aria-live="polite" aria-label="Open Approval/Reject History"><small id="driverPendingLabel">Pending</small><strong id="driverPending">GH₵0.00</strong><small id="driverPendingMessage">Submitted payments awaiting admin approval · Click to view history</small></div>
+      <div class="stat"><small>Owing</small><strong id="driverOwing">GH₵0.00</strong><small>Approved weekly shortfalls against the assigned target</small></div>
       <div class="stat"><small>Paid</small><strong id="driverPaid">GH₵0.00</strong><small>Confirmed payments to date</small></div>
       <div class="stat"><small>Outstanding Balance</small><strong id="driverOutstanding">GH₵0.00</strong><small>Remaining contract balance</small></div>
       <div class="stat"><small>Year End</small><strong id="driverYearEnd">—</strong><small>Contract end date</small></div>
@@ -522,6 +525,17 @@ th,td{padding:12px;border-bottom:1px solid #e6edf4}
       </div>
     </div>
   </section>
+  <section id="approvalHistory" class="section">
+    <div class="panel">
+      <h2>Approval/Reject History</h2>
+      <p>All weekly payment reports you submitted appear here. Pending reports have not been approved; only admin-approved reports count toward Paid and reduce your outstanding contract balance. Rejected reports do not add to Paid or Owing.</p>
+      <div class="toolbar" style="display:flex;flex-wrap:wrap;gap:10px;margin:14px 0">
+        <button type="button" class="primary" id="refreshApprovalHistory">Refresh History</button>
+      </div>
+      <div id="approvalHistoryMsg" aria-live="polite"></div>
+      <div class="tablebox"><table><thead><tr><th>Week</th><th>Sales Reported</th><th>Payment Submitted</th><th>Shortfall Submitted</th><th>Status</th><th>Admin Response</th><th>Submitted</th></tr></thead><tbody id="approvalHistoryBody"><tr><td colspan="7">Loading your approval history…</td></tr></tbody></table></div>
+    </div>
+  </section>
 </main>
 
 <script>
@@ -715,7 +729,7 @@ function applyRoleNavigation(role){
     ["sales","stock","stockHistory","credit"].forEach(id=>$(id)?.classList.add("hidden"));
     document.querySelectorAll(".tabs .tab").forEach(b=>b.classList.add("hidden"));
     document.querySelectorAll(".section").forEach(sec=>{sec.classList.remove("active");sec.classList.add("hidden");});
-    ["dashboard","recordSale","profile","communication","contract","paymentHistory"].forEach(id=>$(id)?.classList.remove("hidden"));
+    ["dashboard","recordSale","profile","communication","contract","paymentHistory","approvalHistory"].forEach(id=>$(id)?.classList.remove("hidden"));
     $("dashboard")?.classList.add("active");
     $("driverWeeklyReportPanel")?.classList.remove("hidden");
     // Remove any legacy worker sales/stock panels from the driver dashboard.
@@ -950,7 +964,7 @@ async function loadProfile(user){
   if(isDriverRole(data.role)){
     msg("loginMsg","Profile verified. Loading your contract and weekly reports…");
     await loadDriverContract();
-    await Promise.all([loadDriverDashboardSummary(),loadDriverWeeklyReports()]);
+    await Promise.all([loadDriverDashboardSummary(),loadDriverWeeklyReports(),loadDriverApprovalHistory()]);
     await loadMessages();
   }else{
     await ensureCurrentStockWeek();
@@ -1375,7 +1389,7 @@ async function loadDriverDashboardSummary(){
  try{
   const [contractsResult,reportsResult,paymentsResult]=await Promise.all([
    db.from("tricycle_contracts").select("id,total_contract_amount,opening_paid_amount,contract_end_date,weekly_target,daily_target").eq("driver_user_id",currentUser.id),
-   db.from("tricycle_weekly_reports").select("id,contract_id,sales_reported,payment_amount,status,week_start,week_end").eq("driver_user_id",currentUser.id),
+   db.from("tricycle_weekly_reports").select("id,contract_id,sales_reported,payment_amount,status,week_start,week_end,submitted_at,rejection_reason").eq("driver_user_id",currentUser.id),
    db.from("tricycle_contract_payments").select("contract_id,amount,payment_date").order("payment_date",{ascending:false})
   ]);
   const failed=[contractsResult,reportsResult,paymentsResult].find(x=>x.error);
@@ -1386,13 +1400,31 @@ async function loadDriverDashboardSummary(){
   // The admin "Recorded" column is the reported payment amount, not sales_reported.
   // Only approved reports count toward this approved total.
   const approvedReports=reportsForDriver.filter(r=>String(r.status||'').toLowerCase()==='approved');
+  const pendingReports=reportsForDriver.filter(r=>['pending','submitted','awaiting_review','awaiting review','pending_review'].includes(String(r.status||'pending').trim().toLowerCase()));
   const salesRecorded=approvedReports.reduce((n,r)=>n+Number(r.payment_amount||0),0);
+  const pendingAmount=pendingReports.reduce((n,r)=>n+Number(r.payment_amount||0),0);
+  // The card is a compact communication centre for the latest submitted report.
+  // A newly submitted report has status=pending and resets the card automatically.
+  const latestReport=[...reportsForDriver].sort((a,b)=>String(b.submitted_at||'').localeCompare(String(a.submitted_at||'')))[0]||null;
+  const latestStatus=String(latestReport?.status||'pending').trim().toLowerCase();
+  const pendingCard=$('driverPendingCard'),pendingLabel=$('driverPendingLabel'),pendingMessage=$('driverPendingMessage');
+  const isPendingStatus=['pending','submitted','awaiting_review','awaiting review','pending_review'].includes(latestStatus);
+  const isRejectedStatus=['rejected','declined'].includes(latestStatus);
+  if(pendingCard){pendingCard.classList.remove('status-pending','status-approved','status-rejected');pendingCard.classList.add(isPendingStatus?'status-pending':(isRejectedStatus?'status-rejected':'status-approved'));}
+  if(pendingLabel)pendingLabel.textContent=!latestReport||isPendingStatus?'Pending':(isRejectedStatus?'Sale Rejected':'Sale Approved');
+  if(pendingMessage){
+   if(!latestReport)pendingMessage.textContent='No weekly report submitted yet · Click to view history';
+   else if(isPendingStatus)pendingMessage.textContent='Awaiting admin approval · Click to view history';
+   else if(isRejectedStatus)pendingMessage.textContent='Your latest report was rejected'+(latestReport.rejection_reason?': '+latestReport.rejection_reason:'')+' · Click to view history';
+   else pendingMessage.textContent='Your latest report was approved · Click to view history';
+  }
+  const cardAmount=latestReport&&!isPendingStatus?Number(latestReport.payment_amount||0):pendingAmount;
   const payments=allPayments.filter(p=>contractById.has(String(p.contract_id)));
   const paid=contracts.reduce((n,c)=>n+Number(c.opening_paid_amount||0),0)+payments.reduce((n,p)=>n+Number(p.amount||0),0);
   // Keep the driver Owing total aligned with the admin's Owing / Weekly Shortfalls panel.
   // The admin includes each report and calculates expected target minus payment_amount.
   const owingByContract=new Map();
-  const owing=reportsForDriver.reduce((total,r)=>{
+  const owing=approvedReports.reduce((total,r)=>{
    const c=contractById.get(String(r.contract_id));
    if(!c||!r.week_start||!r.week_end)return total;
    const start=new Date(String(r.week_start).slice(0,10)+'T00:00:00Z');
@@ -1416,9 +1448,9 @@ async function loadDriverDashboardSummary(){
    }else{debtWarning.classList.add('hidden');debtWarning.textContent='';}
   }
   const outstanding=contracts.reduce((n,c)=>n+Math.max(0,Number(c.total_contract_amount||0)-Number(c.opening_paid_amount||0)-payments.filter(p=>String(p.contract_id)===String(c.id)).reduce((a,p)=>a+Number(p.amount||0),0)),0);
-  set('driverSaleRecorded',salesRecorded);set('driverOwing',owing);set('driverPaid',paid);set('driverOutstanding',outstanding);
+  set('driverSaleRecorded',salesRecorded);set('driverPending',cardAmount);set('driverOwing',owing);set('driverPaid',paid);set('driverOutstanding',outstanding);
   const ends=contracts.map(c=>c.contract_end_date).filter(Boolean).sort();const yearEnd=$("driverYearEnd");if(yearEnd)yearEnd.textContent=ends.length?ends[ends.length-1]:"Not set";
-  if(summaryMsg)summaryMsg.textContent='Balances updated. Sale Recorded includes admin-approved weekly amounts; Owing matches the admin weekly shortfall calculation.';
+  if(summaryMsg)summaryMsg.textContent='Balances updated. Pending submissions are shown separately; only approved weekly reports contribute to Sale Recorded and Owing.';
  }catch(e){if(summaryMsg)summaryMsg.innerHTML='<div class="msg error">Could not load driver balances: '+esc(e.message||e)+'</div>';}
 }
 function paymentCalendarISO(year, monthIndex, day) {
@@ -1545,6 +1577,29 @@ async function loadDriverWeeklyReports(){
  const rows=(r.data||[]).filter(x=>String(x.driver_user_id)===String(currentUser.id));
  body.innerHTML=rows.length?rows.map(x=>'<tr><td>'+esc(dateOnly(x.week_start))+ ' – '+esc(dateOnly(x.week_end))+'</td><td>'+money(x.sales_reported)+'</td><td>'+money(x.payment_amount)+'</td><td>'+money(x.shortage_amount)+'</td><td>'+esc(x.status||"pending")+'</td><td>'+esc(x.rejection_reason||"—")+'</td></tr>').join(''):'<tr><td colspan="6">No weekly reports submitted yet.</td></tr>';
 }
+async function loadDriverApprovalHistory(){
+ const body=$("approvalHistoryBody"),box=$("approvalHistoryMsg");if(!body||!currentUser)return;
+ body.innerHTML='<tr><td colspan="7">Loading your approval history…</td></tr>';if(box)box.textContent='';
+ const r=await db.from("tricycle_weekly_reports").select("id,driver_user_id,contract_id,week_start,week_end,sales_reported,payment_amount,shortage_amount,status,rejection_reason,driver_notes,submitted_at").eq("driver_user_id",currentUser.id).order("submitted_at",{ascending:false});
+ if(r.error){body.innerHTML='<tr><td colspan="7">Could not load history: '+esc(r.error.message)+'</td></tr>';if(box)box.textContent='Please try Refresh History or contact admin.';return;}
+ const rows=(r.data||[]).filter(x=>String(x.driver_user_id)===String(currentUser.id));
+ const statusInfo=x=>{const s=String(x.status||'pending').trim().toLowerCase();if(s==='approved')return {label:'Approved',cls:'approved'};if(['rejected','declined'].includes(s))return {label:'Rejected',cls:'rejected'};if(['pending','submitted','awaiting_review','awaiting review','pending_review'].includes(s))return {label:'Pending',cls:'pending'};return {label:String(x.status||'Pending'),cls:'pending'};};
+ body.innerHTML=rows.length?rows.map(x=>{const st=statusInfo(x);return '<tr><td>'+esc(dateOnly(x.week_start))+' – '+esc(dateOnly(x.week_end))+'</td><td>'+money(x.sales_reported)+'</td><td>'+money(x.payment_amount)+'</td><td>'+money(x.shortage_amount)+'</td><td><span class="approval-status '+st.cls+'">'+esc(st.label)+'</span></td><td>'+esc(x.rejection_reason||'—')+'</td><td>'+esc(dateOnly(x.submitted_at))+'</td></tr>';}).join(''):'<tr><td colspan="7">No payment reports submitted yet.</td></tr>';
+}
+$("refreshApprovalHistory")?.addEventListener("click",loadDriverApprovalHistory);
+$("driverPendingCard")?.addEventListener("click",()=>openDriverSection("approvalHistory"));
+$("driverPendingCard")?.addEventListener("keydown",event=>{if(event.key==='Enter'||event.key===' '){event.preventDefault();openDriverSection("approvalHistory");}});
+function openDriverSection(target){
+ if(!isDriverRole(profile?.role)||!['dashboard','approvalHistory'].includes(target))return;
+ document.querySelectorAll('.section').forEach(sec=>sec.classList.remove('active'));
+ $(target)?.classList.add('active');
+ document.querySelectorAll('.tabs .tab').forEach(b=>b.classList.remove('active'));
+ document.querySelector('.tabs .tab[data-tab="'+target+'"]')?.classList.add('active');
+ closeDriverMenu();
+ if(target==='approvalHistory')loadDriverApprovalHistory();
+ if(target==='dashboard')loadDriverDashboardSummary();
+ window.scrollTo({top:0,behavior:'smooth'});
+}
 $("driverReportWeekStart")?.addEventListener("change",()=>{const a=$("driverReportWeekStart").value;if(a){const monday=mondayISO(a);$("driverReportWeekStart").value=monday;$("driverReportWeekEnd").value=sundayISO(monday);}});
 $("driverWeeklyReportForm")?.addEventListener("submit",async event=>{
  event.preventDefault(); if(!currentUser||!profile||!isDriverRole(profile.role)){msg("driverReportMsg","Please sign in with your driver account first.","error");return;}
@@ -1588,10 +1643,13 @@ $("driverWeeklyReportForm")?.addEventListener("submit",async event=>{
     :"Weekly report was saved and is pending admin review, but the admin email could not be confirmed. Please contact admin if urgent.",
     adminEmailSent?"success":"error");
   $("driverReportSales").value="";$("driverReportPayment").value="";$("driverReportShortage").value="0";$("driverReportReference").value="";$("driverReportNotes").value="";
-  await Promise.all([loadDriverWeeklyReports(),loadDriverDashboardSummary()]);
+  await Promise.all([loadDriverWeeklyReports(),loadDriverDashboardSummary(),loadDriverApprovalHistory()]);
  }catch(e){msg("driverReportMsg","Report was not saved: "+esc(e.message||e),"error");}
  finally{btn.disabled=false;}
 });
+
+// Refresh the driver's report status every 30 seconds while the page is open so approval/rejection messages update without logout.
+setInterval(()=>{if(currentUser&&isDriverRole(profile?.role)&&!document.hidden){loadDriverDashboardSummary();loadDriverApprovalHistory();}},30000);
 
 async function loadMessages(){
   /* Communication is intentionally read-only here.
@@ -2028,7 +2086,7 @@ driverMenuToggle?.addEventListener("click",()=>{
 document.querySelectorAll("[data-driver-go]").forEach(btn=>btn.addEventListener("click",async()=>{
   if(!isDriverRole(profile?.role))return;
   const target=btn.dataset.driverGo;
-  if(!["dashboard","recordSale","contract","paymentHistory","profile","communication"].includes(target))return;
+  if(!["dashboard","recordSale","contract","paymentHistory","approvalHistory","profile","communication"].includes(target))return;
   document.querySelectorAll(".section").forEach(sec=>sec.classList.remove("active"));
   $(target)?.classList.add("active");
   document.querySelectorAll(".tabs .tab").forEach(b=>b.classList.remove("active"));
@@ -2036,6 +2094,7 @@ document.querySelectorAll("[data-driver-go]").forEach(btn=>btn.addEventListener(
   closeDriverMenu();
   if(target==="contract")await loadDriverContract();
   if(target==="paymentHistory")await loadDriverPaymentHistory();
+  if(target==="approvalHistory")await loadDriverApprovalHistory();
   if(target==="dashboard")await loadDriverDashboardSummary();
   if(target==="communication")await loadMessages();
   window.scrollTo({top:0,behavior:"smooth"});
