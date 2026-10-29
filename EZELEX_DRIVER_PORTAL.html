@@ -714,7 +714,7 @@ function applyRoleNavigation(role){
     ["sales","stock","stockHistory","credit"].forEach(id=>$(id)?.classList.add("hidden"));
     document.querySelectorAll(".tabs .tab").forEach(b=>b.classList.add("hidden"));
     document.querySelectorAll(".section").forEach(sec=>{sec.classList.remove("active");sec.classList.add("hidden");});
-    ["dashboard","recordSale","profile","communication","contract"].forEach(id=>$(id)?.classList.remove("hidden"));
+    ["dashboard","recordSale","profile","communication","contract","paymentHistory"].forEach(id=>$(id)?.classList.remove("hidden"));
     $("dashboard")?.classList.add("active");
     $("driverWeeklyReportPanel")?.classList.remove("hidden");
     // Remove any legacy worker sales/stock panels from the driver dashboard.
