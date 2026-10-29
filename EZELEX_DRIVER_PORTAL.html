@@ -190,8 +190,8 @@ th,td{padding:12px;border-bottom:1px solid #e6edf4}
     <button type="button" id="driverMenuToggle" class="primary" aria-expanded="false" aria-controls="driverMenu">☰ Menu</button>
     <nav id="driverMenu" class="driverMenu hidden" aria-label="Driver menu">
       <button type="button" data-driver-go="recordSale">Record Sale</button>
-      <button type="button" data-driver-go="contract">My Contract</button>
       <button type="button" data-driver-go="paymentHistory">Payment History Calendar</button>
+      <button type="button" data-driver-go="contract">My Contract</button>
       <button type="button" data-driver-go="profile">Profile</button>
       <button type="button" data-driver-go="communication">Communication</button>
       <button type="button" data-driver-go="dashboard">Back to dashboard</button>
@@ -254,8 +254,8 @@ th,td{padding:12px;border-bottom:1px solid #e6edf4}
       <strong>Status:</strong> <span id="workerStatus" class="badge">Checking…</span>
     </div>
     <div class="stats">
-      <div class="stat"><small>Sale Recorded (approved)</small><strong id="driverSaleRecorded">GH₵0.00</strong><small>Approved weekly sales to date</small></div>
-      <div class="stat"><small>Owing</small><strong id="driverOwing">GH₵0.00</strong><small>Approved sales less payments credited</small></div>
+      <div class="stat"><small>Sale Recorded (approved)</small><strong id="driverSaleRecorded">GH₵0.00</strong><small>Approved weekly amounts recorded to date</small></div>
+      <div class="stat"><small>Owing</small><strong id="driverOwing">GH₵0.00</strong><small>Weekly shortfalls against the assigned target</small></div>
       <div class="stat"><small>Paid</small><strong id="driverPaid">GH₵0.00</strong><small>Confirmed payments to date</small></div>
       <div class="stat"><small>Outstanding Balance</small><strong id="driverOutstanding">GH₵0.00</strong><small>Remaining contract balance</small></div>
       <div class="stat"><small>Year End</small><strong id="driverYearEnd">—</strong><small>Contract end date</small></div>
@@ -276,7 +276,7 @@ th,td{padding:12px;border-bottom:1px solid #e6edf4}
   <section id="dashboard" class="section active">
     <div class="panel">
       <h2>Driver Overview</h2>
-      <p>Sale Recorded shows weekly sales approved by admin. Owing is approved sales minus confirmed payments. Outstanding Balance is the remaining amount on your tricycle contract.</p>
+      <p>Sale Recorded shows weekly amounts confirmed by admin. Owing shows weekly shortfalls against the assigned target, matching the admin weekly shortfalls panel. Outstanding Balance is the remaining amount on your tricycle contract.</p>
       <div id="driverDashboardSummaryMsg" aria-live="polite"></div>
     </div>
   </section>
@@ -503,7 +503,6 @@ th,td{padding:12px;border-bottom:1px solid #e6edf4}
       <div id="driverContractDetails"><div class="driverContractCard">Loading your contract details…</div></div>
     </div>
   </section>
-
   <section id="paymentHistory" class="section">
     <div class="panel">
       <h2>Payment History Calendar</h2>
@@ -546,6 +545,9 @@ let creditRows=[];
 let currentStockWeek=null;
 let stockWeekRows=[];
 let selectedStockWeekId="";
+let paymentCalendarRows=[];
+let paymentCalendarDate=new Date(new Date().getFullYear(),new Date().getMonth(),1);
+let paymentCalendarSelectedDate="";
 
 const $=id=>document.getElementById(id);
 // Never allow a missing optional UI element to prevent the login screen from rendering.
@@ -947,7 +949,7 @@ async function loadProfile(user){
   if(isDriverRole(data.role)){
     msg("loginMsg","Profile verified. Loading your contract and weekly reports…");
     await loadDriverContract();
-    await Promise.all([loadDriverDashboardSummary(), loadDriverWeeklyReports()]);
+    await Promise.all([loadDriverDashboardSummary(),loadDriverWeeklyReports()]);
     await loadMessages();
   }else{
     await ensureCurrentStockWeek();
@@ -1371,33 +1373,40 @@ async function loadDriverDashboardSummary(){
  const set=(id,v)=>{const el=$(id);if(el)el.textContent=money(v);};
  try{
   const [contractsResult,reportsResult,paymentsResult]=await Promise.all([
-   db.from("tricycle_contracts").select("id,total_contract_amount,opening_paid_amount,contract_end_date").eq("driver_user_id",currentUser.id),
-   db.from("tricycle_weekly_reports").select("id,contract_id,sales_reported,payment_amount,status,week_end").eq("driver_user_id",currentUser.id),
+   db.from("tricycle_contracts").select("id,total_contract_amount,opening_paid_amount,contract_end_date,weekly_target,daily_target").eq("driver_user_id",currentUser.id),
+   db.from("tricycle_weekly_reports").select("id,contract_id,sales_reported,payment_amount,status,week_start,week_end").eq("driver_user_id",currentUser.id),
    db.from("tricycle_contract_payments").select("contract_id,amount,payment_date").order("payment_date",{ascending:false})
   ]);
   const failed=[contractsResult,reportsResult,paymentsResult].find(x=>x.error);
   if(failed){if(summaryMsg)summaryMsg.innerHTML='<div class="msg error">Could not load driver balances: '+esc(failed.error.message)+'. Please ask admin to check database permissions.</div>';return;}
   const contracts=contractsResult.data||[],reports=reportsResult.data||[],allPayments=paymentsResult.data||[];
-  const ids=new Set(contracts.map(c=>String(c.id)));
-  const reportsFor=reports.filter(r=>ids.has(String(r.contract_id))&&String(r.status||'').toLowerCase()==='approved');
-  const owingReports=reports.filter(r=>ids.has(String(r.contract_id))&&!['rejected','declined'].includes(String(r.status||'').toLowerCase()));
-  const payments=allPayments.filter(p=>ids.has(String(p.contract_id)));
-  const salesRecorded=reportsFor.reduce((n,r)=>n+Number(r.sales_reported||0),0);
+  const contractById=new Map(contracts.map(c=>[String(c.id),c]));
+  const reportsForDriver=reports.filter(r=>contractById.has(String(r.contract_id)));
+  // The admin "Recorded" column is the reported payment amount, not sales_reported.
+  // Only approved reports count toward this approved total.
+  const approvedReports=reportsForDriver.filter(r=>String(r.status||'').toLowerCase()==='approved');
+  const salesRecorded=approvedReports.reduce((n,r)=>n+Number(r.payment_amount||0),0);
+  const payments=allPayments.filter(p=>contractById.has(String(p.contract_id)));
   const paid=contracts.reduce((n,c)=>n+Number(c.opening_paid_amount||0),0)+payments.reduce((n,p)=>n+Number(p.amount||0),0);
-  const owing=owingReports.reduce((n,r)=>n+Number(r.shortage_amount||0),0);
+  // Keep the driver Owing total aligned with the admin's Owing / Weekly Shortfalls panel.
+  // The admin includes each report and calculates expected target minus payment_amount.
+  const owing=reportsForDriver.reduce((total,r)=>{
+   const c=contractById.get(String(r.contract_id));
+   if(!r.week_start||!r.week_end)return total;
+   const start=new Date(String(r.week_start).slice(0,10)+'T00:00:00Z');
+   const end=new Date(String(r.week_end).slice(0,10)+'T00:00:00Z');
+   if(!Number.isFinite(start.getTime())||!Number.isFinite(end.getTime())||end<start)return total;
+   const days=Math.max(1,Math.floor((end-start)/86400000)+1);
+   const weeklyTarget=Number(c.weekly_target||1400),dailyTarget=Number(c.daily_target||200);
+   const expected=days>=7?weeklyTarget*Math.floor(days/7)+dailyTarget*(days%7):dailyTarget*days;
+   return total+Math.max(0,expected-Number(r.payment_amount||0));
+  },0);
   const outstanding=contracts.reduce((n,c)=>n+Math.max(0,Number(c.total_contract_amount||0)-Number(c.opening_paid_amount||0)-payments.filter(p=>String(p.contract_id)===String(c.id)).reduce((a,p)=>a+Number(p.amount||0),0)),0);
   set('driverSaleRecorded',salesRecorded);set('driverOwing',owing);set('driverPaid',paid);set('driverOutstanding',outstanding);
   const ends=contracts.map(c=>c.contract_end_date).filter(Boolean).sort();const yearEnd=$("driverYearEnd");if(yearEnd)yearEnd.textContent=ends.length?ends[ends.length-1]:"Not set";
-  if(summaryMsg)summaryMsg.textContent='Balances updated. Sale Recorded includes admin-approved sales only; Owing reflects weekly shortfalls not rejected by admin.';
+  if(summaryMsg)summaryMsg.textContent='Balances updated. Sale Recorded includes admin-approved weekly amounts; Owing matches the admin weekly shortfall calculation.';
  }catch(e){if(summaryMsg)summaryMsg.innerHTML='<div class="msg error">Could not load driver balances: '+esc(e.message||e)+'</div>';}
 }
-
-
-let paymentCalendarDate = new Date();
-paymentCalendarDate = new Date(paymentCalendarDate.getFullYear(), paymentCalendarDate.getMonth(), 1);
-let paymentCalendarRows = [];
-let paymentCalendarSelectedDate = "";
-
 function paymentCalendarISO(year, monthIndex, day) {
   return String(year) + "-" + String(monthIndex + 1).padStart(2, "0") + "-" + String(day).padStart(2, "0");
 }
@@ -1513,6 +1522,7 @@ $("paymentCalendarNext")?.addEventListener("click", () => {
 });
 $("paymentCalendarRefresh")?.addEventListener("click", loadDriverPaymentHistory);
 
+
 async function loadDriverWeeklyReports(){
  const body=$("driverWeeklyReportsBody"); if(!body||!currentUser)return;
  body.innerHTML='<tr><td colspan="6">Loading your reports…</td></tr>';
@@ -1541,8 +1551,8 @@ $("driverWeeklyReportForm")?.addEventListener("submit",async event=>{
   const saved=await db.from("tricycle_weekly_reports").insert(payload).select("id").single();
   if(saved.error)throw new Error(saved.error.message);
 
-  // Keep the saved report even if email delivery fails; notify admin immediately through
-  // the existing authenticated Supabase Edge Function.
+  // Notify admin immediately after the report is safely saved. A notification failure
+  // must not undo the report or falsely claim that an email was delivered.
   let adminEmailSent=false;
   try{
     const sessionResult=await db.auth.getSession();
@@ -1559,7 +1569,6 @@ $("driverWeeklyReportForm")?.addEventListener("submit",async event=>{
   }catch(notifyErr){
     console.error("Admin weekly-report email notification failed:",notifyErr?.message||String(notifyErr));
   }
-
   msg("driverReportMsg",adminEmailSent
     ?"Weekly report submitted successfully and is pending admin review. Admin has been emailed."
     :"Weekly report was saved and is pending admin review, but the admin email could not be confirmed. Please contact admin if urgent.",
