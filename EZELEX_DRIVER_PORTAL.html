@@ -278,6 +278,7 @@ th,td{padding:12px;border-bottom:1px solid #e6edf4}
       <h2>Driver Overview</h2>
       <p>Sale Recorded shows weekly amounts confirmed by admin. Owing shows weekly shortfalls against the assigned target, matching the admin weekly shortfalls panel. Outstanding Balance is the remaining amount on your tricycle contract.</p>
       <div id="driverDashboardSummaryMsg" aria-live="polite"></div>
+      <div id="driverDebtThresholdWarning" class="msg error hidden" role="alert" aria-live="assertive"></div>
     </div>
   </section>
 
@@ -1390,17 +1391,30 @@ async function loadDriverDashboardSummary(){
   const paid=contracts.reduce((n,c)=>n+Number(c.opening_paid_amount||0),0)+payments.reduce((n,p)=>n+Number(p.amount||0),0);
   // Keep the driver Owing total aligned with the admin's Owing / Weekly Shortfalls panel.
   // The admin includes each report and calculates expected target minus payment_amount.
+  const owingByContract=new Map();
   const owing=reportsForDriver.reduce((total,r)=>{
    const c=contractById.get(String(r.contract_id));
-   if(!r.week_start||!r.week_end)return total;
+   if(!c||!r.week_start||!r.week_end)return total;
    const start=new Date(String(r.week_start).slice(0,10)+'T00:00:00Z');
    const end=new Date(String(r.week_end).slice(0,10)+'T00:00:00Z');
    if(!Number.isFinite(start.getTime())||!Number.isFinite(end.getTime())||end<start)return total;
    const days=Math.max(1,Math.floor((end-start)/86400000)+1);
-   const weeklyTarget=Number(c.weekly_target||1400),dailyTarget=Number(c.daily_target||200);
+   const dailyTarget=Number(c.daily_target||200);
+   const weeklyTarget=Number(c.weekly_target||dailyTarget*7);
    const expected=days>=7?weeklyTarget*Math.floor(days/7)+dailyTarget*(days%7):dailyTarget*days;
-   return total+Math.max(0,expected-Number(r.payment_amount||0));
+   const shortfall=Math.max(0,expected-Number(r.payment_amount||0));
+   owingByContract.set(String(c.id),(owingByContract.get(String(c.id))||0)+shortfall);
+   return total+shortfall;
   },0);
+  const debtWarning=$('driverDebtThresholdWarning');
+  if(debtWarning){
+   const reached=contracts.map(c=>({c,owing:owingByContract.get(String(c.id))||0,target:Number(c.weekly_target||Number(c.daily_target||200)*7)}))
+    .filter(x=>x.target>0&&x.owing>=x.target);
+   if(reached.length){
+    debtWarning.classList.remove('hidden');
+    debtWarning.innerHTML='<strong>Outstanding debt warning</strong><br>'+reached.map(x=>esc(x.c.vehicle_id||'Your tricycle contract')+': accumulated owing is '+money(x.owing)+', which has reached your assigned weekly target of '+money(x.target)+'. Please contact Ezelex Enterprise admin and arrange payment of the outstanding debt.').join('<br>');
+   }else{debtWarning.classList.add('hidden');debtWarning.textContent='';}
+  }
   const outstanding=contracts.reduce((n,c)=>n+Math.max(0,Number(c.total_contract_amount||0)-Number(c.opening_paid_amount||0)-payments.filter(p=>String(p.contract_id)===String(c.id)).reduce((a,p)=>a+Number(p.amount||0),0)),0);
   set('driverSaleRecorded',salesRecorded);set('driverOwing',owing);set('driverPaid',paid);set('driverOutstanding',outstanding);
   const ends=contracts.map(c=>c.contract_end_date).filter(Boolean).sort();const yearEnd=$("driverYearEnd");if(yearEnd)yearEnd.textContent=ends.length?ends[ends.length-1]:"Not set";
