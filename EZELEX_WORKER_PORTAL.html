@@ -43,6 +43,8 @@ textarea{min-height:90px;resize:vertical}
 #weeklyStockPanel h2,.stock-subsection h2{padding:13px 15px;border-radius:10px;color:#fff;background:linear-gradient(100deg,#174a8b,#087e80);font-size:clamp(18px,2.4vw,23px)}
 #globalToast{position:fixed;right:16px;bottom:18px;z-index:9999;max-width:min(420px,calc(100vw - 32px));padding:13px 17px;border-radius:10px;background:#067647;color:#fff;box-shadow:0 10px 28px #0003;font-weight:700;opacity:0;transform:translateY(12px);pointer-events:none;transition:opacity .2s,transform .2s}
 #globalToast.show{opacity:1;transform:translateY(0)}
+#globalToast.errorToast{background:#b42318}
+#globalToast.infoToast{background:#175cd3}
 .menuDivider{height:1px;background:#e5e7eb;margin:7px 4px}
 .section{display:none}.section.active{display:block}
 .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:18px}
@@ -79,7 +81,7 @@ th,td{padding:12px;border-bottom:1px solid #e6ebf1;text-align:left;font-size:14p
 </style>
 </head>
 <body>
-<div id="globalToast" role="status" aria-live="polite"></div>
+<div id="globalToast" role="alert" aria-live="assertive"></div>
 
 <header>
   <div>
@@ -183,6 +185,12 @@ th,td{padding:12px;border-bottom:1px solid #e6ebf1;text-align:left;font-size:14p
         <button id="closeStockWeekBtn" type="button" class="danger">Close This Week (Sunday)</button>
         <button id="beginWeekCorrectionBtn" type="button" class="primary" style="display:none">Open Selected Closed Week for Correction</button>
         <button id="finishWeekCorrectionBtn" type="button" class="danger" style="display:none">Finish Correction &amp; Reconcile Stock</button>
+      </div>
+      <div class="panel" style="margin-top:14px;background:#f7f9fc">
+        <h3 style="margin:0 0 8px">Previous Stock Record</h3>
+        <p class="stockNote">Choose a closed week below. Each closed week can have one correction session only. After you finish it, the corrected remaining stock is reconciled into the following weeks and that week becomes permanently locked again.</p>
+        <div id="previousStockRecordMsg" aria-live="polite"></div>
+        <div class="tablebox"><table><thead><tr><th>Week</th><th>Status</th><th>Correction</th><th>Action</th></tr></thead><tbody id="previousStockRecordsBody"><tr><td colspan="4">Loading previous weeks…</td></tr></tbody></table></div>
       </div>
       <p class="stockNote" style="margin-top:10px">Closing a week archives it; it does not delete stock, sales, credit, or profit records. A new Monday automatically gets a fresh weekly book.</p>
     </div>
@@ -397,6 +405,7 @@ let currentStockWeek=null;
 let stockWeekRows=[];
 let selectedStockWeekId="";
 let activeWeekCorrection=null;
+let stockWeekCorrections=[];
 
 const $=id=>document.getElementById(id);
 let toastTimer=null;
@@ -495,52 +504,67 @@ function renderStockWeekControls(){
   const isOpen=currentStockWeek.status==="open";
   const chosen=stockWeekRows.find(w=>String(w.id)===String(selectedStockWeekId||currentStockWeek.id))||currentStockWeek;
   const correcting=!!activeWeekCorrection&&String(activeWeekCorrection.week_id)===String(chosen.id);
-  $("weekStatusLabel").textContent=correcting?"TEMPORARY CORRECTION OPEN — finish to close again":isOpen?"OPEN — add purchases and track sales":"CLOSED — archived and read-only";
+  $("weekStatusLabel").textContent=correcting?"ONE-TIME CORRECTION OPEN — finish to lock this week":isOpen?"OPEN — add purchases and track sales":"CLOSED — archived and read-only";
   $("closeStockWeekBtn").disabled=!isOpen;
   $("closeStockWeekBtn").textContent=isOpen?"Close This Week (Sunday)":"Week Closed";
-  const historical=chosen.status==="closed"&&String(chosen.id)!==String(currentStockWeek.id);
-  $("beginWeekCorrectionBtn").style.display=historical&&!correcting&&!activeWeekCorrection?"inline-block":"none";
+  const historical=chosen.status==="closed"&&String(chosen.id)!==String(currentStockWeek.id)&&!chosen._derived;
+  const correctionRecord=stockWeekCorrections.find(c=>String(c.week_id)===String(chosen.id));
+  $("beginWeekCorrectionBtn").style.display=historical&&!correctionRecord&&!activeWeekCorrection?"inline-block":"none";
   $("finishWeekCorrectionBtn").style.display=correcting?"inline-block":"none";
-  $("beginWeekCorrectionBtn").disabled=!!activeWeekCorrection;
+  $("beginWeekCorrectionBtn").disabled=!!activeWeekCorrection||!!correctionRecord;
   const picker=$("stockWeekPicker");
   if(picker&&stockWeekRows.length){const old=selectedStockWeekId||picker.value;picker.innerHTML='<option value="">Current week</option>'+stockWeekRows.map(w=>`<option value="${esc(w.id)}">${esc(weekLabel(w))} — ${esc(String(w.status||"open").toUpperCase())}</option>`).join("");picker.value=old&&stockWeekRows.some(w=>String(w.id)===String(old))?String(old):"";selectedStockWeekId=picker.value;}
+  renderPreviousStockRecords();
+}
+function renderPreviousStockRecords(){
+  const body=$("previousStockRecordsBody");if(!body)return;
+  const weeks=stockWeekRows.filter(w=>w.status==="closed"&&!w._derived&&String(w.id)!==String(currentStockWeek?.id||""));
+  if(!weeks.length){body.innerHTML='<tr><td colspan="4">No previous closed stock books found.</td></tr>';return;}
+  body.innerHTML=weeks.map(w=>{
+    const c=stockWeekCorrections.find(x=>String(x.week_id)===String(w.id));
+    const isActive=!!activeWeekCorrection&&String(activeWeekCorrection.week_id)===String(w.id);
+    const state=isActive?'CORRECTION OPEN':c?'CORRECTION USED — LOCKED':'AVAILABLE — NOT USED';
+    const action=isActive?'<span class="badge">Edit allowed now</span>':c?'<span class="badge">Permanently locked</span>':`<button type="button" class="primary" onclick="beginHistoricalWeekCorrection('${esc(w.id)}')" ${activeWeekCorrection?'disabled':''}>Open Once</button>`;
+    return `<tr><td>${esc(weekLabel(w))}</td><td>CLOSED</td><td>${esc(state)}</td><td>${action}</td></tr>`;
+  }).join("");
 }
 async function loadStockWeeks(){
   if(!currentUser)return;
   const r=await db.from("worker_stock_weeks").select("*").eq("worker_id",currentUser.id).order("week_start",{ascending:false}).limit(100);
   if(r.error){msg("weeklyStockMsg","Weekly stock books could not be loaded: "+esc(r.error.message),"error");return;}
   stockWeekRows=r.data||[];
+  const cr=await db.from("worker_stock_week_corrections").select("id,worker_id,week_id,status,opened_at,closed_at").eq("worker_id",currentUser.id);
+  if(cr.error){msg("weeklyStockMsg","Previous-week correction status could not be checked. Run the one-time correction SQL setup: "+esc(cr.error.message),"error");stockWeekCorrections=[];}else stockWeekCorrections=cr.data||[];
   const batches=await db.from("worker_stock_batches").select("id,week_id,stock_date,created_at").eq("worker_id",currentUser.id).is("deleted_at",null).order("stock_date",{ascending:false}).limit(2000);
-  if(!batches.error){
-    for(const b of (batches.data||[])){
-      const start=mondayDateISO(b.stock_date||b.created_at||today()), weekId=String(b.week_id||"");
-      if(!stockWeekRows.some(w=>(weekId&&String(w.id)===weekId)||String(w.week_start||"")===start))
-        stockWeekRows.push({id:weekId||("date:"+start),week_start:start,week_end:addDaysISO(start,6),status:start===mondayDateISO(today())?"open":"closed",_derived:true});
-    }
-  }
+  if(!batches.error){for(const b of (batches.data||[])){const start=mondayDateISO(b.stock_date||b.created_at||today()),weekId=String(b.week_id||"");if(!stockWeekRows.some(w=>(weekId&&String(w.id)===weekId)||String(w.week_start||"")===start))stockWeekRows.push({id:weekId||("date:"+start),week_start:start,week_end:addDaysISO(start,6),status:start===mondayDateISO(today())?"open":"closed",_derived:true});}}
   stockWeekRows.sort((a,b)=>String(b.week_start||"").localeCompare(String(a.week_start||"")));
   renderStockWeekControls();
 }
-async function beginHistoricalWeekCorrection(){
-  const week=stockWeekRows.find(w=>String(w.id)===String(selectedStockWeekId));
+async function beginHistoricalWeekCorrection(weekId){
+  const targetId=weekId||selectedStockWeekId;
+  const week=stockWeekRows.find(w=>String(w.id)===String(targetId));
   if(!week||week.status!=="closed"||week._derived){msg("weeklyStockMsg","Select a saved, closed weekly book before starting a correction.","error");return;}
   if(activeWeekCorrection){msg("weeklyStockMsg","Finish the currently open historical correction first.","error");return;}
+  const prior=await db.from("worker_stock_week_corrections").select("id,status").eq("worker_id",currentUser.id).eq("week_id",week.id).maybeSingle();
+  if(prior.error){msg("weeklyStockMsg","Could not verify whether this week's one-time correction was already used: "+esc(prior.error.message),"error");return;}
+  if(prior.data){stockWeekCorrections=stockWeekCorrections.filter(c=>String(c.week_id)!==String(week.id)).concat(prior.data);msg("weeklyStockMsg","This week has already used its one correction session and is permanently locked.","error");renderStockWeekControls();return;}
   const {data,error}=await db.from("worker_stock_week_corrections").insert({worker_id:currentUser.id,week_id:week.id,status:"open",opened_at:new Date().toISOString()}).select("*").single();
-  if(error){msg("weeklyStockMsg","Could not open correction mode. Run the weekly correction SQL setup first: "+esc(error.message),"error");return;}
-  activeWeekCorrection=data;renderStockWeekControls();await loadStock();
-  msg("weeklyStockMsg","Correction mode is open for "+weekLabel(week)+". Only this historical week can be edited. Finish the correction when all changes are complete.","success");
+  if(error){msg("weeklyStockMsg","Could not open correction mode. The database may already have recorded this week's one-time correction: "+esc(error.message),"error");return;}
+  activeWeekCorrection=data;selectedStockWeekId=String(week.id);$("stockWeekPicker").value=String(week.id);renderStockWeekControls();await loadStock();
+  msg("weeklyStockMsg","One-time correction is now open for "+weekLabel(week)+". Edit only this week's existing records. When finished, use Finish Correction & Reconcile Stock. This week cannot be reopened afterward.","success");
 }
 async function finishHistoricalWeekCorrection(){
   if(!activeWeekCorrection)return;
-  if(!confirm("Finish this historical correction and close the week again? The portal will reconcile its remaining stock into the next week's opening stock where a linked carry-forward record exists."))return;
-  const {error}=await db.from("worker_stock_week_corrections").update({status:"closed",closed_at:new Date().toISOString()}).eq("id",activeWeekCorrection.id).eq("worker_id",currentUser.id).eq("status","open");
-  if(error){msg("weeklyStockMsg","Correction could not be closed: "+esc(error.message),"error");return;}
+  if(!confirm("Finish this one-time historical correction? The portal will reconcile corrected remaining stock into every following week before permanently locking this week."))return;
   const week=stockWeekRows.find(w=>String(w.id)===String(activeWeekCorrection.week_id));
-  activeWeekCorrection=null;
   const reconcile=await reconcileHistoricalWeekCarry(week);
-  renderStockWeekControls();
   if(!reconcile.ok){msg("weeklyStockMsg",reconcile.message,"error");return;}
-  msg("weeklyStockMsg","Historical correction finished. The week is closed again and linked opening stock has been reconciled without recording a new purchase or profit.","success");
+  const {error}=await db.from("worker_stock_week_corrections").update({status:"closed",closed_at:new Date().toISOString()}).eq("id",activeWeekCorrection.id).eq("worker_id",currentUser.id).eq("status","open");
+  if(error){msg("weeklyStockMsg","Stock was reconciled, but the correction lock could not be saved: "+esc(error.message)+". Do not edit more records; contact admin.","error");return;}
+  stockWeekCorrections=stockWeekCorrections.map(c=>String(c.id)===String(activeWeekCorrection.id)?{...c,status:"closed",closed_at:new Date().toISOString()}:c);
+  activeWeekCorrection=null;
+  renderStockWeekControls();
+  msg("weeklyStockMsg","Correction completed. The corrected remaining quantities have been reconciled into following weeks. This historical week is now permanently locked and cannot be edited again.","success");
   await Promise.all([loadStock(),loadStockHistory(),loadStockWeeks()]);
 }
 async function reconcileHistoricalWeekCarry(week){
@@ -562,7 +586,12 @@ async function reconcileHistoricalWeekCarry(week){
         carry=candidates.data?.[0]||null;
         if(carry){const link=await db.from("worker_stock_batches").update({source_batch_id:source.id}).eq("id",carry.id).eq("worker_id",currentUser.id);if(link.error)return {ok:false,message:"Could not link the existing opening-stock row: "+link.error.message};}
       }
-      if(!carry)continue;
+      if(!carry){
+        const openingQty=Number(source.remaining_quantity||0);
+        const created=await db.from("worker_stock_batches").insert({worker_id:currentUser.id,week_id:next.id,source_batch_id:source.id,stock_type:"carry_forward",stock_date:next.week_start,product_service:source.product_service||"Opening stock",total_quantity:openingQty,capital_amount:0,cost_per_unit:Number(source.cost_per_unit||0),selling_price_per_unit:Number(source.selling_price_per_unit||0),sold_quantity:0,damage_quantity:0,loss_quantity:0,sales_revenue:0,sold_cost:0,damage_value:0,loss_value:0,remaining_quantity:openingQty,remaining_value:openingQty*Number(source.cost_per_unit||0),purchase_total:0,cash_in_hand:0,credit_quantity:0,credit_outstanding:0,profit_loss:0,notes:"Opening balance carried forward from week starting "+sourceWeek.week_start+". Created during one-time historical correction reconciliation; no new purchase or profit recorded."}).select("*").single();
+        if(created.error)return {ok:false,message:"Could not create corrected opening stock in "+weekLabel(next)+": "+created.error.message};
+        carry=created.data;
+      }
       const opening=Number(source.remaining_quantity||0), sold=Number(carry.sold_quantity||0), damage=Number(carry.damage_quantity||0), loss=Number(carry.loss_quantity||0), used=sold+damage+loss;
       if(opening<used)return {ok:false,message:"Reconciliation stopped for "+esc(source.product_service)+" in "+weekLabel(next)+": corrected opening stock is lower than quantities already sold, damaged or lost in that week. The existing figures were not overwritten."};
       const unit=Number(source.cost_per_unit||0), remaining=opening-used;
@@ -597,7 +626,7 @@ async function closeCurrentStockWeek(){
 $("closeStockWeekBtn")?.addEventListener("click",closeCurrentStockWeek);
 $("beginWeekCorrectionBtn")?.addEventListener("click",beginHistoricalWeekCorrection);
 $("finishWeekCorrectionBtn")?.addEventListener("click",finishHistoricalWeekCorrection);
-$("stockWeekPicker")?.addEventListener("change",async()=>{selectedStockWeekId=$("stockWeekPicker").value||"";await loadStock();});
+$("stockWeekPicker")?.addEventListener("change",async()=>{selectedStockWeekId=$("stockWeekPicker").value||"";renderStockWeekControls();await loadStock();});
 
 async function start(){
   const {data:{session}}=await db.auth.getSession();
@@ -973,7 +1002,7 @@ $("saveStockBtn").onclick=async()=>{
   if(saveButton.disabled)return;
   saveButton.disabled=true;
   try{
-  if(!editingStockId&&(!currentStockWeek||currentStockWeek.status!=="open")){msg("stockMsg","This weekly stock book is closed. Start or open the new Monday weekly book before adding stock.","error");return;}
+  if(!editingStockId&&(!currentStockWeek||currentStockWeek.status!=="open"||activeWeekCorrection)){msg("stockMsg","New stock cannot be added during a historical correction. Only existing records in the selected previous week can be edited.","error");return;}
   if(editingStockId&&editingStockOriginal?.week_id&&String(editingStockOriginal.week_id)!==String(currentStockWeek?.id||"")&&(!activeWeekCorrection||String(activeWeekCorrection.week_id)!==String(editingStockOriginal.week_id))){msg("stockMsg","Open the selected closed week for correction before saving its records.","error");return;}
   if(!editingStockId&&selectedStockWeekId&&selectedStockWeekId!==String(currentStockWeek?.id||"")){msg("stockMsg","You are viewing a previous week. Existing records can be edited, but new stock can only be added to the current week.","error");return;}
   const total=num("stockTotal"),capital=num("capitalAmount"),unitCost=num("costPerUnit"),price=num("sellPrice"),purchase=(editingStockId&&editingStockOriginal?.stock_type==="carry_forward")?0:total*unitCost;
@@ -1020,6 +1049,7 @@ $("saveStockBtn").onclick=async()=>{
   const savedStockDate=record.stock_date;
   msg("stockMsg",wasEditing?"Stock updated and date/time history recorded.":"Stock record saved successfully and sent to Ezelex admin.","success");
   editingStockId=""; editingStockOriginal=null; $("editingStockId").value=""; $("stockForm").reset(); $("stockDate").value=savedStockDate||today(); $("stockSold").value=0; $("stockDamage").value=0; $("saveStockBtn").textContent="Save Stock Record"; $("cancelEditStockBtn").style.display="none"; $("deleteStockBtn").style.display="none"; updateStockFormCreditSummary(""); calculateStock(); await Promise.all([loadStock(),loadStockHistory(),loadStockWeeks()]);
+  if(activeWeekCorrection)msg("weeklyStockMsg","Historical record saved. Continue correcting this week, then finish the one-time correction to reconcile and permanently lock it.","success");
   }catch(error){
     console.error("Stock save/update failed:",error);
     msg("stockMsg","Stock could not be saved: "+esc(error?.message||String(error)),"error");
