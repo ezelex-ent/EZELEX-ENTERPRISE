@@ -43,6 +43,7 @@ textarea{min-height:90px;resize:vertical}
 #weeklyStockPanel h2,.stock-subsection h2{padding:13px 15px;border-radius:10px;color:#fff;background:linear-gradient(100deg,#174a8b,#087e80);font-size:clamp(18px,2.4vw,23px)}
 #globalToast{position:fixed;right:16px;bottom:18px;z-index:9999;max-width:min(420px,calc(100vw - 32px));padding:13px 17px;border-radius:10px;background:#067647;color:#fff;box-shadow:0 10px 28px #0003;font-weight:700;opacity:0;transform:translateY(12px);pointer-events:none;transition:opacity .2s,transform .2s}
 #globalToast.show{opacity:1;transform:translateY(0)}
+#globalToast.errorToast{background:#b42318}#globalToast.infoToast{background:#174a8b}
 .menuDivider{height:1px;background:#e5e7eb;margin:7px 4px}
 .section{display:none}.section.active{display:block}
 .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:18px}
@@ -282,6 +283,9 @@ th,td{padding:12px;border-bottom:1px solid #e6ebf1;text-align:left;font-size:14p
       <h2> My Stock Records</h2><div class="stockNote">Enter your starting capital and purchase cost per unit. Total purchase cost is calculated automatically as quantity × unit cost. <strong>Cash In Hand = Starting Capital + Sales Revenue − Total Purchase Cost</strong>. Damage is tracked separately and is not treated as cash spent.</div>
       <div class="tablebox"><table><thead><tr><th>Date</th><th>Product</th><th>Total</th><th>Sold</th><th>Damage</th><th>Remaining</th><th>Capital</th><th>Purchase</th><th>Cash In Hand</th><th>Profit/Loss</th><th>Actions</th></tr></thead>
       <tbody id="stockBody"><tr><td colspan="11">Loading...</td></tr></tbody></table></div>
+      <h3 style="margin-top:22px">Deleted Stock Records — Recovery</h3>
+      <p class="stockNote">Deleted records are kept here until restored. Restoring returns the original stock record, edit history and on-credit entries.</p>
+      <div class="tablebox"><table><thead><tr><th>Deleted On</th><th>Stock Item</th><th>Original Date</th><th>Quantity</th><th>Sold</th><th>Remaining</th><th>Action</th></tr></thead><tbody id="deletedStockBody"><tr><td colspan="7">Loading deleted records...</td></tr></tbody></table></div>
     </div>
 
   </section>
@@ -328,7 +332,7 @@ th,td{padding:12px;border-bottom:1px solid #e6ebf1;text-align:left;font-size:14p
         <div id="dailyChartAccessible" class="dailyChartAccessible" aria-live="polite"></div>
       </div>
       <h3 style="margin-top:22px">Full Edit History</h3>
-      <div class="tablebox"><table><thead><tr><th>Date & Time Edited</th><th>Stock Item</th><th>Action</th><th>Sold Change</th><th>Sold Total</th><th>Damage Total</th><th>Remaining</th><th>Notes</th></tr></thead><tbody id="stockHistoryBody"><tr><td colspan="8">Loading...</td></tr></tbody></table></div>
+      <div class="tablebox"><table><thead><tr><th>Date & Time Edited</th><th>Stock Item</th><th>Action</th><th>Sold Change</th><th>Sold Total</th><th>Damage Total</th><th>Remaining</th><th>Notes</th><th>Stock Action</th></tr></thead><tbody id="stockHistoryBody"><tr><td colspan="9">Loading...</td></tr></tbody></table></div>
     </div>
   </section>
 
@@ -399,12 +403,20 @@ let toastTimer=null;
 function showSuccessToast(text){
   const toast=$("globalToast"); if(!toast)return;
   toast.textContent=String(text??"").replace(/<[^>]*>/g,"").trim();
+  toast.classList.remove("errorToast","infoToast");
   toast.classList.add("show");
   clearTimeout(toastTimer); toastTimer=setTimeout(()=>toast.classList.remove("show"),3200);
 }
 function msg(id,text,type=""){
   const target=$(id); if(target)target.innerHTML=text?`<div class="msg ${type}">${text}</div>`:"";
-  if(type==="success"&&text)showSuccessToast(text);
+  if(text)showScreenAlert(text,type);
+}
+function showScreenAlert(text,type="success"){
+  const toast=$("globalToast");if(!toast)return;
+  toast.textContent=String(text??"").replace(/<[^>]*>/g,"").trim();
+  toast.classList.remove("errorToast","infoToast");
+  if(type==="error")toast.classList.add("errorToast");else if(!["success",""] .includes(type))toast.classList.add("infoToast");
+  toast.classList.add("show");clearTimeout(toastTimer);toastTimer=setTimeout(()=>toast.classList.remove("show"),4200);
 }
 function today(){const d=new Date();return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");}
 function esc(v){return String(v??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[m]));}
@@ -641,6 +653,7 @@ async function loadStock(){
   const {data,error}=await selectWorkerRows("worker_stock_batches","*",{column:"stock_date",ascending:false});
   if(error){$("stockBody").innerHTML='<tr><td colspan="11">Stock records could not be loaded.</td></tr>';msg("stockLiveMsg","Could not load live stock: "+error.message,"error");return;}
   const allRows=data||[]; liveStockRows=allRows;
+  await loadDeletedStockRecords();
   const dashBought=allRows.reduce((sum,r)=>sum+(r.stock_type==="carry_forward"?0:Number(r.total_quantity||0)),0);
   const dashSold=allRows.reduce((sum,r)=>sum+Number(r.sold_quantity||0),0);
   const dashProfit=allRows.reduce((sum,r)=>sum+Number(r.profit_loss||0),0);
@@ -674,7 +687,7 @@ function selectedWeekIsClosed(){const id=selectedStockWeekId||currentStockWeek?.
 function dateTime(v){if(!v)return "—";const d=new Date(v);return Number.isNaN(d.getTime())?String(v):d.toLocaleString("en-GB",{day:"2-digit",month:"short",year:"numeric",hour:"2-digit",minute:"2-digit",second:"2-digit"});}
 async function loadStockHistory(){
   const {data,error}=await selectWorkerRows("worker_stock_edit_history","*",{column:"changed_at",ascending:false},1000);
-  if(error){$("stockHistoryBody").innerHTML='<tr><td colspan="8">History unavailable. Please run the supplied stock history SQL in Supabase.</td></tr>';$("stockDailyBody").innerHTML='<tr><td colspan="4">History unavailable.</td></tr>';msg("stockHistoryMsg","Could not load stock history: "+esc(error.message),"error");return;}
+  if(error){$("stockHistoryBody").innerHTML='<tr><td colspan="9">History unavailable. Please run the supplied stock history SQL in Supabase.</td></tr>';$("stockDailyBody").innerHTML='<tr><td colspan="4">History unavailable.</td></tr>';msg("stockHistoryMsg","Could not load stock history: "+esc(error.message),"error");return;}
   // Hide historical deletion entries from the worker Edit History; keep normal stock edits visible.
   stockHistoryRows=(data||[]).filter(h=>!String(h.action||"").toLowerCase().includes("delet"));renderStockHistory();
 }
@@ -765,7 +778,8 @@ function renderStockHistory(){
   const best=days.slice().sort((a,b)=>b[1].value-a[1].value)[0];
   $("historyDaysCount").textContent=days.length;$("historyUnitsSold").textContent=soldTotal.toLocaleString();$("historyBestDay").textContent=best?best[0]+" ("+money(best[1].value)+")":"—";$("historySalesValue").textContent=money(valueTotal);
   drawDailyPerformanceChart(daily);
-  $("stockHistoryBody").innerHTML=stockHistoryRows.length?stockHistoryRows.map(h=>`<tr><td>${esc(dateTime(h.changed_at))}</td><td>${esc(h.product_service||"")}</td><td>${esc(h.action||"Edited")}</td><td>${Number(h.sold_delta||0)>0?"+":""}${Number(h.sold_delta||0)}</td><td>${esc(h.sold_after??"—")}</td><td>${esc(h.damage_after??"—")}</td><td>${esc(h.remaining_after??"—")}</td><td>${esc(h.notes||"")}</td></tr>`).join(""):'<tr><td colspan="8">No stock edits recorded yet.</td></tr>';
+  const actionShown=new Set();
+  $("stockHistoryBody").innerHTML=stockHistoryRows.length?stockHistoryRows.map(h=>{const batchId=String(h.stock_batch_id||"");const showAction=batchId&&!actionShown.has(batchId);if(showAction)actionShown.add(batchId);return `<tr><td>${esc(dateTime(h.changed_at))}</td><td>${esc(h.product_service||"")}</td><td>${esc(h.action||"Edited")}</td><td>${Number(h.sold_delta||0)>0?"+":""}${Number(h.sold_delta||0)}</td><td>${esc(h.sold_after??"—")}</td><td>${esc(h.damage_after??"—")}</td><td>${esc(h.remaining_after??"—")}</td><td>${esc(h.notes||"")}</td><td>${showAction?`<button type="button" class="danger" onclick="deleteStockToArchive('${esc(batchId)}')">Delete Stock</button>`:"—"}</td></tr>`;}).join(""):'<tr><td colspan="9">No stock edits recorded yet.</td></tr>';
 }
 async function writeStockHistory(before,after,action){
   const soldBefore=Number(before?.sold_quantity||0),soldAfter=Number(after?.sold_quantity||0),damageBefore=Number(before?.damage_quantity||0),damageAfter=Number(after?.damage_quantity||0);
@@ -800,7 +814,7 @@ $("openStockCreditBtn")?.addEventListener("click",()=>{
   msg("creditMsg","Recording credit against: "+esc(batch.product_service||"Stock")+". Enter the customer and quantity below.","success");
 });
 function startStockEdit(r){
-  editingStockId=r.id||""; editingStockOriginal={...r}; $("editingStockId").value=editingStockId; $("deleteStockBtn").style.display="inline-block";
+  editingStockId=r.id||""; editingStockOriginal={...r}; $("editingStockId").value=editingStockId; $("deleteStockBtn").style.display="none";
   $("stockDate").value=dateOnly(r.stock_date)||today(); $("stockProduct").value=r.product_service||"";
   $("stockTotal").value=Number(r.total_quantity||0); $("capitalAmount").value=Number(r.capital_amount ?? r.purchase_total ?? 0); $("costPerUnit").value=Number(r.cost_per_unit ?? (Number(r.total_quantity||0)>0?Number(r.purchase_total||0)/Number(r.total_quantity||0):0));
   $("sellPrice").value=Number(r.selling_price_per_unit||0); $("stockSold").value=Number(r.sold_quantity||0); $("stockDamage").value=Number(r.damage_quantity||0); $("stockNotes").value=r.notes||"";
@@ -827,20 +841,33 @@ function cancelStockEdit(){
   editingStockId=""; editingStockOriginal=null; $("editingStockId").value=""; $("stockForm").reset(); $("stockDate").value=today(); $("stockSold").value=0; $("stockDamage").value=0; $("saveStockBtn").textContent="Save Stock Record"; $("cancelEditStockBtn").style.display="none"; $("deleteStockBtn").style.display="none"; updateStockFormCreditSummary(""); calculateStock(); msg("stockMsg","Edit cancelled","");
 }
 $("cancelEditStockBtn").onclick=cancelStockEdit;
-$("deleteStockBtn").onclick=async()=>{
-  if(!editingStockId){msg("stockMsg","Open a stock record with Edit before deleting it.","error");return;}
-  const product=$("stockProduct").value.trim()||"this stock record";
-  if(!confirm(`Delete the stock record for "${product}"? This will remove it from your stock records and the admin dashboard too. This action cannot be undone.`))return;
-  $("deleteStockBtn").disabled=true;
-  msg("stockMsg","Deleting stock record...");
-  // Deletions are intentionally not added to the shared edit-history table.
-  const {error}=await db.from("worker_stock_batches").delete().eq("id",editingStockId).eq("worker_id",currentUser.id);
-  $("deleteStockBtn").disabled=false;
-  if(error){msg("stockMsg","Stock record could not be deleted: "+error.message,"error");return;}
-  editingStockId=""; editingStockOriginal=null; $("editingStockId").value=""; $("stockForm").reset(); $("stockDate").value=today(); $("stockSold").value=0; $("stockDamage").value=0;
-  $("saveStockBtn").textContent="Save Stock Record"; $("cancelEditStockBtn").style.display="none"; $("deleteStockBtn").style.display="none"; calculateStock();
-  msg("stockMsg","Stock record deleted successfully. It has also been removed from the admin stock view.","success");
-  await Promise.all([loadStock(),loadStockHistory()]);
+$("deleteStockBtn").onclick=()=>{
+  msg("stockMsg","To delete a stock record, use the Delete Stock button in Edit History. Deleted records can be restored from My Stock Records.","info");
+};
+window.deleteStockToArchive=async function(batchId){
+  const batch=liveStockRows.find(r=>String(r.id)===String(batchId));
+  if(!batch){msg("stockHistoryMsg","That stock record is no longer available. Refresh and try again.","error");return;}
+  if(!confirm(`Move "${batch.product_service||"this stock record"}" to Deleted Stock Records? Its purchases, sales, profit and cash figures will be excluded while deleted. You can restore it later.`))return;
+  showScreenAlert("Deleting stock record and recalculating totals…","info");
+  const {data,error}=await db.rpc("ezelex_worker_soft_delete_stock",{p_stock_batch_id:batchId});
+  if(error||data===false){msg("stockHistoryMsg","Stock could not be moved to Deleted Stock Records: "+esc(error?.message||"Permission denied"),"error");return;}
+  if(String(editingStockId)===String(batchId))cancelStockEdit();
+  msg("stockHistoryMsg","Stock record moved to Deleted Stock Records. Dashboard, weekly totals, purchases, remaining stock, revenue, profit and cash have been recalculated.","success");
+  await Promise.all([loadStock(),loadStockHistory(),loadStockWeeks(),loadCredits()]);
+};
+async function loadDeletedStockRecords(){
+  const body=$("deletedStockBody");if(!body||!currentUser)return;
+  const {data,error}=await db.from("worker_stock_deleted_batches").select("id,original_stock_id,stock_snapshot,deleted_at").eq("worker_id",currentUser.id).is("restored_at",null).order("deleted_at",{ascending:false});
+  if(error){body.innerHTML='<tr><td colspan="7">Deleted-record recovery is not set up yet. Run the supplied recovery SQL first.</td></tr>';return;}
+  body.innerHTML=(data||[]).length?(data||[]).map(x=>{const b=x.stock_snapshot||{};return `<tr><td>${esc(dateTime(x.deleted_at))}</td><td>${esc(b.product_service||"Stock")}</td><td>${esc(dateOnly(b.stock_date))}</td><td>${esc(b.total_quantity??0)}</td><td>${esc(b.sold_quantity??0)}</td><td>${esc(b.remaining_quantity??0)}</td><td><button type="button" class="primary" onclick="restoreDeletedStock('${esc(x.id)}')">Restore</button></td></tr>`;}).join(""):'<tr><td colspan="7">No deleted stock records.</td></tr>';
+}
+window.restoreDeletedStock=async function(archiveId){
+  if(!confirm("Restore this stock record, including its original edit history and on-credit records, to the active stock books? All totals will be recalculated."))return;
+  showScreenAlert("Restoring stock record…","info");
+  const {data,error}=await db.rpc("ezelex_worker_restore_stock",{p_archive_id:archiveId});
+  if(error||data===false){msg("stockMsg","Stock could not be restored: "+esc(error?.message||"Permission denied"),"error");return;}
+  msg("stockMsg","Stock record restored successfully. It is back in My Stock Records and can be edited again. All totals have been refreshed.","success");
+  await Promise.all([loadStock(),loadStockHistory(),loadStockWeeks(),loadCredits()]);
 };
 $("saveStockBtn").onclick=async()=>{
   const saveButton=$("saveStockBtn");
@@ -853,14 +880,13 @@ $("saveStockBtn").onclick=async()=>{
   const enteredSold=num("stockSold"),enteredDamage=num("stockDamage");
   const old=editingStockOriginal||{};
   const oldSold=Number(old.sold_quantity||0),oldDamage=Number(old.damage_quantity||0);
-  // On edit, a lower quantity is treated as the additional quantity sold/damaged today;
-  // an equal or higher value is treated as the cumulative quantity for this stock batch.
+  // Preserve the current portal's existing sold/damage entry behaviour.
   const sold=editingStockId&&enteredSold<oldSold?oldSold+enteredSold:enteredSold;
   const damage=editingStockId&&enteredDamage<oldDamage?oldDamage+enteredDamage:enteredDamage;
   const revenue=sold*price,creditOutstanding=Number(old.credit_outstanding||0),cash=capital+revenue-creditOutstanding-purchase;
   if(!$('stockDate').value||!$('stockProduct').value.trim()||total<=0||capital<0||unitCost<0||price<0||cash<0||sold+damage>total){msg("stockMsg","Please check the stock quantities and costs. Available cash (starting capital plus recorded sales) cannot be negative, and sold + damage cannot be greater than total stock.","error");return;}
   const soldCost=sold*unitCost,damageValue=damage*unitCost,remaining=total-sold-damage,remainingValue=remaining*unitCost;
-  // Keep already-earned profit and add only the profit/loss from quantities newly recorded.
+  // Keep the existing incremental profit calculation unchanged.
   const addedSold=Math.max(0,sold-oldSold),addedDamage=Math.max(0,damage-oldDamage);
   const priorProfit=Number(old.profit_loss||0);
   const profit=editingStockId?priorProfit+(addedSold*(price-unitCost))-(addedDamage*unitCost):(revenue-soldCost-damageValue);
