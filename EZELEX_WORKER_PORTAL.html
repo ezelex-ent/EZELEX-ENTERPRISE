@@ -50,6 +50,12 @@ textarea{min-height:90px;resize:vertical}
 .stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-top:18px}
 .stat{background:#fff;border:1px solid #dce4ee;border-top:3px solid #2563a6;border-radius:12px;padding:16px;min-width:0;overflow-wrap:anywhere}
 .stat small{display:block;color:#64748b;font-weight:700;margin-bottom:6px}.stat strong{font-size:21px}
+
+.statAction{display:block;width:100%;text-align:left;font:inherit;cursor:pointer;color:inherit;appearance:none;touch-action:manipulation;transition:transform .15s,box-shadow .15s}
+.statAction:hover,.statAction:focus-visible{outline:2px solid #2563a6;outline-offset:2px;box-shadow:0 5px 16px #10233f18;transform:translateY(-1px)}
+.statAction small,.statAction strong,.statAction .live{display:block}
+@media(max-width:700px){.statAction{min-height:105px;padding:12px}.statAction strong{font-size:18px}}
+
 .stockGrid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px;margin:15px 0}
 .stockCard{background:#fff;border:1px solid #dce4ee;border-radius:12px;padding:16px;min-width:0;overflow-wrap:anywhere}
 .stockCard small{display:block;color:#64748b;font-weight:700;margin-bottom:6px}.stockCard strong{font-size:20px}
@@ -155,10 +161,10 @@ th,td{padding:12px;border-bottom:1px solid #e6ebf1;text-align:left;font-size:14p
     <div class="stats">
       <div class="stat"><small>Total Crates Bought</small><strong id="todaySales">0</strong></div>
       <div class="stat"><small>Total Crates Sold</small><strong id="weekSales">0</strong></div>
-      <div class="stat" id="dashboardProfitCard"><small>Live Profit/Loss</small><strong id="monthSales">GH₵0.00</strong></div>
-      <div class="stat"><small>Cash In Hand</small><strong id="allSales">GH₵0.00</strong></div>
+      <div class="stat" id="dashboardProfitCard"><small>Projected Live Profit/Loss (Sold + On-Credit)</small><strong id="monthSales">GH₵0.00</strong><div id="dashboardProfitBreakdown" class="live">Actual sold: GH₵0.00 + unpaid credit projection: GH₵0.00</div></div>
+      <div class="stat"><small>Cash In Hand</small><strong id="allSales">GH₵0.00</strong><div class="live">Unpaid credit is excluded until fully paid.</div></div>
       <div class="stat" id="dashboardRemainingCard"><small>Remaining Stock (including unpaid credit)</small><strong id="dashboardRemaining">0</strong><div id="dashboardRemainingBreakdown">0 available + 0 on-credit</div></div>
-      <div class="stat"><small>On-Credit Crates (unpaid)</small><strong id="dashboardCreditUnits">0</strong></div>
+      <button type="button" class="stat statAction" id="dashboardCreditCard" aria-label="Open On-Credit records"><small>On-Credit Crates (unpaid) — Open records</small><strong id="dashboardCreditUnits">0</strong><div id="dashboardCreditBreakdown" class="live">View outstanding customer credit</div></button>
     </div>
   </div>
 
@@ -765,21 +771,36 @@ async function loadStock(){
   const allRows=data||[]; liveStockRows=allRows;
   const dashBought=allRows.reduce((sum,r)=>sum+(r.stock_type==="carry_forward"?0:Number(r.total_quantity||0)),0);
   const dashSold=allRows.reduce((sum,r)=>sum+Number(r.sold_quantity||0),0);
-  const dashProfit=allRows.reduce((sum,r)=>sum+Number(r.profit_loss||0),0);
+  const actualSoldProfit=allRows.reduce((sum,r)=>sum+Number(r.profit_loss||0),0);
   const dashCash=allRows.reduce((sum,r)=>sum+Number(r.cash_in_hand??(Number(r.capital_amount??r.purchase_total??0)+Number(r.sales_revenue||0)-Number(r.purchase_total||0))),0);
   const liveWeekStart=mondayDateISO(today());
   const dashboardWeekRows=allRows.filter(r=>String(r.week_id||"")===String(currentStockWeek?.id||"")||(!r.week_id&&mondayDateISO(r.stock_date||r.created_at||today())===liveWeekStart));
   const dashboardBatchIds=new Set(dashboardWeekRows.map(r=>String(r.id)));
-  const openCreditRows=(creditRows||[]).filter(c=>dashboardBatchIds.has(String(c.stock_batch_id))&&Number(c.amount_paid||0)<Number(c.amount_due||0));
-  const unpaidCreditUnits=openCreditRows.reduce((n,c)=>n+Number(c.quantity||0),0);
+  const openCreditRows=(creditRows||[]).filter(c=>Number(c.amount_paid||0)<Number(c.amount_due||0));
+  const openDashboardWeekCredits=openCreditRows.filter(c=>dashboardBatchIds.has(String(c.stock_batch_id)));
+  const unpaidCreditUnits=openDashboardWeekCredits.reduce((n,c)=>n+Number(c.quantity||0),0);
   const availableRemaining=dashboardWeekRows.reduce((n,r)=>n+Number(r.remaining_quantity||0),0);
   const dashboardRemaining=availableRemaining+unpaidCreditUnits;
+  // Project the profit on every unpaid credit record without recognising it as earned profit.
+  // It is shown separately and added to actual sold profit only for the dashboard projection.
+  const batchById=new Map(allRows.map(r=>[String(r.id),r]));
+  const unpaidCreditProfit=openCreditRows.reduce((sum,c)=>{
+    const batch=batchById.get(String(c.stock_batch_id));
+    if(!batch)return sum;
+    const qty=Math.max(0,Number(c.quantity||0));
+    const due=Math.max(0,Number(c.amount_due||0));
+    const unitCost=Math.max(0,Number(batch.cost_per_unit||0));
+    return sum+(due-qty*unitCost);
+  },0);
+  const projectedLiveProfit=actualSoldProfit+unpaidCreditProfit;
   $("todaySales").textContent=dashBought.toLocaleString(); $("weekSales").textContent=dashSold.toLocaleString();
-  $("monthSales").textContent=money(dashProfit); $("allSales").textContent=money(dashCash);
+  $("monthSales").textContent=money(projectedLiveProfit); $("allSales").textContent=money(dashCash);
+  if($("dashboardProfitBreakdown"))$("dashboardProfitBreakdown").textContent=`Actual sold: ${money(actualSoldProfit)} + unpaid credit projection: ${money(unpaidCreditProfit)}`;
   if($("dashboardRemaining"))$("dashboardRemaining").textContent=dashboardRemaining.toLocaleString();
   if($("dashboardRemainingBreakdown"))$("dashboardRemainingBreakdown").textContent=`${availableRemaining.toLocaleString()} available + ${unpaidCreditUnits.toLocaleString()} on-credit`;
-  if($("dashboardCreditUnits"))$("dashboardCreditUnits").textContent=unpaidCreditUnits.toLocaleString();
-  const dashboardProfitCard=$("dashboardProfitCard"); dashboardProfitCard?.classList.toggle("profit",dashProfit>0); dashboardProfitCard?.classList.toggle("loss",dashProfit<0);
+  if($("dashboardCreditUnits"))$("dashboardCreditUnits").textContent=openCreditRows.reduce((n,c)=>n+Number(c.quantity||0),0).toLocaleString();
+  if($("dashboardCreditBreakdown"))$("dashboardCreditBreakdown").textContent=`${money(openCreditRows.reduce((n,c)=>n+Math.max(0,Number(c.amount_due||0)-Number(c.amount_paid||0)),0))} outstanding · Tap to open On-Credit`;
+  const dashboardProfitCard=$("dashboardProfitCard"); dashboardProfitCard?.classList.toggle("profit",projectedLiveProfit>0); dashboardProfitCard?.classList.toggle("loss",projectedLiveProfit<0);
   const chosenWeekId=selectedStockWeekId||currentStockWeek?.id||"";
   const chosenWeek=stockWeekRows.find(w=>String(w.id)===String(chosenWeekId))||currentStockWeek;
   const chosenStart=chosenWeek?.week_start||mondayDateISO(today());
@@ -1593,6 +1614,11 @@ function activateMainSection(tab){
   if(tab==="credit")loadCredits();
   if(tab==="communication")loadMessages();
 }
+$("dashboardCreditCard")?.addEventListener("click",()=>{
+  activateMainSection("credit");
+  closeWorkerMenu();
+  if($("credit"))$("credit").scrollIntoView({behavior:"smooth",block:"start"});
+});
 document.querySelectorAll(".menuItem[data-tab]").forEach(btn=>{
   btn.addEventListener("click",()=>{
     activateMainSection(btn.dataset.tab);
