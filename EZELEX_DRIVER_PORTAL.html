@@ -186,16 +186,72 @@ th,td{padding:12px;border-bottom:1px solid #e6edf4}
 @media(max-width:420px){.stats,.stockGrid,.resultGrid{grid-template-columns:minmax(0,1fr)}header h1{font-size:17px}.wrap{padding:0 8px}.panel{padding:13px}}
 @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}*,*::before,*::after{transition:none!important;animation:none!important}}
 /* Additive payment warning and live profile billboard */
-.driver-live-billboard{border:1px solid #cbd9e8;border-left:5px solid #1761a8;border-radius:14px;padding:16px 18px;margin:0 0 16px;background:linear-gradient(120deg,#f3f8ff,#edf8f7);min-height:138px;box-shadow:0 6px 18px #10233f12}
+.driver-dashboard-live-panel{padding:10px!important;margin-bottom:12px!important}
+.driver-live-billboard{border:1px solid #cbd9e8;border-left:4px solid #1761a8;border-radius:10px;padding:10px 13px;margin:0;background:linear-gradient(120deg,#f3f8ff,#edf8f7);min-height:0;box-shadow:0 3px 10px #10233f0d}
+.driver-live-billboard-top{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
+.driver-live-billboard-rotation{font-size:10px;color:#66788b}
+
 .driver-live-billboard-kicker{font-size:11px;font-weight:800;letter-spacing:.09em;color:#526b85}
-.driver-live-billboard-label{font-size:15px;font-weight:800;margin-top:8px;color:#203b58}
-.driver-live-billboard-value{font-size:clamp(20px,3vw,28px);font-weight:900;margin-top:4px;color:#10233f;overflow-wrap:anywhere}
-.driver-live-billboard-detail{font-size:13px;color:#526579;margin-top:5px;line-height:1.5}
-.driver-live-billboard-dots{font-size:11px;letter-spacing:5px;color:#1761a8;margin-top:9px}
+.driver-live-billboard-label{font-size:12px;font-weight:800;margin-top:5px;color:#203b58}
+.driver-live-billboard-value{font-size:clamp(17px,2.3vw,22px);font-weight:900;margin-top:2px;color:#10233f;overflow-wrap:anywhere}
+.driver-live-billboard-detail{font-size:11px;color:#526579;margin-top:3px;line-height:1.35}
+.driver-live-billboard-dots{font-size:9px;letter-spacing:4px;color:#1761a8;margin-top:4px}
 .driver-live-billboard.is-critical{border-left-color:#b42318;background:linear-gradient(120deg,#fff1f0,#fff8f6)}
 .driver-live-billboard.is-critical .driver-live-billboard-label,.driver-live-billboard.is-critical .driver-live-billboard-value{color:#a11b1b}
-@media(max-width:700px){.driver-live-billboard{padding:13px;min-height:128px;margin-bottom:12px}.driver-live-billboard-value{font-size:21px}.driver-live-billboard-detail{font-size:12px}}
-@media(max-width:420px){.driver-live-billboard{padding:11px;border-radius:11px}.driver-live-billboard-value{font-size:19px}}
+@media(max-width:700px){.driver-dashboard-live-panel{padding:7px!important}.driver-live-billboard{padding:9px 10px}.driver-live-billboard-value{font-size:18px}.driver-live-billboard-detail{font-size:10px}}
+@media(max-width:420px){.driver-live-billboard{padding:8px;border-radius:9px}.driver-live-billboard-value{font-size:17px}.driver-live-billboard-rotation{font-size:9px}}
+
+/* EZELEX DRIVER DASHBOARD — compact mobile fit (additive; desktop layout unchanged) */
+#portal{min-width:0;width:100%;overflow-x:clip}
+#portal *{min-width:0}
+#driverWelcomePanel .workerInfo{overflow-wrap:anywhere}
+#dashboard{min-width:0}
+#dashboard .panel{min-width:0}
+#dashboard h2{margin-top:0}
+#dashboard p{max-width:850px}
+.driver-dashboard-live-panel{padding:12px!important}
+.driver-live-billboard{display:grid;grid-template-columns:minmax(0,1fr) auto;column-gap:12px;row-gap:3px;align-items:center;padding:11px 14px}
+.driver-live-billboard-top{grid-column:1/-1}
+.driver-live-billboard-label,.driver-live-billboard-value,.driver-live-billboard-detail{min-width:0;overflow-wrap:anywhere}
+.driver-live-billboard-dots{grid-column:1/-1;margin-top:2px}
+@media(max-width:700px){
+ body{overflow-x:hidden}
+ #portal.wrap{width:100%;max-width:100%;margin:10px auto;padding-left:9px;padding-right:9px}
+ #driverWelcomePanel{padding:12px!important;margin-bottom:11px!important;border-radius:12px}
+ #driverWelcomePanel h2{font-size:18px;margin:0 0 6px}
+ #driverWelcomePanel .workerInfo{font-size:11px;line-height:1.45}
+ #driverWelcomePanel .stats{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:7px!important;margin-top:10px}
+ #driverWelcomePanel .stat{padding:9px 10px!important;border-radius:10px!important;border-top-width:2px;box-shadow:0 2px 8px #10233f08}
+ #driverWelcomePanel .stat small{font-size:10px;line-height:1.3;margin-bottom:3px}
+ #driverWelcomePanel .stat strong{display:block;font-size:clamp(14px,4vw,17px)!important;line-height:1.2;overflow-wrap:anywhere}
+ #driverWelcomePanel .stat small:last-child{font-size:9px;line-height:1.25;margin-top:4px}
+ #portal>.tabs{margin:0 0 11px!important;gap:6px!important;grid-template-columns:repeat(2,minmax(0,1fr))!important}
+ #portal>.tabs .tab{min-height:38px!important;padding:7px 6px!important;font-size:11px!important;border-radius:8px!important;line-height:1.2}
+ #dashboard .panel{padding:11px!important;margin-bottom:10px!important;border-radius:11px!important}
+ #dashboard .panel h2{font-size:16px;margin:0 0 6px}
+ #dashboard .panel p{font-size:11px;line-height:1.4;margin:5px 0 8px}
+ .driver-dashboard-live-panel{padding:6px!important}
+ .driver-live-billboard{padding:8px 9px;column-gap:7px;row-gap:2px;border-radius:9px}
+ .driver-live-billboard-kicker{font-size:9px;letter-spacing:.07em}
+ .driver-live-billboard-rotation{font-size:9px}
+ .driver-live-billboard-label{font-size:10px;margin-top:2px}
+ .driver-live-billboard-value{font-size:clamp(14px,4.2vw,17px)!important;line-height:1.2}
+ .driver-live-billboard-detail{font-size:9px;line-height:1.25}
+ .driver-live-billboard-dots{font-size:8px;letter-spacing:3px}
+ #driverDashboardSummaryMsg,#driverDebtThresholdWarning{font-size:11px;line-height:1.35}
+}
+@media(max-width:360px){
+ #portal.wrap{padding-left:7px;padding-right:7px}
+ #driverWelcomePanel .stats{gap:6px!important}
+ #driverWelcomePanel .stat{padding:8px!important}
+ #driverWelcomePanel .stat small{font-size:9px}
+ #driverWelcomePanel .stat strong{font-size:14px!important}
+ #portal>.tabs .tab{font-size:10px!important}
+ .driver-live-billboard{grid-template-columns:minmax(0,1fr)}
+ .driver-live-billboard-top,.driver-live-billboard-dots{grid-column:1}
+ .driver-live-billboard-rotation{margin-left:auto}
+}
+
 </style>
 </head>
 <body>
@@ -300,6 +356,15 @@ th,td{padding:12px;border-bottom:1px solid #e6edf4}
   </div>
 
   <section id="dashboard" class="section active">
+    <div class="panel driver-dashboard-live-panel">
+      <div id="driverLiveBillboard" class="driver-live-billboard" aria-live="polite" aria-atomic="true">
+        <div class="driver-live-billboard-top"><span class="driver-live-billboard-kicker">LIVE DRIVER UPDATE</span><span class="driver-live-billboard-rotation">Updates every 5 seconds</span></div>
+        <div id="driverLiveBillboardLabel" class="driver-live-billboard-label">Loading your latest updates…</div>
+        <div id="driverLiveBillboardValue" class="driver-live-billboard-value">Please wait</div>
+        <div id="driverLiveBillboardDetail" class="driver-live-billboard-detail">Your payment and weekly report activity will appear here.</div>
+        <div class="driver-live-billboard-dots" id="driverLiveBillboardDots">● ○ ○ ○ ○</div>
+      </div>
+    </div>
     <div class="panel">
       <h2>Driver Overview</h2>
       <p>Sale Recorded shows weekly amounts confirmed by admin. Owing shows weekly shortfalls against the assigned target, matching the admin weekly shortfalls panel. Outstanding Balance is the remaining amount on your tricycle contract.</p>
@@ -493,13 +558,6 @@ th,td{padding:12px;border-bottom:1px solid #e6edf4}
   <section id="profile" class="section">
     <div class="panel">
       <h2>My Profile</h2>
-      <div id="driverLiveBillboard" class="driver-live-billboard" aria-live="polite" aria-atomic="true">
-        <div class="driver-live-billboard-kicker">LIVE DRIVER UPDATE · 5-SECOND ROTATION</div>
-        <div id="driverLiveBillboardLabel" class="driver-live-billboard-label">Loading your latest updates…</div>
-        <div id="driverLiveBillboardValue" class="driver-live-billboard-value">Please wait</div>
-        <div id="driverLiveBillboardDetail" class="driver-live-billboard-detail">Your payment and weekly report activity will appear here.</div>
-        <div class="driver-live-billboard-dots" id="driverLiveBillboardDots">● ○ ○ ○ ○</div>
-      </div>
       <div class="infoBox" style="margin-bottom:14px">
         <strong>Profile Photo</strong>
         <img id="profilePhotoPreview" class="photoPreview" alt="Your profile photo" src="" style="display:none">
@@ -1767,7 +1825,7 @@ function openDriverSection(target){
  if(target==='approvalHistory')loadDriverApprovalHistory();
  if(target==='paymentWarnings')loadDriverPaymentWarnings();
  if(target==='profile')refreshDriverLiveBillboard();
- if(target==='dashboard')loadDriverDashboardSummary();
+ if(target==='dashboard'){loadDriverDashboardSummary();refreshDriverLiveBillboard();}
  window.scrollTo({top:0,behavior:'smooth'});
 }
 $("driverReturnDashboard")?.addEventListener('click',()=>openDriverSection('dashboard'));
@@ -2267,7 +2325,7 @@ document.querySelectorAll("[data-driver-go]").forEach(btn=>btn.addEventListener(
   if(target==="paymentWarnings")await loadDriverPaymentWarnings();
   if(target==="dashboard")await loadDriverDashboardSummary();
   if(target==="communication")await loadMessages();
-  if(target==="profile")await refreshDriverLiveBillboard();
+  if(target==="dashboard")await refreshDriverLiveBillboard();
   window.scrollTo({top:0,behavior:"smooth"});
 }));
 $("driverMenuLogout")?.addEventListener("click",async()=>{
