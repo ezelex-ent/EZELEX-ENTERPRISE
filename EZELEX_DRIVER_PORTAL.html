@@ -1732,6 +1732,13 @@ function setDriverBillboardItems(items){
  if(driverBillboardTimer)clearInterval(driverBillboardTimer);
  driverBillboardTimer=setInterval(()=>{if(document.hidden||!currentUser||!isDriverRole(profile?.role))return;driverBillboardIndex=(driverBillboardIndex+1)%Math.max(1,driverBillboardItems.length);renderDriverBillboard();},5000);
 }
+function driverGhanaClock(){
+ const parts=new Intl.DateTimeFormat("en-CA",{timeZone:"Africa/Accra",year:"numeric",month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit",second:"2-digit",hourCycle:"h23"}).formatToParts(new Date());
+ const v={};parts.forEach(x=>{if(x.type!=="literal")v[x.type]=x.value;});
+ const iso=`${v.year}-${v.month}-${v.day}`,time=`${v.hour}:${v.minute}:${v.second}`;
+ return {iso,time,nowMs:Date.parse(`${iso}T${time}Z`)};
+}
+function driverWeekPaymentDueAt(sunday){return Date.parse(addDaysISO(sunday,1)+"T16:00:00Z");}
 async function loadDriverPaymentWarnings(){
  const body=$("driverPaymentWarningsBody");if(!body||!currentUser)return;
  body.innerHTML='<tr><td colspan="6">Checking completed contract weeks…</td></tr>';
@@ -1742,43 +1749,40 @@ async function loadDriverPaymentWarnings(){
    db.from("tricycle_contract_payments").select("*").order("payment_date",{ascending:false})
   ]);
   const failed=[cr,rr,pr].find(x=>x.error);if(failed)throw failed.error;
-  const contracts=(cr.data||[]),contractIds=new Set(contracts.map(c=>String(c.id)));
+  const contracts=cr.data||[],contractIds=new Set(contracts.map(c=>String(c.id)));
   const reports=(rr.data||[]).filter(r=>contractIds.has(String(r.contract_id)));
   const payments=(pr.data||[]).filter(p=>contractIds.has(String(p.contract_id)));
-  const todayISO=today(),currentMonday=mondayISO(todayISO);
-  const rows=[];
+  const gh=driverGhanaClock(),todayISO=gh.iso,currentMonday=mondayISO(todayISO),rows=[];
   for(const c of contracts){
    const start=String(c.contract_start_date||c.contract_start||"").slice(0,10);
    const end=String(c.contract_end_date||c.contract_end||"").slice(0,10);
    if(!start)continue;
    let monday=mondayISO(start);
-   while(monday<currentMonday && (!end||monday<=end)){
-    const sunday=sundayISO(monday);
-    const activeStart=monday<start?start:monday;
-    const activeEnd=end&&end<sunday?end:sunday;
+   while(monday<currentMonday&&(!end||monday<=end)){
+    const sunday=sundayISO(monday),dueAt=driverWeekPaymentDueAt(sunday),isDue=gh.nowMs>=dueAt;
+    const activeStart=monday<start?start:monday,activeEnd=end&&end<sunday?end:sunday;
     const activeDays=Math.max(0,Math.floor((new Date(activeEnd+"T12:00:00")-new Date(activeStart+"T12:00:00"))/86400000)+1);
     const daily=Number(c.daily_target||0),weekly=Number(c.weekly_target||daily*7);
     const expected=activeDays>=7?weekly:daily*activeDays;
     const weekReports=reports.filter(r=>String(r.contract_id)===String(c.id)&&String(r.week_start||"").slice(0,10)===monday);
     const approved=weekReports.filter(r=>String(r.status||"").toLowerCase()==="approved");
     const pending=weekReports.some(r=>["pending","submitted","awaiting_review","awaiting review","pending_review"].includes(String(r.status||"").trim().toLowerCase()));
-    // Shared reconciliation rule: ledger receipts are authoritative; approved reports
-    // are a fallback only when no ledger receipt exists for this contract-week.
-    // Historical ledger rows use their allocated payment_date (normally the covered Sunday).
     const ledgerPaid=payments.filter(p=>String(p.contract_id)===String(c.id)&&String(p.payment_date||p.created_at||"").slice(0,10)>=monday&&String(p.payment_date||p.created_at||"").slice(0,10)<=sunday).reduce((n,p)=>n+Math.max(0,Number(p.amount||0)),0);
     const reportPaid=approved.reduce((n,r)=>n+Math.max(0,Number(r.payment_amount||0)),0);
-    const confirmed=ledgerPaid>0?ledgerPaid:reportPaid;
-    const outstanding=Math.max(0,expected-confirmed);
-    if(outstanding>0.009)rows.push({contract:c,monday,sunday,expected,confirmed,outstanding,pending,report:weekReports[0]||null});
+    const confirmed=ledgerPaid>0?ledgerPaid:reportPaid,outstanding=Math.max(0,expected-confirmed);
+    // Payment becomes overdue only at 4:00 PM Ghana time on the Monday after the week.
+    // Weekly report shortfall is a separate measure and is never added to this balance.
+    const report=weekReports[0]||null;
+    if(isDue&&outstanding>0.009)rows.push({monday,sunday,expected,confirmed,outstanding,pending,report});
     monday=addDaysISO(monday,7);
    }
   }
   rows.sort((a,b)=>b.monday.localeCompare(a.monday));
   setText("driverOverdueWeekCount",rows.length);
   setText("driverOverdueAmount",money(rows.reduce((n,r)=>n+r.outstanding,0)));
-  body.innerHTML=rows.length?rows.map(r=>`<tr><td>${esc(r.monday)} – ${esc(r.sunday)}</td><td>${money(r.expected)}</td><td>${money(r.confirmed)}</td><td><strong style="color:#b42318">${money(r.outstanding)}</strong></td><td>${r.pending?"Pending review":r.report?esc(r.report.status||"Submitted"):"Not submitted"}</td><td><span class="badge" style="background:#fee2e2;color:#991b1b">PAYMENT REQUIRED</span></td></tr>`).join(""):'<tr><td colspan="6">No overdue payment weeks identified from the available records.</td></tr>';
-  if(rows.length)msg("driverPaymentWarningsMsg","You have "+rows.length+" completed week(s) with an outstanding expected payment. Please contact Ezelex Enterprise if you believe a payment is missing.","error");
-  else msg("driverPaymentWarningsMsg","No completed-week payment shortfalls were identified.","success");
+  body.innerHTML=rows.length?rows.map(r=>`<tr><td>${esc(r.monday)} – ${esc(r.sunday)}</td><td>${money(r.expected)}</td><td>${money(r.confirmed)}</td><td><strong style="color:#b42318">${money(r.outstanding)}</strong></td><td>${r.pending?"Pending review":r.report?esc(r.report.status||"Submitted"):"Not submitted"}</td><td><span class="badge" style="background:#fee2e2;color:#991b1b">OVERDUE — PAYMENT REQUIRED</span></td></tr>`).join(""):'<tr><td colspan="6">No overdue payments. The previous week becomes overdue at 4:00 PM Ghana time on Monday.</td></tr>';
+  if(rows.length)msg("driverPaymentWarningsMsg","You have "+rows.length+" completed week(s) with payment outstanding after the Monday 4:00 PM Ghana deadline. Weekly report shortfalls are tracked separately.","error");
+  else msg("driverPaymentWarningsMsg","No overdue payment was identified. Weekly report shortfalls are tracked separately.","success");
  }catch(err){body.innerHTML='<tr><td colspan="6">Payment warnings could not be loaded.</td></tr>';msg("driverPaymentWarningsMsg","We could not verify your payment position. Please contact Ezelex Enterprise. "+esc(err?.message||""),"error");}
 }
 async function refreshDriverLiveBillboard(){
@@ -1793,14 +1797,16 @@ async function refreshDriverLiveBillboard(){
   const contracts=cr.data||[],ids=new Set(contracts.map(c=>String(c.id)));
   const reports=(rr.data||[]).filter(r=>ids.has(String(r.contract_id)));
   const payments=(pr.data||[]).filter(p=>ids.has(String(p.contract_id)));
-  const currentMonday=mondayISO(today());
+  const gh=driverGhanaClock(),currentMonday=mondayISO(gh.iso);
   let overdue=0,overdueAmount=0;
   for(const c of contracts){
    const start=String(c.contract_start_date||"").slice(0,10);if(!start)continue;
    const end=String(c.contract_end_date||"").slice(0,10);
    let week=mondayISO(start);
    while(week<currentMonday&&(!end||week<=end)){
-    const sunday=sundayISO(week),daily=Number(c.daily_target||0),weekly=Number(c.weekly_target||daily*7);
+    const sunday=sundayISO(week),dueAt=driverWeekPaymentDueAt(sunday);
+    if(gh.nowMs<dueAt){week=addDaysISO(week,7);continue;}
+    const daily=Number(c.daily_target||0),weekly=Number(c.weekly_target||daily*7);
     const activeStart=week<start?start:week,contractEnd=end&&end<sunday?end:sunday;
     const activeDays=Math.max(0,Math.floor((new Date(contractEnd+"T12:00:00")-new Date(activeStart+"T12:00:00"))/86400000)+1);
     const expected=activeDays>=7?weekly:daily*activeDays;
