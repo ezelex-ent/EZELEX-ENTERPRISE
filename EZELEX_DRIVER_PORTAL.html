@@ -1006,7 +1006,13 @@ async function loadProfile(user){
   if(isDriverRole(data.role)){
     msg("loginMsg","Profile verified. Loading your contract and weekly reports…");
     await loadDriverContract();
-    await Promise.all([loadDriverDashboardSummary(),loadDriverWeeklyReports(),loadDriverApprovalHistory()]);
+    await Promise.all([
+      loadDriverDashboardSummary(),
+      loadDriverWeeklyReports(),
+      loadDriverApprovalHistory(),
+      loadDriverPaymentWarnings(),
+      refreshDriverLiveBillboard()
+    ]);
     await loadMessages();
   }else{
     await ensureCurrentStockWeek();
@@ -1633,12 +1639,19 @@ $("driverPendingCard")?.addEventListener("click",()=>openDriverSection("approval
 $("driverPendingCard")?.addEventListener("keydown",event=>{if(event.key==='Enter'||event.key===' '){event.preventDefault();openDriverSection("approvalHistory");}});
 function setDriverSectionView(target){
  const dashboard=(target==='dashboard');
+ const section=$(target);
+ if(!section)return;
  const welcome=$("driverWelcomePanel"),tabs=document.querySelector('#portal .tabs'),nav=$("driverSectionDashboardNav");
  welcome?.classList.toggle('view-hidden',!dashboard);
  tabs?.classList.toggle('view-hidden',!dashboard);
  nav?.classList.toggle('hidden',dashboard);
- document.querySelectorAll('.section').forEach(sec=>sec.classList.remove('active'));
- $(target)?.classList.add('active');
+ // Explicitly reveal the destination. The previous version only removed
+ // .active, so a section that had retained .hidden could remain invisible.
+ document.querySelectorAll('#portal .section').forEach(sec=>{
+   sec.classList.remove('active');
+   if(sec===section)sec.classList.remove('hidden');
+ });
+ section.classList.add('active');
  document.querySelectorAll('.tabs .tab').forEach(b=>b.classList.remove('active'));
  document.querySelector('.tabs .tab[data-tab="'+target+'"]')?.classList.add('active');
 }
@@ -1748,11 +1761,12 @@ async function refreshDriverLiveBillboard(){
  }catch(err){console.warn("Driver live billboard refresh failed",err);setDriverBillboardItems([{label:"LIVE DRIVER UPDATE",value:"Temporarily unavailable",detail:"We could not refresh your latest payment and report information. Please try again shortly.",critical:true}]);}
 }
 function openDriverSection(target){
- if(!isDriverRole(profile?.role)||!['dashboard','approvalHistory','paymentWarnings'].includes(target))return;
+ if(!isDriverRole(profile?.role)||!['dashboard','approvalHistory','paymentWarnings','profile'].includes(target))return;
  setDriverSectionView(target);
  closeDriverMenu();
  if(target==='approvalHistory')loadDriverApprovalHistory();
  if(target==='paymentWarnings')loadDriverPaymentWarnings();
+ if(target==='profile')refreshDriverLiveBillboard();
  if(target==='dashboard')loadDriverDashboardSummary();
  window.scrollTo({top:0,behavior:'smooth'});
 }
