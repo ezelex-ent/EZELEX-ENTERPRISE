@@ -1762,9 +1762,12 @@ async function loadDriverPaymentWarnings(){
     const weekReports=reports.filter(r=>String(r.contract_id)===String(c.id)&&String(r.week_start||"").slice(0,10)===monday);
     const approved=weekReports.filter(r=>String(r.status||"").toLowerCase()==="approved");
     const pending=weekReports.some(r=>["pending","submitted","awaiting_review","awaiting review","pending_review"].includes(String(r.status||"").trim().toLowerCase()));
-    const ledgerPaid=payments.filter(p=>String(p.contract_id)===String(c.id)&&String(p.payment_date||"").slice(0,10)>=monday&&String(p.payment_date||"").slice(0,10)<=sunday).reduce((n,p)=>n+Number(p.amount||0),0);
-    const reportPaid=approved.reduce((n,r)=>n+Number(r.payment_amount||0),0);
-    const confirmed=Math.max(ledgerPaid,reportPaid);
+    // Shared reconciliation rule: ledger receipts are authoritative; approved reports
+    // are a fallback only when no ledger receipt exists for this contract-week.
+    // Historical ledger rows use their allocated payment_date (normally the covered Sunday).
+    const ledgerPaid=payments.filter(p=>String(p.contract_id)===String(c.id)&&String(p.payment_date||p.created_at||"").slice(0,10)>=monday&&String(p.payment_date||p.created_at||"").slice(0,10)<=sunday).reduce((n,p)=>n+Math.max(0,Number(p.amount||0)),0);
+    const reportPaid=approved.reduce((n,r)=>n+Math.max(0,Number(r.payment_amount||0)),0);
+    const confirmed=ledgerPaid>0?ledgerPaid:reportPaid;
     const outstanding=Math.max(0,expected-confirmed);
     if(outstanding>0.009)rows.push({contract:c,monday,sunday,expected,confirmed,outstanding,pending,report:weekReports[0]||null});
     monday=addDaysISO(monday,7);
@@ -1798,9 +1801,12 @@ async function refreshDriverLiveBillboard(){
    let week=mondayISO(start);
    while(week<currentMonday&&(!end||week<=end)){
     const sunday=sundayISO(week),daily=Number(c.daily_target||0),weekly=Number(c.weekly_target||daily*7);
-    const paid=payments.filter(p=>String(p.contract_id)===String(c.id)&&String(p.payment_date||"").slice(0,10)>=week&&String(p.payment_date||"").slice(0,10)<=sunday).reduce((n,p)=>n+Number(p.amount||0),0);
-    const approved=reports.filter(r=>String(r.contract_id)===String(c.id)&&String(r.week_start||"").slice(0,10)===week&&String(r.status||"").toLowerCase()==="approved").reduce((n,r)=>n+Number(r.payment_amount||0),0);
-    const expected=weekly;const bal=Math.max(0,expected-Math.max(paid,approved));if(bal>0.009){overdue++;overdueAmount+=bal;}
+    const activeStart=week<start?start:week,contractEnd=end&&end<sunday?end:sunday;
+    const activeDays=Math.max(0,Math.floor((new Date(contractEnd+"T12:00:00")-new Date(activeStart+"T12:00:00"))/86400000)+1);
+    const expected=activeDays>=7?weekly:daily*activeDays;
+    const ledgerPaid=payments.filter(p=>String(p.contract_id)===String(c.id)&&String(p.payment_date||p.created_at||"").slice(0,10)>=week&&String(p.payment_date||p.created_at||"").slice(0,10)<=sunday).reduce((n,p)=>n+Math.max(0,Number(p.amount||0)),0);
+    const approved=reports.filter(r=>String(r.contract_id)===String(c.id)&&String(r.week_start||"").slice(0,10)===week&&String(r.status||"").toLowerCase()==="approved").reduce((n,r)=>n+Math.max(0,Number(r.payment_amount||0)),0);
+    const confirmed=ledgerPaid>0?ledgerPaid:approved;const bal=Math.max(0,expected-confirmed);if(bal>0.009){overdue++;overdueAmount+=bal;}
     week=addDaysISO(week,7);
    }
   }
