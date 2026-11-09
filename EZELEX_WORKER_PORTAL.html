@@ -896,8 +896,9 @@ async function loadStock(){
 async function loadDeletedStock(){
   if(!currentUser||!$("deletedStockBody"))return;
   let q=db.from("worker_stock_batches").select("*").eq("worker_id",currentUser.id).not("deleted_at","is",null).order("deleted_at",{ascending:false});
-  let r=await q;
-  if((r.error||!(r.data||[]).length)&&profile?.worker_id&&String(profile.worker_id)!==String(currentUser.id))r=await db.from("worker_stock_batches").select("*").eq("worker_id",profile.worker_id).not("deleted_at","is",null).order("deleted_at",{ascending:false});
+  // worker_stock_batches.worker_id is an auth UUID. profile.worker_id is a human-readable
+  // staff code (for example "comfort-1T"), so never use it in this UUID column filter.
+  const r=await q;
   if(r.error){$("deletedStockBody").innerHTML='<tr><td colspan="7">Recovery records unavailable. Please run the recovery SQL setup first.</td></tr>';msg("deletedStockMsg","Could not load deleted stock: "+esc(r.error.message),"error");return;}
   deletedStockRows=r.data||[];
   $("deletedStockBody").innerHTML=deletedStockRows.length?deletedStockRows.map(r=>`<tr><td>${esc(dateTime(r.deleted_at))}</td><td>${esc(r.product_service||"Stock")}</td><td>${esc(dateOnly(r.stock_date))}</td><td>${Number(r.total_quantity||0)}</td><td>${Number(r.sold_quantity||0)}</td><td>${Number(r.remaining_quantity||0)}</td><td><button type="button" class="primary" onclick="restoreStock('${esc(r.id)}')">Restore Original Stock</button></td></tr>`).join(""):'<tr><td colspan="7">No deleted original stock records. Your recovery area is empty.</td></tr>';
@@ -905,10 +906,10 @@ async function loadDeletedStock(){
 window.restoreStock=async function(id){
   const row=deletedStockRows.find(r=>String(r.id)===String(id));if(!row)return;
   if(!confirm(`Restore “${row.product_service||"this stock record"}”? It will return to active stock and its original credit and edit history will remain linked.`))return;
-  const owner=String(row.worker_id)===String(currentUser.id)?currentUser.id:profile?.worker_id;
-  const result=await db.from("worker_stock_batches").update({deleted_at:null,deleted_by:null}).eq("id",id).eq("worker_id",owner).not("deleted_at","is",null).select("id");
-  if(result.error){msg("stockLiveMsg","Could not restore stock: "+esc(result.error.message),"error");return;}
-  if(!result.data?.length){msg("stockLiveMsg","No deleted stock record was restored. Refresh and try again.","error");return;}
+  // worker_id is the authenticated user's UUID; profile.worker_id is only a display/staff code.
+  const result=await db.from("worker_stock_batches").update({deleted_at:null,deleted_by:null}).eq("id",id).eq("worker_id",currentUser.id).not("deleted_at","is",null).select("id");
+  if(result.error){msg("deletedStockMsg","Could not restore stock: "+esc(result.error.message),"error");return;}
+  if(!result.data?.length){msg("deletedStockMsg","No deleted stock record was restored for this signed-in worker. Refresh and try again.","error");return;}
   await writeStockHistory(row,row,"Stock record restored from recovery");
   msg("deletedStockMsg","Original stock restored successfully. Its original quantities, linked credit records and edit history are active again.","success");
   await Promise.all([loadStock(),loadStockHistory(),loadCredits(),loadStockWeeks()]);
@@ -1206,8 +1207,19 @@ async function loadCredits(){
   }
   for(const [batchId,ledger] of byBatch){
     const batch=liveStockRows.find(x=>String(x.id)===batchId);if(!batch)continue;
-    if(batch.credit_sales_normalized===true)continue;
     const unit=Number(batch.cost_per_unit||0);
+    // Normalized rows already exclude unpaid credit from sold_quantity. Repair only
+    // their physical remaining balance if an earlier version marked them normalized
+    // without deducting the reserved credit crates.
+    if(batch.credit_sales_normalized===true){
+      const expectedRemaining=Math.max(0,Number(batch.total_quantity||0)-Number(batch.sold_quantity||0)-ledger.unpaidQty-Number(batch.damage_quantity||0)-Number(batch.loss_quantity||0));
+      if(Math.abs(Number(batch.remaining_quantity||0)-expectedRemaining)>0.0001){
+        const repaired=await db.from('worker_stock_batches').update({remaining_quantity:expectedRemaining,remaining_value:expectedRemaining*unit,credit_quantity:ledger.qty,credit_outstanding:ledger.unpaidAmount}).eq('id',batchId).eq('worker_id',currentUser.id).is('deleted_at',null);
+        if(!repaired.error){batch.remaining_quantity=expectedRemaining;batch.remaining_value=expectedRemaining*unit;batch.credit_quantity=ledger.qty;batch.credit_outstanding=ledger.unpaidAmount;}
+        else console.warn('Credit stock balance repair could not update batch',batchId,repaired.error.message);
+      }
+      continue;
+    }
     const baseSold=Math.max(0,Number(batch.sold_quantity||0)-ledger.qty);
     const baseRevenue=Math.max(0,Number(batch.sales_revenue||0)-ledger.amount);
     const baseSoldCost=Math.max(0,Number(batch.sold_cost||0)-ledger.qty*unit);
