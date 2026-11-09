@@ -560,11 +560,21 @@ async function ensureCurrentStockWeek(){
   if(!existingWeekRows.error&&!(existingWeekRows.data||[]).length){
     const prevWeek=await db.from("worker_stock_weeks").select("id,week_start").eq("worker_id",currentUser.id).lt("week_start",start).order("week_start",{ascending:false}).limit(1).maybeSingle();
     if(prevWeek.data){
-      const prevBatches=await db.from("worker_stock_batches").select("*").eq("worker_id",currentUser.id).eq("week_id",prevWeek.data.id).is("deleted_at",null).gt("remaining_quantity",0);
-      if(!prevBatches.error&&prevBatches.data?.length){
-        const carryRows=prevBatches.data.map(b=>({worker_id:currentUser.id,week_id:currentStockWeek.id,source_batch_id:b.id,stock_type:"carry_forward",stock_date:start,product_service:b.product_service||"Opening stock",total_quantity:Number(b.remaining_quantity||0),capital_amount:0,cost_per_unit:Number(b.cost_per_unit||0),selling_price_per_unit:Number(b.selling_price_per_unit||0),sold_quantity:0,damage_quantity:0,loss_quantity:0,sales_revenue:0,sold_cost:0,damage_value:0,loss_value:0,remaining_quantity:Number(b.remaining_quantity||0),remaining_value:Number(b.remaining_quantity||0)*Number(b.cost_per_unit||0),purchase_total:0,cash_in_hand:0,credit_quantity:0,credit_outstanding:0,profit_loss:0,notes:`Opening balance carried forward from week starting ${prevWeek.data.week_start}. Original purchase and profit remain in the previous week's record.`}));
-        const inserted=await db.from("worker_stock_batches").insert(carryRows);
-        if(inserted.error)msg("weeklyStockMsg","Weekly book opened, but previous unsold stock could not be carried forward automatically: "+esc(inserted.error.message)+". Please contact admin before recording sales.","error");
+      const prevWeekRows=await db.from("worker_stock_batches").select("*").eq("worker_id",currentUser.id).eq("week_id",prevWeek.data.id).is("deleted_at",null);
+      if(prevWeekRows.error){
+        msg("weeklyStockMsg","Previous week's closing capital could not be read, so the new week was not given an assumed opening balance: "+esc(prevWeekRows.error.message)+". Please contact admin before recording stock.","error");
+      }else{
+        const previousRows=prevWeekRows.data||[];
+        // Carry forward the prior week's cash/capital balance once, separately from the physical stock rows.
+        const closingCapital=Number(previousRows.reduce((sum,b)=>sum+Number(b.cash_in_hand??(Number(b.capital_amount??b.purchase_total??0)+Number(b.sales_revenue||0)-Number(b.purchase_total||0))),0).toFixed(2));
+        const remainingBatches=previousRows.filter(b=>Number(b.remaining_quantity||0)>0);
+        const carryRows=remainingBatches.map((b,index)=>({worker_id:currentUser.id,week_id:currentStockWeek.id,source_batch_id:b.id,stock_type:"carry_forward",stock_date:start,product_service:b.product_service||"Opening stock",total_quantity:Number(b.remaining_quantity||0),capital_amount:index===0?closingCapital:0,cost_per_unit:Number(b.cost_per_unit||0),selling_price_per_unit:Number(b.selling_price_per_unit||0),sold_quantity:0,damage_quantity:0,loss_quantity:0,sales_revenue:0,sold_cost:0,damage_value:0,loss_value:0,remaining_quantity:Number(b.remaining_quantity||0),remaining_value:Number(b.remaining_quantity||0)*Number(b.cost_per_unit||0),purchase_total:0,cash_in_hand:index===0?closingCapital:0,credit_quantity:0,credit_outstanding:0,profit_loss:0,notes:`Opening stock and closing capital carried forward from week starting ${prevWeek.data.week_start}. Original purchase and profit remain in the previous week's record.`}));
+        // If no physical stock remains, retain the closing capital in a zero-quantity opening row.
+        if(!carryRows.length&&closingCapital!==0)carryRows.push({worker_id:currentUser.id,week_id:currentStockWeek.id,stock_type:"carry_forward",stock_date:start,product_service:"Opening capital carried forward",total_quantity:0,capital_amount:closingCapital,cost_per_unit:0,selling_price_per_unit:0,sold_quantity:0,damage_quantity:0,loss_quantity:0,sales_revenue:0,sold_cost:0,damage_value:0,loss_value:0,remaining_quantity:0,remaining_value:0,purchase_total:0,cash_in_hand:closingCapital,credit_quantity:0,credit_outstanding:0,profit_loss:0,notes:`Closing capital carried forward from week starting ${prevWeek.data.week_start}.`});
+        if(carryRows.length){
+          const inserted=await db.from("worker_stock_batches").insert(carryRows);
+          if(inserted.error)msg("weeklyStockMsg","Weekly book opened, but the previous week's opening stock/capital could not be carried forward: "+esc(inserted.error.message)+". Please contact admin before recording sales.","error");
+        }
       }
     }
   }
