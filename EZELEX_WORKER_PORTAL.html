@@ -365,6 +365,14 @@ th,td{padding:12px;border-bottom:1px solid #e6ebf1;text-align:left;font-size:14p
       <h2> My Stock Records</h2><div class="stockNote">Enter your starting capital and purchase cost per unit. Total purchase cost is calculated automatically as quantity × unit cost. <strong>Cash In Hand = Starting Capital + Sales Revenue − Total Purchase Cost</strong>. Damage is tracked separately and is not treated as cash spent.</div>
       <div class="tablebox"><table><thead><tr><th>Date</th><th>Product</th><th>Total</th><th>Sold</th><th>Damage</th><th>Remaining</th><th>Capital</th><th>Purchase</th><th>Cash In Hand</th><th>Profit/Loss</th><th>Actions</th></tr></thead>
       <tbody id="stockBody"><tr><td colspan="11">Loading...</td></tr></tbody></table></div>
+
+      <div class="panel" id="deletedStockRecoveryPanel" style="margin-top:20px;border:1px solid #f0c36d;background:#fffdf7">
+        <h3>Deleted Original Stock — Recovery</h3>
+        <p class="stockNote">If an original stock batch was accidentally moved to Deleted Stock, it will appear here. Restore the original batch to return it to active stock. Its original quantities, financial figures, linked credit records and edit history are preserved.</p>
+        <div id="deletedStockMsg" aria-live="polite"></div>
+        <div class="tablebox"><table><thead><tr><th>Deleted Date &amp; Time</th><th>Original Stock Item</th><th>Stock Date</th><th>Total</th><th>Sold</th><th>Remaining</th><th>Recovery Action</th></tr></thead>
+        <tbody id="deletedStockBody"><tr><td colspan="7">Loading deleted stock records...</td></tr></tbody></table></div>
+      </div>
     </div>
 
   </section>
@@ -391,7 +399,7 @@ th,td{padding:12px;border-bottom:1px solid #e6ebf1;text-align:left;font-size:14p
   <section id="stockHistory" class="section">
     <div class="panel">
       <h2> Stock Edit & Daily Sales History</h2>
-      <p>Each stock batch keeps one record. Every time you update its sold or damaged quantity, the date, time and quantity change are recorded here for you and Ezelex admin.</p>
+      <p>Each original stock batch keeps one permanent record. Use <strong>Correct Stock</strong> beside an edit to reopen that original batch, correct the figures and let the portal recalculate the totals. Edit-history entries are not used to delete original stock.</p>
       <div id="stockHistoryMsg"></div>
       <div class="stockGrid">
         <div class="stockCard"><small>Days With Sales</small><strong id="historyDaysCount">0</strong></div>
@@ -560,21 +568,11 @@ async function ensureCurrentStockWeek(){
   if(!existingWeekRows.error&&!(existingWeekRows.data||[]).length){
     const prevWeek=await db.from("worker_stock_weeks").select("id,week_start").eq("worker_id",currentUser.id).lt("week_start",start).order("week_start",{ascending:false}).limit(1).maybeSingle();
     if(prevWeek.data){
-      const prevWeekRows=await db.from("worker_stock_batches").select("*").eq("worker_id",currentUser.id).eq("week_id",prevWeek.data.id).is("deleted_at",null);
-      if(prevWeekRows.error){
-        msg("weeklyStockMsg","Previous week's closing capital could not be read, so the new week was not given an assumed opening balance: "+esc(prevWeekRows.error.message)+". Please contact admin before recording stock.","error");
-      }else{
-        const previousRows=prevWeekRows.data||[];
-        // Carry forward the prior week's cash/capital balance once, separately from the physical stock rows.
-        const closingCapital=Number(previousRows.reduce((sum,b)=>sum+Number(b.cash_in_hand??(Number(b.capital_amount??b.purchase_total??0)+Number(b.sales_revenue||0)-Number(b.purchase_total||0))),0).toFixed(2));
-        const remainingBatches=previousRows.filter(b=>Number(b.remaining_quantity||0)>0);
-        const carryRows=remainingBatches.map((b,index)=>({worker_id:currentUser.id,week_id:currentStockWeek.id,source_batch_id:b.id,stock_type:"carry_forward",stock_date:start,product_service:b.product_service||"Opening stock",total_quantity:Number(b.remaining_quantity||0),capital_amount:index===0?closingCapital:0,cost_per_unit:Number(b.cost_per_unit||0),selling_price_per_unit:Number(b.selling_price_per_unit||0),sold_quantity:0,damage_quantity:0,loss_quantity:0,sales_revenue:0,sold_cost:0,damage_value:0,loss_value:0,remaining_quantity:Number(b.remaining_quantity||0),remaining_value:Number(b.remaining_quantity||0)*Number(b.cost_per_unit||0),purchase_total:0,cash_in_hand:index===0?closingCapital:0,credit_quantity:0,credit_outstanding:0,profit_loss:0,notes:`Opening stock and closing capital carried forward from week starting ${prevWeek.data.week_start}. Original purchase and profit remain in the previous week's record.`}));
-        // If no physical stock remains, retain the closing capital in a zero-quantity opening row.
-        if(!carryRows.length&&closingCapital!==0)carryRows.push({worker_id:currentUser.id,week_id:currentStockWeek.id,stock_type:"carry_forward",stock_date:start,product_service:"Opening capital carried forward",total_quantity:0,capital_amount:closingCapital,cost_per_unit:0,selling_price_per_unit:0,sold_quantity:0,damage_quantity:0,loss_quantity:0,sales_revenue:0,sold_cost:0,damage_value:0,loss_value:0,remaining_quantity:0,remaining_value:0,purchase_total:0,cash_in_hand:closingCapital,credit_quantity:0,credit_outstanding:0,profit_loss:0,notes:`Closing capital carried forward from week starting ${prevWeek.data.week_start}.`});
-        if(carryRows.length){
-          const inserted=await db.from("worker_stock_batches").insert(carryRows);
-          if(inserted.error)msg("weeklyStockMsg","Weekly book opened, but the previous week's opening stock/capital could not be carried forward: "+esc(inserted.error.message)+". Please contact admin before recording sales.","error");
-        }
+      const prevBatches=await db.from("worker_stock_batches").select("*").eq("worker_id",currentUser.id).eq("week_id",prevWeek.data.id).is("deleted_at",null).gt("remaining_quantity",0);
+      if(!prevBatches.error&&prevBatches.data?.length){
+        const carryRows=prevBatches.data.map(b=>({worker_id:currentUser.id,week_id:currentStockWeek.id,source_batch_id:b.id,stock_type:"carry_forward",stock_date:start,product_service:b.product_service||"Opening stock",total_quantity:Number(b.remaining_quantity||0),capital_amount:0,cost_per_unit:Number(b.cost_per_unit||0),selling_price_per_unit:Number(b.selling_price_per_unit||0),sold_quantity:0,damage_quantity:0,loss_quantity:0,sales_revenue:0,sold_cost:0,damage_value:0,loss_value:0,remaining_quantity:Number(b.remaining_quantity||0),remaining_value:Number(b.remaining_quantity||0)*Number(b.cost_per_unit||0),purchase_total:0,cash_in_hand:0,credit_quantity:0,credit_outstanding:0,profit_loss:0,notes:`Opening balance carried forward from week starting ${prevWeek.data.week_start}. Original purchase and profit remain in the previous week's record.`}));
+        const inserted=await db.from("worker_stock_batches").insert(carryRows);
+        if(inserted.error)msg("weeklyStockMsg","Weekly book opened, but previous unsold stock could not be carried forward automatically: "+esc(inserted.error.message)+". Please contact admin before recording sales.","error");
       }
     }
   }
@@ -900,9 +898,9 @@ async function loadDeletedStock(){
   let q=db.from("worker_stock_batches").select("*").eq("worker_id",currentUser.id).not("deleted_at","is",null).order("deleted_at",{ascending:false});
   let r=await q;
   if((r.error||!(r.data||[]).length)&&profile?.worker_id&&String(profile.worker_id)!==String(currentUser.id))r=await db.from("worker_stock_batches").select("*").eq("worker_id",profile.worker_id).not("deleted_at","is",null).order("deleted_at",{ascending:false});
-  if(r.error){$("deletedStockBody").innerHTML='<tr><td colspan="7">Recovery records unavailable. Please run the recovery SQL setup first.</td></tr>';return;}
+  if(r.error){$("deletedStockBody").innerHTML='<tr><td colspan="7">Recovery records unavailable. Please run the recovery SQL setup first.</td></tr>';msg("deletedStockMsg","Could not load deleted stock: "+esc(r.error.message),"error");return;}
   deletedStockRows=r.data||[];
-  $("deletedStockBody").innerHTML=deletedStockRows.length?deletedStockRows.map(r=>`<tr><td>${esc(dateTime(r.deleted_at))}</td><td>${esc(r.product_service||"Stock")}</td><td>${esc(dateOnly(r.stock_date))}</td><td>${Number(r.total_quantity||0)}</td><td>${Number(r.sold_quantity||0)}</td><td>${Number(r.remaining_quantity||0)}</td><td><button type="button" class="primary" onclick="restoreStock('${esc(r.id)}')">Restore Record</button></td></tr>`).join(""):'<tr><td colspan="7">No deleted stock records. Your recovery area is empty.</td></tr>';
+  $("deletedStockBody").innerHTML=deletedStockRows.length?deletedStockRows.map(r=>`<tr><td>${esc(dateTime(r.deleted_at))}</td><td>${esc(r.product_service||"Stock")}</td><td>${esc(dateOnly(r.stock_date))}</td><td>${Number(r.total_quantity||0)}</td><td>${Number(r.sold_quantity||0)}</td><td>${Number(r.remaining_quantity||0)}</td><td><button type="button" class="primary" onclick="restoreStock('${esc(r.id)}')">Restore Original Stock</button></td></tr>`).join(""):'<tr><td colspan="7">No deleted original stock records. Your recovery area is empty.</td></tr>';
 }
 window.restoreStock=async function(id){
   const row=deletedStockRows.find(r=>String(r.id)===String(id));if(!row)return;
@@ -912,7 +910,7 @@ window.restoreStock=async function(id){
   if(result.error){msg("stockLiveMsg","Could not restore stock: "+esc(result.error.message),"error");return;}
   if(!result.data?.length){msg("stockLiveMsg","No deleted stock record was restored. Refresh and try again.","error");return;}
   await writeStockHistory(row,row,"Stock record restored from recovery");
-  msg("stockLiveMsg","Stock record restored successfully. Its original records are active again.","success");
+  msg("deletedStockMsg","Original stock restored successfully. Its original quantities, linked credit records and edit history are active again.","success");
   await Promise.all([loadStock(),loadStockHistory(),loadCredits(),loadStockWeeks()]);
 };
 function selectedWeekIsClosed(){const id=selectedStockWeekId||currentStockWeek?.id;const w=stockWeekRows.find(x=>String(x.id)===String(id));return !!w&&w.status==="closed";}
@@ -1031,20 +1029,33 @@ function renderStockHistory(){
   const best=days.slice().sort((a,b)=>b[1].value-a[1].value)[0];
   $("historyDaysCount").textContent=days.length;$("historyUnitsSold").textContent=soldTotal.toLocaleString();$("historyBestDay").textContent=best?best[0]+" ("+money(best[1].value)+")":"—";$("historySalesValue").textContent=money(valueTotal);
   drawDailyPerformanceChart(daily);
-  $("stockHistoryBody").innerHTML=stockHistoryRows.length?stockHistoryRows.map(h=>{const batchId=historyLinkedBatchId(h);const activeRow=liveStockRows.find(r=>String(r.id)===batchId);const active=!!activeRow;const deleted=deletedStockRows.some(r=>String(r.id)===batchId);const eligibility=activeRow?stockDeleteEligibility(activeRow):{allowed:false,reason:""};const action=batchId?(active?(eligibility.allowed?`<button type="button" class="danger" title="${esc(eligibility.reason)}" onclick="deleteStockFromHistory('${esc(batchId)}')">Delete Stock</button><small class="muted" style="display:block">${esc(eligibility.reason)}</small>`:`<span class="badge" title="${esc(eligibility.reason)}">Deletion expired — 3-day limit</span>`):deleted?'<span class="badge">Deleted — recover below</span>':'<span class="badge">Record not found — contact admin</span>'):'<span class="badge">No unique linked stock record</span>';return `<tr><td>${esc(dateTime(h.changed_at))}</td><td>${esc(h.product_service||"")}</td><td>${esc(h.action||"Edited")}</td><td>${Number(h.sold_delta||0)>0?"+":""}${Number(h.sold_delta||0)}</td><td>${esc(h.sold_after??"—")}</td><td>${esc(h.damage_after??"—")}</td><td>${esc(h.remaining_after??"—")}</td><td>${esc(h.notes||"")}</td><td>${action}</td></tr>`;}).join(""):'<tr><td colspan="9">No stock edits recorded yet.</td></tr>';
+  $("stockHistoryBody").innerHTML=stockHistoryRows.length?stockHistoryRows.map(h=>{const batchId=historyLinkedBatchId(h);const deleted=deletedStockRows.some(r=>String(r.id)===String(batchId));const action=batchId?(deleted?'<span class="badge">Original stock archived — restore it in My Stock Records</span>':`<button type="button" class="primary" onclick="correctStockFromHistory('${esc(batchId)}')">Correct Stock</button>`):'<span class="badge">No linked original stock record</span>';return `<tr><td>${esc(dateTime(h.changed_at))}</td><td>${esc(h.product_service||"")}</td><td>${esc(h.action||"Edited")}</td><td>${Number(h.sold_delta||0)>0?"+":""}${Number(h.sold_delta||0)}</td><td>${esc(h.sold_after??"—")}</td><td>${esc(h.damage_after??"—")}</td><td>${esc(h.remaining_after??"—")}</td><td>${esc(h.notes||"")}</td><td>${action}</td></tr>`;}).join(""):'<tr><td colspan="9">No stock edits recorded yet.</td></tr>';
 }
-window.deleteStockFromHistory=async function(id){
-  const row=liveStockRows.find(r=>String(r.id)===String(id));if(!row){msg("stockHistoryMsg","This stock record is not currently active. Refresh the history and try again.","error");return;}
-  const eligibility=stockDeleteEligibility(row);if(!eligibility.allowed){msg("stockHistoryMsg",eligibility.reason,"error");return;}
-  if(!confirm(`Move “${row.product_service||"this stock record"}” to Deleted Stock Records? Its data, credit entries and edit history will be preserved and can be restored. ${eligibility.reason}`))return;
+window.archiveOriginalStock=async function(id){
+  const row=liveStockRows.find(r=>String(r.id)===String(id));
+  if(!row){msg("stockMsg","This original stock record is not loaded. Refresh My Stock Records and try again.","error");return;}
+  const eligibility=stockDeleteEligibility(row);
+  if(!eligibility.allowed){msg("stockMsg",eligibility.reason,"error");return;}
+  if(!confirm(`Move the original stock batch “${row.product_service||"Stock"}” to Deleted Original Stock Recovery? Its stock data, linked credit entries and edit history will be preserved and can be restored from My Stock Records.`))return;
   const owner=String(row.worker_id)===String(currentUser.id)?currentUser.id:profile?.worker_id;
   const result=await db.from("worker_stock_batches").update({deleted_at:new Date().toISOString(),deleted_by:currentUser.id}).eq("id",id).eq("worker_id",owner).is("deleted_at",null).select("id");
-  if(result.error){msg("stockHistoryMsg","Stock could not be moved to recovery: "+esc(result.error.message),"error");return;}
-  if(!result.data?.length){msg("stockHistoryMsg","No stock record was deleted. It may already have been removed or changed.","error");return;}
-  await writeStockHistory(row,row,"Stock moved to Deleted Stock Records (recoverable)");
-  msg("stockHistoryMsg","Stock record moved to Deleted Stock Records. Active stock, profit and cash totals have been recalculated.","success");
+  if(result.error){msg("stockMsg","Original stock could not be moved to recovery: "+esc(result.error.message),"error");return;}
+  if(!result.data?.length){msg("stockMsg","No original stock record was archived. Refresh and try again.","error");return;}
+  await writeStockHistory(row,row,"Original stock moved to Deleted Stock Recovery (recoverable)");
+  msg("stockMsg","Original stock moved to Deleted Stock Recovery. You can restore it from My Stock Records.","success");
   if(String(editingStockId)===String(id))cancelStockEdit();
   await Promise.all([loadStock(),loadStockHistory(),loadStockWeeks()]);
+};
+
+window.correctStockFromHistory=async function(id){
+  if(deletedStockRows.some(r=>String(r.id)===String(id))){
+    msg("stockHistoryMsg","This original stock batch is archived. Restore it from My Stock Records before making a correction.","error");
+    return;
+  }
+  await window.editStock(id);
+  if(editingStockId && String(editingStockId)===String(id)){
+    msg("stockMsg","Correction mode opened for the original stock batch. Correct the figures and save. The portal will recalculate remaining stock, cash and profit/loss, and record this correction in the edit history.","success");
+  }
 };
 
 async function writeStockHistory(before,after,action){
@@ -1108,8 +1119,8 @@ function cancelStockEdit(){
 }
 $("cancelEditStockBtn").onclick=cancelStockEdit;
 $("deleteStockBtn").onclick=async()=>{
-  if(!editingStockId){msg("stockMsg","Open a stock record with Edit before deleting it.","error");return;}
-  await window.deleteStockFromHistory(editingStockId);
+  if(!editingStockId){msg("stockMsg","Open a stock record with Edit before moving it to recovery.","error");return;}
+  await window.archiveOriginalStock(editingStockId);
 };
 $("saveStockBtn").onclick=async()=>{
   const saveButton=$("saveStockBtn");
