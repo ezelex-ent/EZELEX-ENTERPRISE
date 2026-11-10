@@ -5,6 +5,18 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Ezelex Enterprise — Worker Dashboard</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+/* EZELEX shared worker-stock accounting rules. Read-only calculation layer. */
+(function(root){'use strict';
+ const n=v=>{const x=Number(v);return Number.isFinite(x)?x:0},money=v=>Math.round((n(v)+Number.EPSILON)*100)/100;
+ const unpaid=c=>Math.max(0,n(c.amount_due)-n(c.amount_paid));
+ function creditForBatch(id,rows){const matches=(rows||[]).filter(c=>String(c.stock_batch_id||'')===String(id||'')&&unpaid(c)>0.009);return{units:matches.reduce((s,c)=>s+Math.max(0,n(c.quantity)),0),amount:money(matches.reduce((s,c)=>s+unpaid(c),0))};}
+ function stockBatch(b,credits){const total=Math.max(0,n(b.total_quantity)),sold=Math.max(0,n(b.sold_quantity)),damage=Math.max(0,n(b.damage_quantity)),loss=Math.max(0,n(b.loss_quantity)),unit=Math.max(0,n(b.cost_per_unit)),cr=creditForBatch(b.id,credits);const physical=b.remaining_quantity==null?Math.max(0,total-sold-damage-loss-cr.units):Math.max(0,n(b.remaining_quantity));const revenue=money(b.sales_revenue==null?sold*n(b.selling_price_per_unit):b.sales_revenue),soldCost=money(b.sold_cost==null?sold*unit:b.sold_cost),damageValue=money(b.damage_value==null?damage*unit:b.damage_value),lossValue=money(b.loss_value==null?loss*unit:b.loss_value);return{total,sold,damage,loss,unit,physicalRemaining:physical,creditUnits:cr.units,projectedRemaining:physical+cr.units,physicalValue:money(physical*unit),remainingValue:money((physical+cr.units)*unit),revenue,soldCost,damageValue,lossValue,profit:money(b.profit_loss==null?revenue-soldCost-damageValue-lossValue:b.profit_loss),creditAmount:cr.amount};}
+ function stockPosition(rows,credits){return(rows||[]).filter(r=>!r.deleted_at).reduce((a,r)=>{const c=stockBatch(r,credits);a.physicalUnits+=c.physicalRemaining;a.creditUnits+=c.creditUnits;a.projectedUnits+=c.projectedRemaining;a.physicalValue+=c.physicalValue;a.projectedValue+=c.remainingValue;return a;},{physicalUnits:0,creditUnits:0,projectedUnits:0,physicalValue:0,projectedValue:0});}
+ const api=Object.freeze({money,unpaid,creditForBatch,stockBatch,stockPosition});root.EZELEXAccounting=api;if(typeof module!=="undefined"&&module.exports)module.exports=api;
+})(typeof window!=='undefined'?window:globalThis);
+
+</script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <style>
 *{box-sizing:border-box}
@@ -823,7 +835,9 @@ function unpaidCreditForBatch(batchId){return (creditRows||[]).filter(c=>String(
 function calculateStock(){
   const total=num("stockTotal"),capital=num("capitalAmount"),unitCost=num("costPerUnit"),purchase=total*unitCost,price=num("sellPrice"),sold=num("stockSold"),damage=num("stockDamage"),loss=Number(editingStockOriginal?.loss_quantity||0);
   const unpaidQty=editingStockId?unpaidCreditForBatch(editingStockId):0,paidCredit=editingStockId?creditPaidForBatch(editingStockId):{qty:0,amount:0};
-  const remaining=Math.max(0,total-sold-damage-loss-unpaidQty),revenue=Math.max(0,sold-paidCredit.qty)*price+paidCredit.amount,soldCost=sold*unitCost,damageValue=damage*unitCost,remainingValue=remaining*unitCost,profit=revenue-soldCost-damageValue-loss*unitCost,accounted=sold+damage+loss+unpaidQty,cash=capital+revenue-purchase;
+  const revenue=Math.max(0,sold-paidCredit.qty)*price+paidCredit.amount,soldCost=sold*unitCost,damageValue=damage*unitCost,profit=revenue-soldCost-damageValue-loss*unitCost;
+  const central=window.EZELEXAccounting.stockBatch({id:editingStockId||"__new__",total_quantity:total,sold_quantity:sold,damage_quantity:damage,loss_quantity:loss,remaining_quantity:null,cost_per_unit:unitCost,selling_price_per_unit:price,sales_revenue:revenue,sold_cost:soldCost,damage_value:damageValue,loss_value:loss*unitCost,profit_loss:profit},editingStockId?creditRows:[]);
+  const remaining=central.physicalRemaining,remainingValue=central.physicalValue,accounted=sold+damage+loss+unpaidQty,cash=capital+revenue-purchase;
   const outstandingCredit=(creditRows||[]).reduce((sum,c)=>sum+Math.max(0,Number(c.amount_due||0)-Number(c.amount_paid||0)),0);
   $("calcTotal").textContent=total+" units";$("calcTotalValue").textContent=money(purchase);
   $("calcSold").textContent=sold+" units";$("calcRevenue").textContent=money(revenue)+" revenue";
@@ -851,9 +865,10 @@ async function loadStock(){
   const dashboardBatchIds=new Set(dashboardWeekRows.map(r=>String(r.id)));
   const openCreditRows=(creditRows||[]).filter(c=>Number(c.amount_paid||0)<Number(c.amount_due||0));
   const openDashboardWeekCredits=openCreditRows.filter(c=>dashboardBatchIds.has(String(c.stock_batch_id)));
-  const unpaidCreditUnits=openDashboardWeekCredits.reduce((n,c)=>n+Number(c.quantity||0),0);
-  const availableRemaining=dashboardWeekRows.reduce((n,r)=>n+Number(r.remaining_quantity||0),0);
-  const dashboardRemaining=availableRemaining+unpaidCreditUnits;
+  const centralWeekPosition=window.EZELEXAccounting.stockPosition(dashboardWeekRows,openDashboardWeekCredits);
+  const unpaidCreditUnits=centralWeekPosition.creditUnits;
+  const availableRemaining=centralWeekPosition.physicalUnits;
+  const dashboardRemaining=centralWeekPosition.projectedUnits;
   // Project the profit on every unpaid credit record without recognising it as earned profit.
   // It is shown separately and added to actual sold profit only for the dashboard projection.
   const batchById=new Map(allRows.map(r=>[String(r.id),r]));
@@ -1142,7 +1157,9 @@ $("saveStockBtn").onclick=async()=>{
   const paidCredit=editingStockId?creditPaidForBatch(editingStockId):{qty:0,amount:0};
   const revenue=Math.max(0,sold-paidCredit.qty)*price+paidCredit.amount,creditOutstanding=Number(old.credit_outstanding||0),unpaidCreditQty=editingStockId?unpaidCreditForBatch(editingStockId):0,cash=capital+revenue-purchase;
   if(!$('stockDate').value||!$('stockProduct').value.trim()||total<=0||capital<0||unitCost<0||price<0||cash<0||sold+damage+lossQuantity+unpaidCreditQty>total){msg("stockMsg","Please check the stock quantities and costs. Available cash (starting capital plus recorded sales) cannot be negative, and sold + damage + loss + unpaid on-credit crates cannot be greater than total stock.","error");return;}
-  const soldCost=sold*unitCost,damageValue=damage*unitCost,remaining=total-sold-damage-lossQuantity-unpaidCreditQty,remainingValue=remaining*unitCost;
+  const soldCost=sold*unitCost,damageValue=damage*unitCost;
+  const central=window.EZELEXAccounting.stockBatch({id:editingStockId||"__new__",total_quantity:total,sold_quantity:sold,damage_quantity:damage,loss_quantity:lossQuantity,remaining_quantity:null,cost_per_unit:unitCost,selling_price_per_unit:price,sales_revenue:revenue,sold_cost:soldCost,damage_value:damageValue,loss_value:lossQuantity*unitCost},editingStockId?creditRows:[]);
+  const remaining=central.physicalRemaining,remainingValue=central.physicalValue;
   // Keep already-earned profit and add only the profit/loss from quantities newly recorded.
   const addedSold=Math.max(0,sold-oldSold),addedDamage=Math.max(0,damage-oldDamage);
   const lossValue=lossQuantity*unitCost;
