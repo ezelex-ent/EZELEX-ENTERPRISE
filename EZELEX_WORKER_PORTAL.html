@@ -146,6 +146,13 @@ th,td{padding:12px;border-bottom:1px solid #e6ebf1;text-align:left;font-size:14p
   .stockGrid,.resultGrid{grid-template-columns:repeat(2,minmax(0,1fr))!important}
   .menuWrap{gap:6px}
 }
+
+/* Compact rotating worker performance billboard */
+.menuActions{min-width:0;flex:1;justify-content:flex-end}
+.workerBillboard{display:flex;align-items:center;gap:8px;min-width:230px;max-width:360px;padding:7px 11px;border:1px solid rgba(255,255,255,.28);border-radius:10px;background:rgba(255,255,255,.13);color:#fff;box-shadow:0 2px 8px rgba(0,0,0,.12);font-size:12px;line-height:1.2}
+.workerBillboard .bbLabel{opacity:.82;white-space:nowrap}.workerBillboard strong{font-size:14px;white-space:nowrap}.workerBillboard .bbDot{width:7px;height:7px;border-radius:50%;background:#55e39a;flex:0 0 auto;box-shadow:0 0 0 3px rgba(85,227,154,.15)}
+@media(max-width:700px){.menuActions{width:100%;justify-content:space-between}.workerBillboard{min-width:0;flex:1;max-width:none;padding:7px 8px}.workerBillboard strong{font-size:12px}.workerBillboard .bbLabel{font-size:10px}header{gap:8px}}
+
 </style>
 </head>
 <body>
@@ -195,6 +202,7 @@ th,td{padding:12px;border-bottom:1px solid #e6ebf1;text-align:left;font-size:14p
   <div class="menuWrap">
     <button id="backToDashboard" type="button" aria-label="Back to Dashboard">← Back to Dashboard</button>
     <div class="menuActions">
+    <div class="workerBillboard" id="workerBillboard" aria-live="polite"><span class="bbDot"></span><span class="bbLabel" id="billboardLabel">Profit this week</span><strong id="billboardValue">GH₵0.00</strong></div>
     <button id="menuToggle" class="menuToggle" type="button" aria-expanded="false" aria-controls="workerMenu"> Menu</button>
     </div>
     <nav id="workerMenu" class="menuPopup" aria-label="Worker portal menu">
@@ -234,7 +242,6 @@ th,td{padding:12px;border-bottom:1px solid #e6ebf1;text-align:left;font-size:14p
     <div class="stats">
       <div class="stat"><small>Total Crates Bought</small><strong id="todaySales">0</strong></div>
       <div class="stat"><small>Total Crates Sold</small><strong id="weekSales">0</strong></div>
-      <div class="stat" id="dashboardProfitCard"><small>Projected Live Profit/Loss (Sold + On-Credit)</small><strong id="monthSales">GH₵0.00</strong><div id="dashboardProfitBreakdown" class="live">Actual sold: GH₵0.00 + unpaid credit projection: GH₵0.00</div></div>
       <div class="stat"><small>Cash In Hand</small><strong id="allSales">GH₵0.00</strong><div class="live">Unpaid credit is excluded until fully paid.</div></div>
       <div class="stat" id="dashboardRemainingCard"><small>Remaining Stock (including unpaid credit)</small><strong id="dashboardRemaining">0</strong><div id="dashboardRemainingBreakdown">0 available + 0 on-credit</div></div>
       <button type="button" class="stat statAction" id="dashboardCreditCard" aria-label="Open On-Credit records"><small>On-Credit Crates (unpaid) — Open records</small><strong id="dashboardCreditUnits">0</strong><div id="dashboardCreditBreakdown" class="live">View outstanding customer credit</div></button>
@@ -503,7 +510,7 @@ th,td{padding:12px;border-bottom:1px solid #e6ebf1;text-align:left;font-size:14p
   <h2>Expenses Management</h2><form id="expenseForm" class="grid"><div><label>Expense Category</label><select id="expenseCategory" required><option value="transport">Transportation</option><option value="food">Food</option><option value="loading">Loading / Unloading</option><option value="repairs">Repairs</option><option value="storage">Storage</option><option value="other">Other</option></select></div><div><label>Amount (GH₵)</label><input id="expenseAmount" type="number" min="0.01" step="0.01" required></div><div><label>Date</label><input id="expenseDate" type="date" required></div><div><label>Description</label><input id="expenseDescription" maxlength="250" required></div><div class="full"><button class="primary" type="submit">Save Expense</button></div></form>
   <div class="tablebox"><table><thead><tr><th>Date</th><th>Category</th><th>Description</th><th>Amount</th></tr></thead><tbody id="expenseRows"><tr><td colspan="4">Loading expenses…</td></tr></tbody></table></div>
  </div>
- <div class="panel financePane" data-finance-pane="profit" style="display:none"><h2>Profit &amp; Loss Statement</h2><div class="stats"><div class="stat"><small>Recognised Trading Profit</small><strong id="pnlTrading">GH₵0.00</strong></div><div class="stat"><small>Operating Expenses</small><strong id="pnlExpenses">GH₵0.00</strong></div><div class="stat profit" id="pnlNetCard"><small>Net Profit / (Loss)</small><strong id="pnlNet">GH₵0.00</strong></div><div class="stat"><small>Unpaid Credit Receivable</small><strong id="pnlCredit">GH₵0.00</strong></div></div><p class="live">Unpaid credit is shown separately and is not treated as cash received. Stock purchases are inventory investments, not operating expenses; their cost is recognised as stock is sold.</p></div>
+ <div class="panel financePane" data-finance-pane="profit" style="display:none"><h2>Profit &amp; Loss Statement</h2><div class="stats"><div class="stat"><small>Recognised Trading Profit</small><strong id="pnlTrading">GH₵0.00</strong></div><div class="stat"><small>Operating Expenses</small><strong id="pnlExpenses">GH₵0.00</strong></div><div class="stat profit" id="pnlNetCard"><small>Net Profit / (Loss)</small><strong id="pnlNet">GH₵0.00</strong></div><div class="stat"><small>Unpaid Credit Receivable</small><strong id="pnlCredit">GH₵0.00</strong></div><div class="stat"><small>Projected Profit — Remaining Stock</small><strong id="pnlRemainingProjection">GH₵0.00</strong></div><div class="stat"><small>Projected Profit — Unpaid Credit</small><strong id="pnlCreditProjection">GH₵0.00</strong></div><div class="stat"><small>Potential Profit After Current Stock Sells</small><strong id="pnlPotential">GH₵0.00</strong></div></div><p class="live">Realised profit is shown separately from projected profit on unsold available stock and unpaid credit. Sold crates are never projected again. When credit is fully paid, its crates leave the on-credit projection and are recognised through the paid-sale figures. Stock purchases are inventory investments, not operating expenses.</p></div>
  <div class="panel financePane" data-finance-pane="history" style="display:none"><h2>Purchase &amp; Reinvestment History</h2><div class="tablebox"><table><thead><tr><th>Date</th><th>Product</th><th>Quantity</th><th>Unit Cost</th><th>Purchase Total</th><th>Type</th></tr></thead><tbody id="purchaseHistoryRows"><tr><td colspan="6">Loading purchases…</td></tr></tbody></table></div></div>
  <div class="panel"><button type="button" class="secondary" onclick="activateMainSection('dashboard')">← Back to Dashboard</button></div>
 </section>
@@ -932,17 +939,9 @@ async function loadStock(){
     const unitCost=Math.max(0,Number(batch.cost_per_unit||0));
     return sum+(due-qty*unitCost);
   },0);
-  const projectedWeekRows=allRows.filter(r=>String(r.week_id||"")===String(currentStockWeek?.id||"")||mondayDateISO(r.stock_date||r.created_at||today())===liveWeekStart);
-  const projectedRemainingProfit=projectedWeekRows.reduce((sum,r)=>{
-    const remaining=Math.max(0,Number(r.remaining_quantity||0));
-    const cost=Math.max(0,Number(r.cost_per_unit||0));
-    const price=Math.max(0,Number(r.selling_price_per_unit||0));
-    return sum+remaining*Math.max(0,price-cost);
-  },0);
-  const projectedLiveProfit=actualSoldProfit+unpaidCreditProfit+projectedRemainingProfit;
+  // Dashboard profit is intentionally not displayed here; projected values belong in P&L.
   $("todaySales").textContent=dashBought.toLocaleString(); $("weekSales").textContent=dashSold.toLocaleString();
-  $("monthSales").textContent=money(projectedLiveProfit); $("allSales").textContent=money(dashCash);
-  if($("dashboardProfitBreakdown"))$("dashboardProfitBreakdown").textContent=`Realised profit: ${money(actualSoldProfit)} + unpaid credit projection: ${money(unpaidCreditProfit)} + available stock profit: ${money(projectedRemainingProfit)}`;
+  $("allSales").textContent=money(dashCash);
   if($("dashboardRemaining"))$("dashboardRemaining").textContent=dashboardRemaining.toLocaleString();
   if($("dashboardRemainingBreakdown"))$("dashboardRemainingBreakdown").textContent=`${availableRemaining.toLocaleString()} available + ${unpaidCreditUnits.toLocaleString()} on-credit`;
   if($("dashboardCreditUnits"))$("dashboardCreditUnits").textContent=openCreditRows.reduce((n,c)=>n+Number(c.quantity||0),0).toLocaleString();
@@ -951,9 +950,9 @@ async function loadStock(){
   const chosenWeekId=selectedStockWeekId||currentStockWeek?.id||"";
   const chosenWeek=stockWeekRows.find(w=>String(w.id)===String(chosenWeekId))||currentStockWeek;
   const chosenStart=chosenWeek?.week_start||mondayDateISO(today());
-  const rows=allRows.filter(r=>String(r.week_id||"")===String(chosenWeekId)||mondayDateISO(r.stock_date||r.created_at||today())===String(chosenStart));
+  const rows=allRows.filter(r=>mondayDateISO(r.stock_date||r.created_at||today())===String(chosenStart));
   let units=0,value=0,revenue=0,profit=0,cash=0,purchased=0,soldWeek=0;
-  rows.forEach(r=>{units+=Number(r.remaining_quantity||0);value+=Number(r.remaining_value||0);revenue+=Number(r.sales_revenue||0);profit+=Number(r.profit_loss||0);if(r.stock_type!=="carry_forward")purchased+=Number(r.total_quantity||0);soldWeek+=Number(r.sold_quantity||0);const cap=Number(r.capital_amount??r.purchase_total??0),pur=Number(r.purchase_total||0);cash+=Number(r.cash_in_hand??(cap+Number(r.sales_revenue||0)-pur));});
+  rows.forEach(r=>{units+=Number(r.remaining_quantity||0);value+=Number(r.remaining_value||0);revenue+=Number(r.sales_revenue||0);profit+=Number(r.profit_loss||0);if(r.stock_type!=="carry_forward"&&mondayDateISO(r.stock_date||r.created_at||today())===String(chosenStart))purchased+=Number(r.total_quantity||0);soldWeek+=Number(r.sold_quantity||0);const cap=Number(r.capital_amount??r.purchase_total??0),pur=Number(r.purchase_total||0);cash+=Number(r.cash_in_hand??(cap+Number(r.sales_revenue||0)-pur));});
   const selectedBatchIds=new Set(rows.map(r=>String(r.id)));
   const selectedUnpaidCredit=(creditRows||[]).filter(c=>selectedBatchIds.has(String(c.stock_batch_id))&&Number(c.amount_paid||0)<Number(c.amount_due||0)).reduce((n,c)=>n+Number(c.quantity||0),0);
   const displayedUnits=units+selectedUnpaidCredit;
@@ -1104,7 +1103,7 @@ function renderStockHistory(){
   const best=days.slice().sort((a,b)=>b[1].value-a[1].value)[0];
   $("historyDaysCount").textContent=days.length;$("historyUnitsSold").textContent=soldTotal.toLocaleString();$("historyBestDay").textContent=best?best[0]+" ("+money(best[1].value)+")":"—";$("historySalesValue").textContent=money(valueTotal);
   drawDailyPerformanceChart(daily);
-  $("stockHistoryBody").innerHTML=stockHistoryRows.length?stockHistoryRows.map(h=>{const batchId=historyLinkedBatchId(h);const deleted=deletedStockRows.some(r=>String(r.id)===String(batchId));const action=batchId?(deleted?'<span class="badge">Original stock archived — restore it in My Stock Records</span>':`<button type="button" class="primary" onclick="correctStockFromHistory('${esc(batchId)}')">Correct Stock</button>`):'<span class="badge">No linked original stock record</span>';return `<tr><td>${esc(dateTime(h.changed_at))}</td><td>${esc(h.product_service||"")}</td><td>${esc(h.action||"Edited")}</td><td>${Number(h.sold_delta||0)>0?"+":""}${Number(h.sold_delta||0)}</td><td>${esc(h.sold_after??"—")}</td><td>${esc(h.damage_after??"—")}</td><td>${esc(h.remaining_after??"—")}</td><td>${esc(h.notes||"")}</td><td>${action}</td></tr>`;}).join(""):'<tr><td colspan="9">No stock edits recorded yet.</td></tr>';
+  $("stockHistoryBody").innerHTML=stockHistoryRows.length?stockHistoryRows.map(h=>{const batchId=historyLinkedBatchId(h);const deleted=deletedStockRows.some(r=>String(r.id)===String(batchId));const action=(batchId&&!deleted?`<button type="button" class="primary" onclick="correctStockFromHistory('${esc(batchId)}')">Correct Stock</button> `:(deleted?'<span class="badge">Original stock archived</span> ':'') )+`<button type="button" class="danger" onclick="deleteStockHistoryEntry('${esc(h.id)}')">Delete Edit Entry</button>`;return `<tr><td>${esc(dateTime(h.changed_at))}</td><td>${esc(h.product_service||"")}</td><td>${esc(h.action||"Edited")}</td><td>${Number(h.sold_delta||0)>0?"+":""}${Number(h.sold_delta||0)}</td><td>${esc(h.sold_after??"—")}</td><td>${esc(h.damage_after??"—")}</td><td>${esc(h.remaining_after??"—")}</td><td>${esc(h.notes||"")}</td><td>${action}</td></tr>`;}).join(""):'<tr><td colspan="9">No stock edits recorded yet.</td></tr>';
 }
 window.archiveOriginalStock=async function(id){
   const row=liveStockRows.find(r=>String(r.id)===String(id));
@@ -1122,13 +1121,21 @@ window.archiveOriginalStock=async function(id){
   await Promise.all([loadStock(),loadStockHistory(),loadStockWeeks()]);
 };
 
+window.deleteStockHistoryEntry=async function(historyId){
+  const row=stockHistoryRows.find(x=>String(x.id)===String(historyId));if(!row)return;
+  if(!confirm('Delete this edit-history entry only? The original stock record and its quantities will NOT be deleted or changed.'))return;
+  const {error}=await db.from('worker_stock_edit_history').delete().eq('id',historyId).eq('worker_id',currentUser.id);
+  if(error){msg('stockHistoryMsg','Could not delete this edit-history entry: '+error.message,'error');return;}
+  stockHistoryRows=stockHistoryRows.filter(x=>String(x.id)!==String(historyId));renderStockHistory();msg('stockHistoryMsg','Edit-history entry deleted. The original stock record was left untouched.','success');
+};
+let stockCorrectionMode=false;
 window.correctStockFromHistory=async function(id){
   if(deletedStockRows.some(r=>String(r.id)===String(id))){
     msg("stockHistoryMsg","This original stock batch is archived. Restore it from My Stock Records before making a correction.","error");
     return;
   }
   await window.editStock(id);
-  if(editingStockId && String(editingStockId)===String(id)){
+  if(editingStockId && String(editingStockId)===String(id)){stockCorrectionMode=true;
     msg("stockMsg","Correction mode opened for the original stock batch. Correct the figures and save. The portal will recalculate remaining stock, cash and profit/loss, and record this correction in the edit history.","success");
   }
 };
@@ -1190,7 +1197,7 @@ window.editStock=async function(id){
   setTimeout(()=>$("manageStockPanel")?.scrollIntoView({behavior:"smooth",block:"start"}),50);
 };
 function cancelStockEdit(){
-  editingStockId=""; editingStockOriginal=null; $("editingStockId").value=""; $("stockForm").reset(); $("stockDate").value=today(); $("stockSold").value=0; $("stockDamage").value=0; $("saveStockBtn").textContent="Save Stock Record"; $("cancelEditStockBtn").style.display="none"; $("deleteStockBtn").style.display="none"; updateStockFormCreditSummary(""); calculateStock(); msg("stockMsg","Edit cancelled","");
+  editingStockId=""; editingStockOriginal=null; stockCorrectionMode=false; $("editingStockId").value=""; $("stockForm").reset(); $("stockDate").value=today(); $("stockSold").value=0; $("stockDamage").value=0; $("saveStockBtn").textContent="Save Stock Record"; $("cancelEditStockBtn").style.display="none"; $("deleteStockBtn").style.display="none"; updateStockFormCreditSummary(""); calculateStock(); msg("stockMsg","Edit cancelled","");
 }
 $("cancelEditStockBtn").onclick=cancelStockEdit;
 $("deleteStockBtn").onclick=async()=>{
@@ -1211,7 +1218,7 @@ $("saveStockBtn").onclick=async()=>{
   const oldSold=Number(old.sold_quantity||0),oldDamage=Number(old.damage_quantity||0),lossQuantity=Number(old.loss_quantity||0);
   // On edit, a lower quantity is treated as the additional quantity sold/damaged today;
   // an equal or higher value is treated as the cumulative quantity for this stock batch.
-  const sold=editingStockId&&enteredSold<oldSold?oldSold+enteredSold:enteredSold;
+  const sold=editingStockId&&!stockCorrectionMode&&enteredSold<oldSold?oldSold+enteredSold:enteredSold;
   const damage=editingStockId&&enteredDamage<oldDamage?oldDamage+enteredDamage:enteredDamage;
   const paidCredit=editingStockId?creditPaidForBatch(editingStockId):{qty:0,amount:0};
   const revenue=Math.max(0,sold-paidCredit.qty)*price+paidCredit.amount,creditOutstanding=Number(old.credit_outstanding||0),unpaidCreditQty=editingStockId?unpaidCreditForBatch(editingStockId):0,cash=capital+revenue-purchase;
@@ -1248,7 +1255,7 @@ $("saveStockBtn").onclick=async()=>{
       const h2=await writeStockHistory(null,inserted.data,"Additional purchase created from stock edit");
       if(h1||h2)msg("stockMsg","Additional purchase saved. One of the audit entries needs administrator review.","error");
       else msg("stockMsg",addedPurchaseQty+" additional crates saved as a new purchase this week. Original purchase history preserved.","success");
-      const savedDate=today();editingStockId="";editingStockOriginal=null;$('editingStockId').value="";$('stockForm').reset();$('stockDate').value=savedDate;$('stockSold').value=0;$('stockDamage').value=0;$('saveStockBtn').textContent="Save Stock Record";$('cancelEditStockBtn').style.display="none";$('deleteStockBtn').style.display="none";updateStockFormCreditSummary("");calculateStock();await Promise.all([loadStock(),loadStockHistory(),loadStockWeeks()]);return;
+      const savedDate=today();editingStockId="";editingStockOriginal=null;stockCorrectionMode=false;$('editingStockId').value="";$('stockForm').reset();$('stockDate').value=savedDate;$('stockSold').value=0;$('stockDamage').value=0;$('saveStockBtn').textContent="Save Stock Record";$('cancelEditStockBtn').style.display="none";$('deleteStockBtn').style.display="none";updateStockFormCreditSummary("");calculateStock();await Promise.all([loadStock(),loadStockHistory(),loadStockWeeks()]);return;
     }
     const purchaseChanged=beforeTotal!==total||Math.abs(beforeUnit-unitCost)>0.0001;
     const historyAction=purchaseChanged?"Stock updated — purchase quantity/unit cost changed":"Stock updated";
@@ -1915,8 +1922,14 @@ start();
   $f('financeCashAvailable').textContent=fmt(cash);$f('financeWeekPurchases').textContent=fmt(purchases);$f('cashOpeningDisplay').textContent=fmt(opening);$f('cashSalesDisplay').textContent=fmt(sales);$f('cashPurchasesDisplay').textContent=fmt(purchases);$f('cashExpensesDisplay').textContent=fmt(expenses);$f('cashClosingDisplay').textContent=fmt(cash);$f('openingCashInput').value=opening.toFixed(2);
   const lifetimeOperatingExpenses=(allE.data||[]).reduce((n,r)=>n+Number(r.amount||0),0);
   const netProfit=trading-lifetimeOperatingExpenses;
+  const openCredits=(creditRows||[]).filter(c=>Number(c.amount_paid||0)<Number(c.amount_due||0));
+  const creditUnitsByBatch=new Map();openCredits.forEach(c=>creditUnitsByBatch.set(String(c.stock_batch_id),(creditUnitsByBatch.get(String(c.stock_batch_id))||0)+Number(c.quantity||0)));
+  const remainingProjection=(liveStockRows||[]).filter(r=>r.stock_type!=='carry_forward'&&!r.deleted_at).reduce((n,r)=>n+Math.max(0,Number(r.remaining_quantity||0))*Math.max(0,Number(r.selling_price_per_unit||0)-Number(r.cost_per_unit||0)),0);
+  const creditProjection=openCredits.reduce((n,c)=>{const b=(liveStockRows||[]).find(r=>String(r.id)===String(c.stock_batch_id));if(!b)return n;const qty=Math.max(0,Number(c.quantity||0)),due=Math.max(0,Number(c.amount_due||0)-Number(c.amount_paid||0));return n+Math.max(0,due-qty*Number(b.cost_per_unit||0));},0);
+  const potentialProfit=netProfit+remainingProjection+creditProjection;
   $f('pnlTrading').textContent=fmt(trading);$f('pnlExpenses').textContent=fmt(lifetimeOperatingExpenses);$f('pnlNet').textContent=fmt(netProfit);$f('pnlNetCard').classList.toggle('loss',netProfit<0);$f('pnlNetCard').classList.toggle('profit',netProfit>=0);
-  let cr=(creditRows||[]).reduce((n,c)=>n+Math.max(0,Number(c.amount_due||0)-Number(c.amount_paid||0)),0);$f('pnlCredit').textContent=fmt(cr);
+  $f('pnlRemainingProjection').textContent=fmt(remainingProjection);$f('pnlCreditProjection').textContent=fmt(creditProjection);$f('pnlPotential').textContent=fmt(potentialProfit);
+  let cr=openCredits.reduce((n,c)=>n+Math.max(0,Number(c.amount_due||0)-Number(c.amount_paid||0)),0);$f('pnlCredit').textContent=fmt(cr);
   $f('expenseRows').innerHTML=financeExpenses.length?financeExpenses.map(x=>`<tr><td>${x.expense_date}</td><td>${x.category}</td><td>${String(x.description||'').replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]))}</td><td>${fmt(x.amount)}</td></tr>`).join(''):'<tr><td colspan="4">No expenses recorded this week.</td></tr>';
   $f('purchaseHistoryRows').innerHTML=(liveStockRows||[]).filter(r=>r.stock_type!=='carry_forward').sort((a,b)=>String(b.stock_date).localeCompare(String(a.stock_date))).map(r=>`<tr><td>${String(r.stock_date||'').slice(0,10)}</td><td>${r.product_service||''}</td><td>${Number(r.total_quantity||0)}</td><td>${fmt(r.cost_per_unit)}</td><td>${fmt(r.purchase_total??(Number(r.total_quantity||0)*Number(r.cost_per_unit||0)))}</td><td>${r.stock_type==='reinvestment'?'Reinvestment':'Purchase'}</td></tr>`).join('')||'<tr><td colspan="6">No purchase records.</td></tr>';
   const products=new Map();(liveStockRows||[]).filter(r=>!r.deleted_at&&r.stock_type!=='carry_forward').forEach(r=>{let k=String(r.product_service||'').trim();if(k&&!products.has(k))products.set(k,r);});
@@ -1935,6 +1948,14 @@ start();
  window.ezelexLoadFinance=loadFinance;
 })();
 </script>
+
+
+// Five-second live performance billboard beside the Menu.
+(function(){
+ const labels=['Profit Made This Week','All-Time Realised Profit','Sold Today','Sold This Week','Remaining Stock','On-Credit Crates'];let idx=0;
+ function update(){if(!currentUser)return;const rows=(liveStockRows||[]).filter(r=>!r.deleted_at&&r.stock_type!=='carry_forward');const start=mondayDateISO(today());const thisWeek=rows.filter(r=>mondayDateISO(r.stock_date||r.created_at||today())===start);const soldToday=(stockHistoryRows||[]).filter(h=>dateOnly(h.changed_at)===today()).reduce((n,h)=>n+Math.max(0,Number(h.sold_delta||0)),0);const soldWeek=thisWeek.reduce((n,r)=>n+Number(r.sold_quantity||0),0);const remaining=thisWeek.reduce((n,r)=>n+Number(r.remaining_quantity||0),0);const onCredit=(creditRows||[]).filter(c=>Number(c.amount_paid||0)<Number(c.amount_due||0)).reduce((n,c)=>n+Number(c.quantity||0),0);const allProfit=rows.reduce((n,r)=>n+Number(r.profit_loss||0),0);const weekProfit=thisWeek.reduce((n,r)=>n+Number(r.profit_loss||0),0);const vals=[money(weekProfit),money(allProfit),soldToday.toLocaleString()+' crates',soldWeek.toLocaleString()+' crates',remaining.toLocaleString()+' crates',onCredit.toLocaleString()+' crates'];const l=document.getElementById('billboardLabel'),v=document.getElementById('billboardValue');if(l&&v){l.textContent=labels[idx];v.textContent=vals[idx];idx=(idx+1)%labels.length;}}
+ setInterval(update,5000);document.addEventListener('visibilitychange',()=>{if(!document.hidden)update();});setTimeout(update,1200);
+})();
 
 </body>
 </html>
