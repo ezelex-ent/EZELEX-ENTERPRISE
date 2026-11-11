@@ -254,15 +254,48 @@ th,td{padding:12px;border-bottom:1px solid #e6edf4}
 
 
 /* Additive contract table and owing/payment-plan presentation. Existing portal styles remain intact. */
-.driver-contract-table{width:100%;min-width:0!important;border-collapse:separate;border-spacing:0}
-.driver-contract-table th{width:20%;white-space:normal;text-transform:uppercase;font-size:11px}
-.driver-contract-table td{font-weight:650;color:#1b2b42;overflow-wrap:anywhere}
-.driver-contract-table .contract-end-cell{font-weight:800;color:#174a78}
 .driver-contract-time{display:inline-block;padding:7px 10px;border-radius:9px;background:#eaf4fb;color:#174a78;font-weight:800;line-height:1.4}
 .driver-contract-progress{margin-top:14px;padding:14px;border:1px solid #dce7f1;border-radius:12px;background:#f7fafc}
 .driver-contract-progress strong{font-size:18px;color:#173d62}
 .driver-plan-action{white-space:normal;min-width:150px}
-@media(max-width:600px){.driver-contract-table th{width:22%}.driver-contract-table th,.driver-contract-table td{padding:10px 8px;font-size:12px}.driver-plan-action{width:100%;min-width:0}}
+@media(max-width:600px){.driver-plan-action{width:100%;min-width:0}}
+
+/* Driver My Contract — card-based responsive presentation; no tabular layout. */
+.driver-contract-shell{padding:clamp(16px,3vw,25px);background:linear-gradient(145deg,#ffffff 0%,#f6faff 100%);border:1px solid #d9e5f0;box-shadow:0 10px 28px #10233f0d}
+.driver-contract-heading{display:flex;justify-content:space-between;align-items:flex-start;gap:14px;flex-wrap:wrap;padding-bottom:16px;border-bottom:1px solid #e4ebf3}
+.driver-contract-eyebrow{display:block;font-size:10px;font-weight:850;letter-spacing:.12em;color:#66809a;margin-bottom:5px}
+.driver-contract-heading h3{font-size:clamp(21px,3vw,27px);margin:0;color:#142d49;overflow-wrap:anywhere}
+.driver-contract-period{display:block;margin-top:5px;color:#718399;font-size:12px;font-weight:650}
+.driver-contract-status{display:inline-flex;align-items:center;justify-content:center;padding:7px 13px;border-radius:999px;background:#edf2f7;color:#43566b;font-size:12px;font-weight:800;text-transform:capitalize;white-space:nowrap}
+.driver-contract-status.is-active{background:#dcfce7;color:#166534}
+.driver-contract-dates{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin:16px 0}
+.driver-contract-date-card{min-width:0;padding:15px 16px;border:1px solid #dce7f1;border-radius:13px;background:#fff;display:flex;flex-direction:column;gap:5px}
+.driver-contract-date-card>span,.driver-contract-finance-card>span,.driver-contract-detail>span,.driver-contract-notes>span{font-size:10px;line-height:1.4;font-weight:800;letter-spacing:.07em;text-transform:uppercase;color:#718399}
+.driver-contract-date-card>strong{font-size:clamp(16px,2.4vw,20px);color:#173c60;overflow-wrap:anywhere}
+.driver-contract-date-card.is-end{background:linear-gradient(135deg,#f0f7ff,#edf8f7);border-color:#cbdfee}
+.driver-contract-date-card>small{margin-top:4px;color:#61778d;font-size:11px;font-weight:700}
+.driver-contract-time{display:inline-flex;align-self:flex-start;padding:7px 10px;border-radius:9px;background:#dceefa;color:#174a78;font-size:13px;line-height:1.4;font-weight:850;overflow-wrap:anywhere}
+.driver-contract-financials{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:0 0 15px}
+.driver-contract-finance-card{min-width:0;padding:14px;border:1px solid #dfe8f1;border-radius:12px;background:#fff}
+.driver-contract-finance-card>strong{display:block;margin-top:6px;font-size:clamp(16px,2vw,21px);line-height:1.25;color:#172b45;overflow-wrap:anywhere}
+.driver-contract-finance-card.is-paid{background:#f0fbf5;border-color:#c9ead8}.driver-contract-finance-card.is-paid>strong{color:#16734a}
+.driver-contract-finance-card.is-outstanding{background:#fff7f5;border-color:#f0d7d2}.driver-contract-finance-card.is-outstanding>strong{color:#ad3028}
+.driver-contract-details-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
+.driver-contract-detail{min-width:0;padding:12px 13px;border:1px solid #e3eaf2;border-radius:11px;background:#fff}
+.driver-contract-detail>strong{display:block;margin-top:5px;color:#1c3552;font-size:16px;overflow-wrap:anywhere}
+.driver-contract-detail>small{display:block;color:#8392a4;font-size:10px;margin-top:2px}
+.driver-contract-progress{margin-top:15px;padding:15px;border:1px solid #dce7f1;border-radius:13px;background:#f5f9fd}
+.driver-contract-progress-top{display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap;color:#173d62}
+.driver-contract-progress-top strong{font-size:14px}.driver-contract-progress-top b{font-size:13px}
+.driver-contract-progress-track{height:9px;border-radius:99px;background:#e1eaf3;overflow:hidden;margin:11px 0 8px}
+.driver-contract-progress-track span{display:block;height:100%;border-radius:99px;background:linear-gradient(90deg,#2366a8,#138477)}
+.driver-contract-progress p{margin:0 0 5px;color:#405a74;font-size:12px}
+.driver-contract-progress>small{display:block;color:#728399;font-size:10px;line-height:1.45}
+.driver-contract-notes{margin-top:12px;padding:13px;border:1px solid #e3eaf2;border-radius:11px;background:#fff}
+.driver-contract-notes p{margin:5px 0 0;color:#43566b;overflow-wrap:anywhere}
+@media(max-width:600px){.driver-contract-dates{grid-template-columns:1fr 1fr;gap:8px}.driver-contract-date-card{padding:12px 10px}.driver-contract-time{font-size:11px;padding:6px 8px}.driver-contract-financials{grid-template-columns:1fr;gap:8px}.driver-contract-finance-card{padding:12px}.driver-contract-details-grid{grid-template-columns:1fr 1fr;gap:7px}.driver-contract-detail{padding:10px}.driver-contract-detail>strong{font-size:14px}.driver-contract-heading{gap:8px}}
+@media(max-width:360px){.driver-contract-dates,.driver-contract-details-grid{grid-template-columns:1fr}.driver-contract-status{font-size:11px}}
+
 </style>
 </head>
 <body>
@@ -938,24 +971,30 @@ async function loadDriverContract(){
    const gh=driverGhanaClock(),currentMonth=gh.iso.slice(0,7),paidThisMonth=paymentRows.filter(p=>String(p.contract_id)===String(c.id)&&String(p.payment_date||'').slice(0,7)===currentMonth).reduce((sum,p)=>sum+Number(p.amount||0),0);
    const remainingWeeks=driverContractRemainingWeeks(c,paymentRows,reportRows),periods=driverContractScheduledPeriods(c),weekCap=periods.length;
    const completedWeeks=remainingWeeks===null?null:Math.max(0,weekCap-remainingWeeks);
-   return `<div class="driverContractCard">
-    <h3>${esc(c.vehicle_registration||c.vehicle_id||"Tricycle contract")}</h3>
-    <div class="tablebox"><table class="driver-contract-table"><tbody>
-     <tr><th>Contract status</th><td><span class="badge">${esc(status)}</span></td></tr>
-     <tr><th>Contract period</th><td>${esc(dateOnly(start))} – ${esc(dateOnly(end))}</td></tr>
-     <tr><th>Contract start date</th><td>${esc(dateOnly(start))}</td></tr>
-     <tr><th>End date</th><td class="contract-end-cell">${esc(dateOnly(end))}</td><th>Remaining time</th><td><span class="driver-contract-time">${esc(remainingText)}</span></td></tr>
-     <tr><th>Contract amount</th><td>${moneyVal(total)}</td></tr>
-     <tr><th>Total amount paid</th><td>${moneyVal(paid)}</td></tr>
-     <tr><th>Outstanding balance</th><td><strong>${moneyVal(outstanding)}</strong></td></tr>
-     <tr><th>Estimated monthly target</th><td>${moneyVal(monthlyTarget)}</td></tr>
-     <tr><th>Payments recorded this month (${esc(currentMonth)})</th><td>${moneyVal(paidThisMonth)}</td></tr>
-     <tr><th>Opening amount paid</th><td>${moneyVal(openingPaid)}</td></tr>
-     <tr><th>Weekly target</th><td>${moneyVal(c.weekly_target??1400)}</td></tr>
-     <tr><th>Daily target</th><td>${moneyVal(c.daily_target??200)}</td></tr>
-     ${c.admin_notes?`<tr><th>Admin notes</th><td>${esc(c.admin_notes)}</td></tr>`:""}
-    </tbody></table></div>
-    <div class="driver-contract-progress"><strong>Contract week progress</strong><p>Week cap: <b>${weekCap||'—'}</b> scheduled weeks · Completed: <b>${completedWeeks===null?'—':completedWeeks}</b> · Remaining: <b>${remainingWeeks===null?'—':remainingWeeks}</b></p><small>Week cap and remaining weeks use the Admin Management Centre's scheduled Monday–Sunday periods and confirmed historical allocations / approved reports.</small></div>
+   const progressPct=weekCap>0&&completedWeeks!==null?Math.max(0,Math.min(100,completedWeeks/weekCap*100)):0;
+   return `<div class="driverContractCard driver-contract-shell">
+    <div class="driver-contract-heading">
+     <div><span class="driver-contract-eyebrow">TRICYCLE CONTRACT</span><h3>${esc(c.vehicle_registration||c.vehicle_id||"Tricycle contract")}</h3><span class="driver-contract-period">${esc(dateOnly(start))} <span aria-hidden="true">→</span> ${esc(dateOnly(end))}</span></div>
+     <span class="driver-contract-status ${/active/i.test(status)?'is-active':''}">${esc(status)}</span>
+    </div>
+    <div class="driver-contract-dates">
+     <div class="driver-contract-date-card"><span>Contract start date</span><strong>${esc(dateOnly(start))}</strong></div>
+     <div class="driver-contract-date-card is-end"><span>End date</span><strong>${esc(dateOnly(end))}</strong><small>Remaining time</small><b class="driver-contract-time">${esc(remainingText)}</b></div>
+    </div>
+    <div class="driver-contract-financials">
+     <div class="driver-contract-finance-card"><span>Contract amount</span><strong>${moneyVal(total)}</strong></div>
+     <div class="driver-contract-finance-card is-paid"><span>Total amount paid</span><strong>${moneyVal(paid)}</strong></div>
+     <div class="driver-contract-finance-card is-outstanding"><span>Outstanding balance</span><strong>${moneyVal(outstanding)}</strong></div>
+    </div>
+    <div class="driver-contract-details-grid">
+     <div class="driver-contract-detail"><span>Weekly target</span><strong>${moneyVal(c.weekly_target??1400)}</strong></div>
+     <div class="driver-contract-detail"><span>Daily target</span><strong>${moneyVal(c.daily_target??200)}</strong></div>
+     <div class="driver-contract-detail"><span>Estimated monthly target</span><strong>${moneyVal(monthlyTarget)}</strong></div>
+     <div class="driver-contract-detail"><span>Payments recorded this month</span><strong>${moneyVal(paidThisMonth)}</strong><small>${esc(currentMonth)}</small></div>
+     <div class="driver-contract-detail"><span>Opening amount paid</span><strong>${moneyVal(openingPaid)}</strong></div>
+    </div>
+    <div class="driver-contract-progress"><div class="driver-contract-progress-top"><strong>Contract week progress</strong><b>${completedWeeks===null?'—':completedWeeks} / ${weekCap||'—'} weeks</b></div><div class="driver-contract-progress-track" role="progressbar" aria-label="Completed contract weeks" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${Math.round(progressPct)}"><span style="width:${progressPct}%"></span></div><p>Week cap: <b>${weekCap||'—'}</b> · Completed: <b>${completedWeeks===null?'—':completedWeeks}</b> · Remaining: <b>${remainingWeeks===null?'—':remainingWeeks}</b></p><small>Week progress follows the Admin Management Centre's scheduled contract periods and confirmed historical allocations / approved reports.</small></div>
+    ${c.admin_notes?`<div class="driver-contract-notes"><span>Admin notes</span><p>${esc(c.admin_notes)}</p></div>`:""}
    </div>`;
   }).join("");
  } catch(err) {console.error("Unexpected contract loading error:",err);host.innerHTML='<div class="msg error">Something interrupted contract loading. Please try again.</div><button type="button" class="primary" id="retryDriverContract">Try again</button>';$("retryDriverContract")?.addEventListener("click",loadDriverContract);}
@@ -1816,7 +1855,9 @@ async function loadDriverPaymentWarnings(){
     const approved=weekReports.filter(r=>String(r.status||'').toLowerCase()==='approved');
     const pending=weekReports.some(r=>['pending','submitted','awaiting_review','awaiting review','pending_review'].includes(String(r.status||'').trim().toLowerCase()));
     const h=historical.get(monday+'|'+sunday)||null;
-    const ledgerPaid=payments.filter(p=>String(p.contract_id)===String(c.id)&&String(p.payment_date||p.created_at||'').slice(0,10)>=monday&&String(p.payment_date||p.created_at||'').slice(0,10)<=sunday&&!driverHistoricalAllocationInfo(p)).reduce((n,p)=>n+Math.max(0,Number(p.amount||0)),0);
+    // Match Admin Management Centre: include every ledger payment dated in this Monday–Sunday week.
+    // Do not discard a historical row just because its allocation metadata uses a partial-period key.
+    const ledgerPaid=payments.filter(p=>String(p.contract_id)===String(c.id)&&String(p.payment_date||p.created_at||'').slice(0,10)>=monday&&String(p.payment_date||p.created_at||'').slice(0,10)<=sunday).reduce((n,p)=>n+Math.max(0,Number(p.amount||0)),0);
     const reportPaid=approved.reduce((n,r)=>n+Math.max(0,Number(r.payment_amount||0)),0);
     const expected=h?(h.target||h.paid):normalExpected,confirmed=h?h.paid:(ledgerPaid>0?ledgerPaid:reportPaid),outstanding=Math.max(0,expected-confirmed);
     const report=weekReports.slice().sort((a,b)=>String(b.submitted_at||'').localeCompare(String(a.submitted_at||'')))[0]||null;
@@ -1878,7 +1919,8 @@ async function refreshDriverLiveBillboard(){
     const activeDays=Math.max(0,Math.floor((new Date(contractEnd+"T12:00:00")-new Date(activeStart+"T12:00:00"))/86400000)+1);
     const expected=activeDays>=7?weekly:daily*activeDays;
     const historical=driverHistoricalWeeks(payments,c.id).get(week+'|'+sunday)||null;
-    const ledgerPaid=payments.filter(p=>String(p.contract_id)===String(c.id)&&String(p.payment_date||p.created_at||"").slice(0,10)>=week&&String(p.payment_date||p.created_at||"").slice(0,10)<=sunday&&!driverHistoricalAllocationInfo(p)).reduce((n,p)=>n+Math.max(0,Number(p.amount||0)),0);
+    // Same ledger inclusion rule as Admin: keep historical rows dated in this week, even when allocation metadata is partial-period.
+    const ledgerPaid=payments.filter(p=>String(p.contract_id)===String(c.id)&&String(p.payment_date||p.created_at||"").slice(0,10)>=week&&String(p.payment_date||p.created_at||"").slice(0,10)<=sunday).reduce((n,p)=>n+Math.max(0,Number(p.amount||0)),0);
     const approved=reports.filter(r=>String(r.contract_id)===String(c.id)&&String(r.week_start||"").slice(0,10)===week&&String(r.week_end||"").slice(0,10)===sunday&&String(r.status||"").toLowerCase()==="approved").reduce((n,r)=>n+Math.max(0,Number(r.payment_amount||0)),0);
     const confirmed=historical?historical.paid:(ledgerPaid>0?ledgerPaid:approved),dueExpected=historical?(historical.target||historical.paid):expected;const bal=Math.max(0,dueExpected-confirmed);if(bal>0.009){overdue++;overdueAmount+=bal;}
     week=addDaysISO(week,7);
