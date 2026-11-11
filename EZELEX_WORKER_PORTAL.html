@@ -1026,6 +1026,22 @@ async function loadStock(){
   await loadDeletedStock();
   if(typeof window.updateEzelexBillboard==="function")window.updateEzelexBillboard();
 }
+
+// Keep the stock area from being left on an endless "Loading..." state if a
+// later calculation or rendering step fails. The original error is logged and
+// shown in the portal so the exact database/runtime issue can be diagnosed.
+const _ezelexLoadStockCore=loadStock;
+loadStock=async function(){
+  try {
+    return await _ezelexLoadStockCore();
+  } catch(error) {
+    console.error("EZELEX loadStock failed:",error);
+    const body=$("stockBody");
+    if(body) body.innerHTML='<tr><td colspan="11">Stock data could not finish loading. Please refresh and report the error shown in the browser console.</td></tr>';
+    msg("stockLiveMsg","Stock data could not finish loading: "+esc(error?.message||String(error)),"error");
+  }
+};
+
 async function loadDeletedStock(){
   if(!currentUser||!$("deletedStockBody"))return;
   let q=db.from("worker_stock_batches").select("*").eq("worker_id",currentUser.id).not("deleted_at","is",null).order("deleted_at",{ascending:false});
@@ -1966,7 +1982,7 @@ window.addEventListener("resize",()=>{
 });
 
 calculateStock();
-start();
+window.addEventListener("load",()=>start(),{once:true});
 </script>
 <style>.financePane{margin-top:14px}.financePane .stats{grid-template-columns:repeat(auto-fit,minmax(180px,1fr))}.financePane .stat strong{font-size:20px}@media(max-width:650px){.financePane .stats{grid-template-columns:1fr 1fr}}</style>
 
@@ -1976,6 +1992,9 @@ start();
  let financeWeeks=[],financeExpenses=[],financeCashRow=null,financeWeekId=null;
  const reinvestmentSpendRows=rows=>(rows||[]).filter(r=>r.stock_type==='reinvestment'||(r.stock_type!=='carry_forward'&&String(r.notes||'').toLowerCase().includes('additional purchase quantity added while editing an existing stock item')));
  function calculateReinvestmentCash(rows){const active=(rows||[]).filter(r=>!r.deleted_at);const recovered=active.reduce((n,r)=>n+Math.max(0,Number(r.sold_cost||0)),0);const spent=reinvestmentSpendRows(active).reduce((n,r)=>n+Math.max(0,Number(r.purchase_total??(Number(r.total_quantity||0)*Number(r.cost_per_unit||0)))),0);return {recovered,spent,balance:recovered-spent};}
+ // The main portal script also needs this calculation. Export it explicitly;
+ // a function declared inside this IIFE is otherwise private to this script.
+ window.calculateReinvestmentCash=calculateReinvestmentCash;
  function paintReinvestmentCash(result){const amount=$f('financeCashAvailable'),status=$f('reinvestCashStatus'),card=$f('reinvestCashCard');if(amount){amount.textContent=fmt(result.balance);amount.style.color=result.balance<0?'#b42318':'#14532d';}if(card)card.classList.toggle('loss',result.balance<0);if(status){status.textContent=result.balance<0?'OVERSPENT: '+fmt(Math.abs(result.balance))+' must be recovered before another purchase.':'Recovered purchase cost: '+fmt(result.recovered)+' · Reinvested: '+fmt(result.spent);status.style.color=result.balance<0?'#b42318':'#52647a';}}
  const finMsg=(t,err=false)=>{const el=$f('financeMsg');if(el)el.innerHTML=t?`<div class="msg ${err?'error':'success'}">${String(t).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]))}</div>`:''};
  const weekStart=d=>{let x=new Date(String(d||new Date().toISOString().slice(0,10)).slice(0,10)+'T12:00:00');x.setDate(x.getDate()-(x.getDay()+6)%7);return x.toISOString().slice(0,10)};
