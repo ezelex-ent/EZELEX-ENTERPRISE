@@ -396,7 +396,7 @@ th,td{padding:12px;border-bottom:1px solid #e6ebf1;text-align:left;font-size:14p
   <section id="credit" class="section">
     <div class="panel" id="creditPanel">
       <h2> On-Credit Egg Sales</h2>
-      <p class="stockNote">Record crates given to a customer who has not paid yet. Credit sales count as sold and earned profit, but unpaid money is excluded from Cash In Hand until the customer pays. Ezelex admin can see outstanding credit.</p>
+      <p class="stockNote">Record crates given to a customer who has not paid yet. Credit crates remain outstanding until the customer pays. Workers can edit credit details and record part-payments by crate quantity. Each paid crate is then counted as sold, its original cost is recovered into Reinvestment Cash, and its profit is recognised in the week the payment is received. Unpaid crates and their projected profit remain outstanding.</p>
       <div id="creditMsg"></div>
       <form id="creditForm" class="grid">
         <div><label>Stock Batch</label><select id="creditStockBatch" required><option value="">Choose stock batch</option></select></div>
@@ -408,7 +408,36 @@ th,td{padding:12px;border-bottom:1px solid #e6ebf1;text-align:left;font-size:14p
       </form>
       <button id="saveCreditBtn" class="primary" type="button">Record On-Credit Sale</button>
       <div class="stockGrid" style="margin-top:16px"><div class="stockCard"><small>Outstanding Credit</small><strong id="creditOutstanding">GH₵0.00</strong></div><div class="stockCard"><small>Crates on Credit</small><strong id="creditUnits">0</strong></div></div>
-      <h3>My Credit Records</h3><div class="tablebox"><table><thead><tr><th>Date</th><th>Customer</th><th>Stock</th><th>Crates</th><th>Amount Due</th><th>Paid</th><th>Balance</th><th>Status</th><th>Action</th></tr></thead><tbody id="creditBody"><tr><td colspan="9">Loading credit records...</td></tr></tbody></table></div>
+
+      <dialog id="creditActionDialog" style="border:0;border-radius:16px;padding:0;max-width:520px;width:calc(100% - 28px);box-shadow:0 24px 70px rgba(15,23,42,.28)">
+        <form id="creditActionForm" method="dialog" style="padding:22px;display:grid;gap:13px">
+          <div style="display:flex;justify-content:space-between;align-items:center;gap:12px">
+            <h3 id="creditActionTitle" style="margin:0">Edit On-Credit Record</h3>
+            <button type="button" id="creditActionClose" aria-label="Close" style="padding:7px 11px">Close</button>
+          </div>
+          <p id="creditActionHint" class="stockNote" style="margin:0"></p>
+          <input id="creditActionId" type="hidden">
+          <div id="creditEditFields" style="display:grid;gap:11px">
+            <div><label for="creditEditCustomer">Customer name / reference</label><input id="creditEditCustomer" maxlength="180"></div>
+            <div><label for="creditEditDate">Credit date</label><input id="creditEditDate" type="date"></div>
+            <div><label for="creditEditQuantity">Total crates on credit</label><input id="creditEditQuantity" type="number" min="1" step="1"></div>
+            <div><label for="creditEditAmount">Total amount due (GH₵)</label><input id="creditEditAmount" type="number" min="0.01" step="0.01"></div>
+            <div><label for="creditEditNotes">Notes</label><textarea id="creditEditNotes"></textarea></div>
+          </div>
+          <div id="creditPaymentFields" style="display:none;gap:11px">
+            <div><label for="creditPaymentCrates">Crates customer is paying for now</label><input id="creditPaymentCrates" type="number" min="1" step="1"></div>
+            <div><label for="creditPaymentDate">Payment date</label><input id="creditPaymentDate" type="date"></div>
+            <div class="stockNote" id="creditPaymentPreview">Enter the number of crates to calculate the payment.</div>
+          </div>
+          <div id="creditActionMsg"></div>
+          <div style="display:flex;gap:10px;flex-wrap:wrap">
+            <button type="button" id="creditActionSave" class="primary">Save</button>
+            <button type="button" id="creditActionCancel">Cancel</button>
+          </div>
+        </form>
+      </dialog>
+
+      <h3>My Credit Records</h3><div class="tablebox"><table><thead><tr><th>Date</th><th>Customer</th><th>Stock</th><th>Crates</th><th>Crates Paid</th><th>Crates Outstanding</th><th>Amount Due</th><th>Paid</th><th>Balance</th><th>Status</th><th>Action</th></tr></thead><tbody id="creditBody"><tr><td colspan="11">Loading credit records...</td></tr></tbody></table></div>
     </div>
   </section>
 
@@ -531,6 +560,7 @@ let deletedStockRows=[];
 let stockHistoryRows=[];
 let editingStockOriginal=null;
 let creditRows=[];
+let creditPaymentRows=[];
 let creditRowsLoaded=false;
 let currentStockWeek=null;
 let stockWeekRows=[];
@@ -986,8 +1016,12 @@ async function loadSales(){
   </tr>`).join("");
 }
 
-function creditPaidForBatch(batchId){const paid=(creditRows||[]).filter(c=>String(c.stock_batch_id||"")===String(batchId||"")&&Number(c.amount_due||0)>0&&Number(c.amount_paid||0)>=Number(c.amount_due||0));return {qty:paid.reduce((n,c)=>n+Number(c.quantity||0),0),amount:paid.reduce((n,c)=>n+Number(c.amount_due||0),0)};}
-function unpaidCreditForBatch(batchId){return (creditRows||[]).filter(c=>String(c.stock_batch_id||"")===String(batchId||"")&&Number(c.amount_paid||0)<Number(c.amount_due||0)).reduce((n,c)=>n+Number(c.quantity||0),0);}
+function creditPaidForBatch(batchId){const paid=(creditRows||[]).filter(c=>String(c.stock_batch_id||"")===String(batchId||""));return {qty:paid.reduce((n,c)=>n+Number(c.crates_paid||0),0),amount:paid.reduce((n,c)=>n+Number(c.amount_paid||0),0)};}
+function unpaidCreditForBatch(batchId){return (creditRows||[]).filter(c=>String(c.stock_batch_id||"")===String(batchId||"")).reduce((n,c)=>n+Math.max(0,Number(c.quantity||0)-Number(c.crates_paid||0)),0);}
+function creditPaymentProfitForRows(rows){const ids=new Set((rows||[]).map(r=>String(r.id)));return (creditPaymentRows||[]).filter(p=>ids.has(String(p.stock_batch_id))).reduce((sum,p)=>sum+Number(p.profit_amount||0),0);}
+function creditPaymentQtyForRows(rows){const ids=new Set((rows||[]).map(r=>String(r.id)));return (creditPaymentRows||[]).filter(p=>ids.has(String(p.stock_batch_id))).reduce((sum,p)=>sum+Number(p.crates_paid||0),0);}
+function creditPaymentsForWeek(weekStart){return (creditPaymentRows||[]).filter(p=>mondayDateISO(p.payment_date||p.created_at||today())===String(weekStart||""));}
+
 function calculateStock(){
   const total=num("stockTotal"),capital=num("capitalAmount"),unitCost=num("costPerUnit"),purchase=total*unitCost,price=num("sellPrice"),sold=num("stockSold"),damage=num("stockDamage"),loss=Number(editingStockOriginal?.loss_quantity||0);
   const unpaidQty=editingStockId?unpaidCreditForBatch(editingStockId):0,paidCredit=editingStockId?creditPaidForBatch(editingStockId):{qty:0,amount:0};
@@ -1054,12 +1088,17 @@ async function loadStock(){
   );
   const dashBought=dashboardWeekRows.filter(r=>r.stock_type!=="carry_forward")
     .reduce((sum,r)=>sum+Number(r.total_quantity||0),0);
-  const dashSold=dashboardWeekRows.reduce((sum,r)=>sum+Number(r.sold_quantity||0),0);
-  const actualSoldProfit=dashboardWeekRows.reduce((sum,r)=>sum+Number(r.profit_loss||0),0);
+  const dashboardBatchPaidCreditProfit=creditPaymentProfitForRows(dashboardWeekRows);
+  const dashboardBatchPaidCreditQty=creditPaymentQtyForRows(dashboardWeekRows);
+  const currentWeekCreditPayments=creditPaymentsForWeek(liveWeekStart);
+  const currentWeekCreditProfit=currentWeekCreditPayments.reduce((n,p)=>n+Number(p.profit_amount||0),0);
+  const currentWeekCreditQty=currentWeekCreditPayments.reduce((n,p)=>n+Number(p.crates_paid||0),0);
+  const dashSold=Math.max(0,dashboardWeekRows.reduce((sum,r)=>sum+Number(r.sold_quantity||0),0)-dashboardBatchPaidCreditQty+currentWeekCreditQty);
+  const actualSoldProfit=dashboardWeekRows.reduce((sum,r)=>sum+Number(r.profit_loss||0),0)-dashboardBatchPaidCreditProfit+currentWeekCreditProfit;
   const dashboardBatchIds=new Set(dashboardWeekRows.map(r=>String(r.id)));
   const openCreditRows=(creditRows||[]).filter(c=>Number(c.amount_paid||0)<Number(c.amount_due||0));
   const openDashboardWeekCredits=openCreditRows.filter(c=>dashboardBatchIds.has(String(c.stock_batch_id)));
-  const unpaidCreditUnits=openDashboardWeekCredits.reduce((n,c)=>n+Number(c.quantity||0),0);
+  const unpaidCreditUnits=openDashboardWeekCredits.reduce((n,c)=>n+Math.max(0,Number(c.quantity||0)-Number(c.crates_paid||0)),0);
   const dashboardAllTimePurchaseNote=$("dashboardAllTimePurchaseNote");
   if(dashboardAllTimePurchaseNote) dashboardAllTimePurchaseNote.textContent=
     `All-time purchases: ${allTimeCratesPurchased.toLocaleString()} crates`;
@@ -1089,7 +1128,7 @@ async function loadStock(){
     const qty=Math.max(0,Number(c.quantity||0));
     const due=Math.max(0,Number(c.amount_due||0));
     const unitCost=Math.max(0,Number(batch.cost_per_unit||0));
-    return sum+(due-qty*unitCost);
+    const paidQty=Math.max(0,Number(c.crates_paid||0));const unpaidQty=Math.max(0,qty-paidQty);const unpaidAmount=Math.max(0,due-Number(c.amount_paid||0));return sum+(unpaidAmount-unpaidQty*unitCost);
   },0);
   // Dashboard profit is intentionally not displayed here; projected values belong in P&L.
   $("todaySales").textContent=dashBought.toLocaleString(); $("weekSales").textContent=dashSold.toLocaleString();
@@ -1097,7 +1136,7 @@ async function loadStock(){
   $("allSales").textContent=money(dashCash);
   if($("dashboardRemaining"))$("dashboardRemaining").textContent=dashboardRemaining.toLocaleString();
   if($("dashboardRemainingBreakdown"))$("dashboardRemainingBreakdown").textContent=`${availableRemaining.toLocaleString()} available + ${unpaidCreditUnits.toLocaleString()} on-credit`;
-  if($("dashboardCreditUnits"))$("dashboardCreditUnits").textContent=openDashboardWeekCredits.reduce((n,c)=>n+Number(c.quantity||0),0).toLocaleString();
+  if($("dashboardCreditUnits"))$("dashboardCreditUnits").textContent=openDashboardWeekCredits.reduce((n,c)=>n+Math.max(0,Number(c.quantity||0)-Number(c.crates_paid||0)),0).toLocaleString();
   if($("dashboardCreditBreakdown"))$("dashboardCreditBreakdown").textContent=`${money(openDashboardWeekCredits.reduce((n,c)=>n+Math.max(0,Number(c.amount_due||0)-Number(c.amount_paid||0)),0))} outstanding this week · Tap to open On-Credit`;
   const dashboardActualProfit=actualSoldProfit+unpaidCreditProfit;
   if($("dashboardProfitValue"))$("dashboardProfitValue").textContent=money(dashboardActualProfit);
@@ -1111,6 +1150,11 @@ async function loadStock(){
     (!r.week_id && mondayDateISO(r.stock_date||r.created_at||today())===String(chosenStart))
   );
   let units=0,value=0,revenue=0,profit=0,cash=0,purchased=0,soldWeek=0;
+  const selectedBatchPaidCreditProfit=creditPaymentProfitForRows(rows);
+  const selectedBatchPaidCreditQty=creditPaymentQtyForRows(rows);
+  const selectedWeekPayments=creditPaymentsForWeek(chosenStart);
+  const selectedWeekPaymentProfit=selectedWeekPayments.reduce((n,p)=>n+Number(p.profit_amount||0),0);
+  const selectedWeekPaymentQty=selectedWeekPayments.reduce((n,p)=>n+Number(p.crates_paid||0),0);
   rows.forEach(r=>{
     units+=Number(r.remaining_quantity||0);
     value+=Number(r.remaining_value||0);
@@ -1123,6 +1167,8 @@ async function loadStock(){
     const cap=Number(r.capital_amount??r.purchase_total??0),pur=Number(r.purchase_total||0);
     cash+=Number(r.cash_in_hand??(cap+Number(r.sales_revenue||0)-pur));
   });
+  profit=profit-selectedBatchPaidCreditProfit+selectedWeekPaymentProfit;
+  soldWeek=Math.max(0,soldWeek-selectedBatchPaidCreditQty+selectedWeekPaymentQty);
   const displayedUnits=units;
   $("liveUnits").textContent=displayedUnits.toLocaleString();$("liveValue").textContent=money(value);$("liveRevenue").textContent=money(revenue);$("liveProfit").textContent=money(profit);$("liveProfitLabel").textContent=profit>=0?"selected week profit":"selected week loss";
   $("weekPurchased").textContent=purchased.toLocaleString();$("weekSold").textContent=soldWeek.toLocaleString();$("weekRemaining").textContent=displayedUnits.toLocaleString();
@@ -1648,14 +1694,33 @@ $("saveStockBtn").onclick=async()=>{
 async function loadCredits(){
   if(!$('creditBody'))return;
   const r=await selectWorkerRows("worker_stock_credit_sales","*",{column:"credit_date",ascending:false});
-  if(r.error){$('creditBody').innerHTML='<tr><td colspan="9">Credit records unavailable. Check the supplied credit SQL and policies.</td></tr>';msg('creditMsg','Could not load credit records: '+esc(r.error.message),'error');return;}
+  if(r.error){$('creditBody').innerHTML='<tr><td colspan="11">Credit records unavailable. Check the supplied credit SQL and policies.</td></tr>';msg('creditMsg','Could not load credit records: '+esc(r.error.message),'error');return;}
   const rawCreditRows=r.data||[];
+  const paymentRead=await selectWorkerRows("worker_stock_credit_payments","*",{column:"payment_date",ascending:false});
+  if(paymentRead.error){
+    creditPaymentRows=[];
+    console.warn("Credit payment history could not be loaded:",paymentRead.error.message);
+  }else creditPaymentRows=paymentRead.data||[];
+  const paymentsByCredit=new Map();
+  for(const p of creditPaymentRows){
+    const key=String(p.credit_sale_id);
+    const item=paymentsByCredit.get(key)||{amount:0,qty:0};
+    item.amount+=Number(p.amount_paid||0);item.qty+=Number(p.crates_paid||0);
+    paymentsByCredit.set(key,item);
+  }
+  const normalizedCreditRows=rawCreditRows.map(c=>{
+    const events=paymentsByCredit.get(String(c.id));
+    const legacyQty=Number(c.amount_due||0)>0
+      ? (Number(c.amount_paid||0)>=Number(c.amount_due||0)?Number(c.quantity||0):Math.min(Number(c.quantity||0),Math.floor((Number(c.amount_paid||0)/Number(c.amount_due||1))*Number(c.quantity||0)+0.000001)))
+      : 0;
+    return {...c,amount_paid:events?events.amount:Number(c.amount_paid||0),crates_paid:events?events.qty:Number(c.crates_paid??legacyQty)};
+  });
   const stockSnapshot=await selectWorkerRows('worker_stock_batches','*',{column:'stock_date',ascending:false});
   if(!stockSnapshot.error){
     liveStockRows=stockSnapshot.data||[];
     const activeBatchIds=new Set(liveStockRows.map(b=>String(b.id)));
-    creditRows=rawCreditRows.filter(c=>activeBatchIds.has(String(c.stock_batch_id)));
-  }else creditRows=rawCreditRows;
+    creditRows=normalizedCreditRows.filter(c=>activeBatchIds.has(String(c.stock_batch_id)));
+  }else creditRows=normalizedCreditRows;
   creditRowsLoaded=true;
   // One-time migration of legacy batches: remove all credit transactions from the old
   // sold/revenue/profit totals, then add back only credit transactions marked fully paid.
@@ -1666,8 +1731,7 @@ async function loadCredits(){
     const a=byBatch.get(id)||{qty:0,amount:0,paidQty:0,paidAmount:0,unpaidQty:0,unpaidAmount:0};
     const q=Math.max(0,Number(c.quantity||0)),due=Math.max(0,Number(c.amount_due||0));
     a.qty+=q;a.amount+=due;
-    if(Number(c.amount_paid||0)>=due&&due>0){a.paidQty+=q;a.paidAmount+=due;}
-    else{a.unpaidQty+=q;a.unpaidAmount+=due;}
+    const paidQty=Math.min(q,Math.max(0,Number(c.crates_paid||0)));const paidAmount=Math.min(due,Math.max(0,Number(c.amount_paid||0)));a.paidQty+=paidQty;a.paidAmount+=paidAmount;a.unpaidQty+=Math.max(0,q-paidQty);a.unpaidAmount+=Math.max(0,due-paidAmount);
     byBatch.set(id,a);
   }
   for(const [batchId,ledger] of byBatch){
@@ -1678,7 +1742,9 @@ async function loadCredits(){
     // without deducting the reserved credit crates.
     if(batch.credit_sales_normalized===true){
       const expectedRemaining=Math.max(0,Number(batch.total_quantity||0)-Number(batch.sold_quantity||0)-ledger.unpaidQty-Number(batch.damage_quantity||0)-Number(batch.loss_quantity||0));
-      if(Math.abs(Number(batch.remaining_quantity||0)-expectedRemaining)>0.0001){
+      if(Math.abs(Number(batch.remaining_quantity||0)-expectedRemaining)>0.0001 ||
+         Math.abs(Number(batch.credit_quantity||0)-ledger.qty)>0.0001 ||
+         Math.abs(Number(batch.credit_outstanding||0)-ledger.unpaidAmount)>0.009){
         const repaired=await db.from('worker_stock_batches').update({remaining_quantity:expectedRemaining,remaining_value:expectedRemaining*unit,credit_quantity:ledger.qty,credit_outstanding:ledger.unpaidAmount}).eq('id',batchId).eq('worker_id',currentUser.id).is('deleted_at',null);
         if(!repaired.error){batch.remaining_quantity=expectedRemaining;batch.remaining_value=expectedRemaining*unit;batch.credit_quantity=ledger.qty;batch.credit_outstanding=ledger.unpaidAmount;}
         else console.warn('Credit stock balance repair could not update batch',batchId,repaired.error.message);
@@ -1702,41 +1768,90 @@ async function loadCredits(){
   if(typeof loadStock==="function")await loadStock();
 }
 function renderCredits(){
-  const open=creditRows.filter(c=>Number(c.amount_due||0)>Number(c.amount_paid||0));
-  $('creditOutstanding').textContent=money(open.reduce((n,c)=>n+Number(c.amount_due||0)-Number(c.amount_paid||0),0));
-  $('creditUnits').textContent=open.reduce((n,c)=>n+Number(c.quantity||0),0).toLocaleString();
-  $('creditBody').innerHTML=creditRows.length?creditRows.map(c=>{const bal=Math.max(0,Number(c.amount_due||0)-Number(c.amount_paid||0));return `<tr><td>${esc(dateOnly(c.credit_date))}</td><td>${esc(c.customer_name||'')}</td><td>${esc(c.product_service||'Eggs')}</td><td>${Number(c.quantity||0)}</td><td>${money(c.amount_due)}</td><td>${money(c.amount_paid)}</td><td><b>${money(bal)}</b></td><td>${bal<=0?'<span class="badge approved">PAID</span>':'<span class="badge pending">OUTSTANDING</span>'}</td><td>${bal>0?`<button class="primary" onclick="markCreditPaid('${esc(c.id)}')">Mark fully paid</button>`:'—'}</td></tr>`}).join(''):'<tr><td colspan="9">No credit sales recorded.</td></tr>';
+  const open=creditRows.filter(c=>Number(c.amount_due||0)>Number(c.amount_paid||0)||Number(c.crates_paid||0)<Number(c.quantity||0));
+  $('creditOutstanding').textContent=money(open.reduce((n,c)=>n+Math.max(0,Number(c.amount_due||0)-Number(c.amount_paid||0)),0));
+  $('creditUnits').textContent=open.reduce((n,c)=>n+Math.max(0,Number(c.quantity||0)-Number(c.crates_paid||0)),0).toLocaleString();
+  $('creditBody').innerHTML=creditRows.length?creditRows.map(c=>{
+    const bal=Math.max(0,Number(c.amount_due||0)-Number(c.amount_paid||0));
+    const paidQty=Math.min(Number(c.quantity||0),Number(c.crates_paid||0));
+    const unpaidQty=Math.max(0,Number(c.quantity||0)-paidQty);
+    const status=unpaidQty<=0&&bal<=0?'PAID':paidQty>0?'PART-PAID':'OUTSTANDING';
+    const statusHtml=status==='PAID'?'<span class="badge approved">PAID</span>':status==='PART-PAID'?'<span class="badge" style="background:#fff3cd;color:#8a5b00">PART-PAID</span>':'<span class="badge pending">OUTSTANDING</span>';
+    const actions=`<span style="display:inline-flex;gap:6px;flex-wrap:wrap"><button type="button" class="primary" onclick="editCreditRecord('${esc(c.id)}')">Edit</button>${unpaidQty>0?`<button type="button" onclick="recordCreditPayment('${esc(c.id)}')">Record Payment</button>`:''}</span>`;
+    return `<tr><td>${esc(dateOnly(c.credit_date))}</td><td>${esc(c.customer_name||'')}</td><td>${esc(c.product_service||'Eggs')}</td><td>${Number(c.quantity||0)}</td><td>${paidQty}</td><td>${unpaidQty}</td><td>${money(c.amount_due)}</td><td>${money(c.amount_paid)}</td><td><b>${money(bal)}</b></td><td>${statusHtml}</td><td>${actions}</td></tr>`;
+  }).join(''):'<tr><td colspan="11">No credit sales recorded.</td></tr>';
 }
-$('creditQuantity')?.addEventListener('input',()=>{const r=liveStockRows.find(x=>x.id===$('creditStockBatch').value);if(r&&Number($('creditQuantity').value)>0)$('creditAmount').value=(Number($('creditQuantity').value)*Number(r.selling_price_per_unit||0)).toFixed(2);});
-$('creditStockBatch')?.addEventListener('change',()=>{const r=liveStockRows.find(x=>x.id===$('creditStockBatch').value);if(r&&Number($('creditQuantity').value)>0)$('creditAmount').value=(Number($('creditQuantity').value)*Number(r.selling_price_per_unit||0)).toFixed(2);});
-$('saveCreditBtn')?.addEventListener('click',async()=>{
-  const batchId=$('creditStockBatch').value,stock=liveStockRows.find(x=>x.id===batchId),customer=$('creditCustomer').value.trim(),qty=Number($('creditQuantity').value),amount=Number($('creditAmount').value),date=$('creditDate').value;
-  if(!stock||!customer||!date||!Number.isInteger(qty)||qty<=0||!Number.isFinite(amount)||amount<=0){msg('creditMsg','Choose a stock batch and enter customer, date, crate quantity and amount due.','error');return;}
-  if(qty>Number(stock.remaining_quantity||0)){msg('creditMsg','There are not enough remaining crates in this stock batch.','error');return;}
-  const unit=Number(stock.cost_per_unit||0),newRemaining=Number(stock.remaining_quantity||0)-qty,oldCredit=Number(stock.credit_outstanding||0),newCredit=oldCredit+amount;
-  const credit={stock_batch_id:stock.id,worker_id:currentUser.id,customer_name:customer,product_service:stock.product_service||'Eggs',quantity:qty,amount_due:amount,amount_paid:0,credit_date:date,notes:$('creditNotes').value.trim()||null,status:'unpaid'};
-  msg('creditMsg','Saving on-credit stock reservation...');
-  const ins=await db.from('worker_stock_credit_sales').insert(credit).select('*').single();if(ins.error){msg('creditMsg','Credit record could not be saved: '+esc(ins.error.message),'error');return;}
-  const upd=await db.from('worker_stock_batches').update({remaining_quantity:newRemaining,remaining_value:newRemaining*unit,credit_quantity:Number(stock.credit_quantity||0)+qty,credit_outstanding:newCredit,credit_sales_normalized:true}).eq('id',stock.id).eq('worker_id',currentUser.id).is('deleted_at',null);
-  if(upd.error){await db.from('worker_stock_credit_sales').delete().eq('id',ins.data.id).eq('worker_id',currentUser.id);msg('creditMsg','Credit record was not applied to stock: '+esc(upd.error.message),'error');return;}
-  $('creditForm').reset();$('creditDate').value=today();msg('creditMsg',`On-credit recorded: ${qty} crates reserved. They reduce available stock, but are NOT counted as sold, profit, sales revenue or cash until marked fully paid.`, 'success');await Promise.all([loadStock(),loadStockHistory(),loadCredits()]);calculateStock();
-});
-window.markCreditPaid=async id=>{
-  const c=creditRows.find(x=>x.id===id);if(!c||Number(c.amount_due||0)<=Number(c.amount_paid||0))return;
-  if(!confirm(`Confirm that ${money(Number(c.amount_due)-Number(c.amount_paid))} has been received from ${c.customer_name}?`))return;
-  const bal=Number(c.amount_due||0)-Number(c.amount_paid||0);const stock=liveStockRows.find(x=>x.id===c.stock_batch_id);
-  const up=await db.from('worker_stock_credit_sales').update({amount_paid:Number(c.amount_due),status:'paid',paid_at:new Date().toISOString()}).eq('id',id).eq('worker_id',currentUser.id);
-  if(up.error){msg('creditMsg','Payment could not be saved: '+esc(up.error.message),'error');return;}
-  if(stock){
-    const qty=Number(c.quantity||0),unit=Number(stock.cost_per_unit||0),next=Math.max(0,Number(stock.credit_outstanding||0)-Number(c.amount_due||0));
-    const sold=Number(stock.sold_quantity||0)+qty,revenue=Number(stock.sales_revenue||0)+Number(c.amount_due||0),soldCost=Number(stock.sold_cost||0)+qty*unit;
-    const profit=Number(stock.profit_loss||0)+Number(c.amount_due||0)-qty*unit;
-    const cash=Number(stock.capital_amount||0)+revenue-Number(stock.purchase_total||0);
-    const su=await db.from('worker_stock_batches').update({sold_quantity:sold,sales_revenue:revenue,sold_cost:soldCost,profit_loss:profit,credit_outstanding:next,cash_in_hand:cash,credit_sales_normalized:true}).eq('id',stock.id).eq('worker_id',currentUser.id).is('deleted_at',null);
-    if(su.error){msg('creditMsg','Payment was marked paid, but stock totals need attention: '+esc(su.error.message),'error');return;}
-  }
-  msg('creditMsg','Payment confirmed in full. These crates are now counted as sold, their profit is recognised, and the received amount is added to cash in hand.','success');await Promise.all([loadStock(),loadCredits()]);calculateStock();
+const creditDialog=$('creditActionDialog');
+function closeCreditAction(){if(creditDialog?.open)creditDialog.close();$('creditActionMsg').textContent='';}
+$('creditActionClose')?.addEventListener('click',closeCreditAction);
+$('creditActionCancel')?.addEventListener('click',closeCreditAction);
+window.editCreditRecord=id=>{
+  const c=creditRows.find(x=>String(x.id)===String(id));if(!c)return;
+  $('creditActionId').value=id;$('creditActionTitle').textContent='Edit On-Credit Record';
+  $('creditActionHint').textContent=`${Number(c.crates_paid||0)} crate(s) already paid. The edited total cannot be lower than paid crates or money already received.`;
+  $('creditEditCustomer').value=c.customer_name||'';$('creditEditDate').value=String(c.credit_date||today()).slice(0,10);
+  $('creditEditQuantity').value=c.quantity;$('creditEditAmount').value=Number(c.amount_due||0).toFixed(2);$('creditEditNotes').value=c.notes||'';
+  $('creditEditFields').style.display='grid';$('creditPaymentFields').style.display='none';
+  $('creditActionSave').textContent='Save Changes';$('creditActionSave').dataset.mode='edit';
+  creditDialog.showModal();
 };
+window.recordCreditPayment=id=>{
+  const c=creditRows.find(x=>String(x.id)===String(id));if(!c)return;
+  const outstanding=Math.max(0,Number(c.quantity||0)-Number(c.crates_paid||0));
+  $('creditActionId').value=id;$('creditActionTitle').textContent='Record Customer Payment';
+  $('creditActionHint').textContent=`${c.customer_name||'Customer'} has ${outstanding} crate(s) outstanding and ${money(Math.max(0,Number(c.amount_due||0)-Number(c.amount_paid||0)))} unpaid. Record the number of crates paid now.`;
+  $('creditPaymentCrates').value='';$('creditPaymentCrates').max=String(outstanding);$('creditPaymentDate').value=today();
+  $('creditPaymentPreview').textContent='The payment amount and profit will be calculated from this stock batch’s selling price and original purchase cost.';
+  $('creditEditFields').style.display='none';$('creditPaymentFields').style.display='grid';
+  $('creditActionSave').textContent='Record Payment';$('creditActionSave').dataset.mode='payment';
+  creditDialog.showModal();
+};
+$('creditPaymentCrates')?.addEventListener('input',()=>{
+  const c=creditRows.find(x=>String(x.id)===String($('creditActionId').value));if(!c)return;
+  const q=Math.max(0,Number($('creditPaymentCrates').value)||0),remainingQty=Math.max(0,Number(c.quantity||0)-Number(c.crates_paid||0));
+  const remainingAmount=Math.max(0,Number(c.amount_due||0)-Number(c.amount_paid||0));
+  const amount=q>=remainingQty?remainingAmount:Math.round((remainingAmount/Math.max(1,remainingQty))*q*100)/100;
+  const batch=liveStockRows.find(b=>String(b.id)===String(c.stock_batch_id));
+  const cost=q*Number(batch?.cost_per_unit||0);
+  $('creditPaymentPreview').textContent=`Payment received: ${money(amount)} · Original cost recovered: ${money(cost)} · Profit recognised: ${money(amount-cost)}`;
+});
+$('creditActionSave')?.addEventListener('click',async()=>{
+  const mode=$('creditActionSave').dataset.mode,id=$('creditActionId').value,c=creditRows.find(x=>String(x.id)===String(id));
+  if(!c)return;
+  const button=$('creditActionSave');button.disabled=true;
+  try{
+    if(mode==='edit'){
+      const customer=$('creditEditCustomer').value.trim(),date=$('creditEditDate').value;
+      const qty=Number($('creditEditQuantity').value),amount=Number($('creditEditAmount').value),notes=$('creditEditNotes').value.trim();
+      const alreadyPaidCrates=Number(c.crates_paid||0),alreadyPaidAmount=Number(c.amount_paid||0);
+      const invalidSettledState=(qty===alreadyPaidCrates&&Math.abs(amount-alreadyPaidAmount)>0.009) ||
+        (qty>alreadyPaidCrates&&amount<=alreadyPaidAmount);
+      if(!customer||!date||!Number.isInteger(qty)||qty<alreadyPaidCrates||qty<=0||!Number.isFinite(amount)||amount<alreadyPaidAmount||amount<=0||invalidSettledState){
+        $('creditActionMsg').innerHTML='<div class="msg error">Check the customer, date, crate quantity and amount. Total crates and amount due cannot be less than payments already recorded. Any remaining crates must also have an amount outstanding.</div>';return;
+      }
+      const upd=await db.from('worker_stock_credit_sales').update({
+        customer_name:customer,credit_date:date,quantity:qty,amount_due:amount,
+        notes:notes||null,status:Number(c.crates_paid||0)>=qty&&Number(c.amount_paid||0)>=amount?'paid':Number(c.crates_paid||0)>0?'partial':'unpaid'
+      }).eq('id',id).eq('worker_id',currentUser.id).select('id');
+      if(upd.error||!upd.data?.length){$('creditActionMsg').innerHTML='<div class="msg error">Credit record could not be updated: '+esc(upd.error?.message||'No row updated')+'</div>';return;}
+      closeCreditAction();msg('creditMsg','On-credit record updated. Outstanding crates, credit balance and stock figures have been recalculated.','success');
+    }else if(mode==='payment'){
+      const crates=Number($('creditPaymentCrates').value),date=$('creditPaymentDate').value;
+      const outstanding=Math.max(0,Number(c.quantity||0)-Number(c.crates_paid||0));
+      if(!Number.isInteger(crates)||crates<=0||crates>outstanding||!date){
+        $('creditActionMsg').innerHTML='<div class="msg error">Enter a valid number of crates (up to '+outstanding+') and a payment date.</div>';return;
+      }
+      const result=await db.rpc('ezelex_record_credit_payment',{p_credit_sale_id:id,p_crates_paid:crates,p_payment_date:date});
+      if(result.error){$('creditActionMsg').innerHTML='<div class="msg error">Payment could not be recorded: '+esc(result.error.message)+'. Check that the credit-payment SQL update has been run.</div>';return;}
+      closeCreditAction();
+      const amount=Number(result.data?.amount_paid||0),profit=Number(result.data?.profit_amount||0);
+      msg('creditMsg',`${crates} crate(s) payment recorded. ${money(amount)} received; ${money(profit)} profit recognised in the payment week. Remaining credit: ${Number(result.data?.crates_outstanding||0)} crate(s).`,'success');
+    }
+    await Promise.all([loadCredits(),loadStock(),loadStockWeeks(),loadStockHistory()]);
+    if(typeof window.ezelexLoadFinance==='function')await window.ezelexLoadFinance();
+  }finally{button.disabled=false;}
+});
+
 async function loadMessages(){
   /* Communication is intentionally read-only here.
      If a communication table exists, this section can be connected without changing worker login/profile. */
@@ -2296,10 +2411,10 @@ window.addEventListener("load",()=>start(),{once:true});
   paintReinvestmentCash(reinvestmentLedger);$f('financeWeekPurchases').textContent=fmt(purchases);$f('cashOpeningDisplay').textContent=fmt(opening);$f('cashSalesDisplay').textContent=fmt(reinvestmentLedger.recovered);$f('cashPurchasesDisplay').textContent=fmt(reinvestmentLedger.spent);$f('cashExpensesDisplay').textContent=fmt(expenses);$f('cashClosingDisplay').textContent=fmt(cash);$f('openingCashInput').value=opening.toFixed(2);
   const lifetimeOperatingExpenses=(allE.data||[]).reduce((n,r)=>n+Number(r.amount||0),0);
   const netProfit=trading-lifetimeOperatingExpenses;
-  const openCredits=(creditRows||[]).filter(c=>Number(c.amount_paid||0)<Number(c.amount_due||0));
-  const creditUnitsByBatch=new Map();openCredits.forEach(c=>creditUnitsByBatch.set(String(c.stock_batch_id),(creditUnitsByBatch.get(String(c.stock_batch_id))||0)+Number(c.quantity||0)));
+  const openCredits=(creditRows||[]).filter(c=>Number(c.amount_paid||0)<Number(c.amount_due||0)||Number(c.crates_paid||0)<Number(c.quantity||0));
+  const creditUnitsByBatch=new Map();openCredits.forEach(c=>creditUnitsByBatch.set(String(c.stock_batch_id),(creditUnitsByBatch.get(String(c.stock_batch_id))||0)+Math.max(0,Number(c.quantity||0)-Number(c.crates_paid||0))));
   const remainingProjection=currentPhysicalStockRows((liveStockRows||[]).filter(r=>!r.deleted_at)).reduce((n,r)=>n+Math.max(0,Number(r.remaining_quantity||0))*Math.max(0,Number(r.selling_price_per_unit||0)-Number(r.cost_per_unit||0)),0);
-  const creditProjection=openCredits.reduce((n,c)=>{const b=(liveStockRows||[]).find(r=>String(r.id)===String(c.stock_batch_id));if(!b)return n;const qty=Math.max(0,Number(c.quantity||0)),due=Math.max(0,Number(c.amount_due||0)-Number(c.amount_paid||0));return n+Math.max(0,due-qty*Number(b.cost_per_unit||0));},0);
+  const creditProjection=openCredits.reduce((n,c)=>{const b=(liveStockRows||[]).find(r=>String(r.id)===String(c.stock_batch_id));if(!b)return n;const qty=Math.max(0,Number(c.quantity||0)-Number(c.crates_paid||0)),due=Math.max(0,Number(c.amount_due||0)-Number(c.amount_paid||0));return n+Math.max(0,due-qty*Number(b.cost_per_unit||0));},0);
   const potentialProfit=netProfit+remainingProjection+creditProjection;
   $f('pnlTrading').textContent=fmt(trading);$f('pnlExpenses').textContent=fmt(lifetimeOperatingExpenses);$f('pnlNet').textContent=fmt(netProfit);$f('pnlNetCard').classList.toggle('loss',netProfit<0);$f('pnlNetCard').classList.toggle('profit',netProfit>=0);
   $f('pnlRemainingProjection').textContent=fmt(remainingProjection);$f('pnlCreditProjection').textContent=fmt(creditProjection);$f('pnlPotential').textContent=fmt(potentialProfit);
