@@ -240,8 +240,8 @@ th,td{padding:12px;border-bottom:1px solid #e6ebf1;text-align:left;font-size:14p
       <strong>Status:</strong> <span id="workerStatus" class="badge">—</span>
     </div>
     <div class="stats">
-      <div class="stat"><small>Total Crates Bought</small><strong id="todaySales">0</strong></div>
-      <div class="stat"><small>Total Crates Sold</small><strong id="weekSales">0</strong></div>
+      <div class="stat"><small>Crates Bought This Week</small><strong id="todaySales">0</strong><div class="live" id="dashboardAllTimePurchaseNote">All-time purchases: loading…</div></div>
+      <div class="stat"><small>Crates Sold This Week</small><strong id="weekSales">0</strong></div>
       <div class="stat"><small>Cash In Hand</small><strong id="allSales">GH₵0.00</strong><div class="live">Actual available cash after purchases and expenses.</div></div>
       <div class="stat profit" id="dashboardProfitCard" style="background:#dcfce7;border-color:#16a34a;color:#14532d"><small>Actual Profit + On-Credit</small><strong id="dashboardProfitValue">GH₵0.00</strong><div class="live" id="dashboardProfitNote">Realised profit plus unpaid-credit profit only.</div></div>
       <div class="stat" id="dashboardRemainingCard"><small>Remaining Stock (including unpaid credit)</small><strong id="dashboardRemaining">0</strong><div id="dashboardRemainingBreakdown">0 available + 0 on-credit</div></div>
@@ -936,6 +936,18 @@ async function loadStock(){
   const {data,error}=await selectWorkerRows("worker_stock_batches","*",{column:"stock_date",ascending:false});
   if(error){$("stockBody").innerHTML='<tr><td colspan="11">Stock records could not be loaded.</td></tr>';msg("stockLiveMsg","Could not load live stock: "+error.message,"error");return;}
   const allRows=data||[]; liveStockRows=allRows;
+  // Read the complete purchase history separately from active stock. The active
+  // stock query intentionally excludes archived rows, but all-time purchases must
+  // continue to include them so archiving a record never erases purchase history.
+  let allTimePurchaseRows=allRows;
+  const historyRead=await db.from("worker_stock_batches")
+    .select("id,worker_id,stock_type,total_quantity,stock_date,week_id,created_at")
+    .eq("worker_id",currentUser.id);
+  if(!historyRead.error) allTimePurchaseRows=historyRead.data||[];
+  else console.warn("All-time purchase history could not be read:",historyRead.error.message);
+  const allTimeCratesPurchased=allTimePurchaseRows
+    .filter(r=>r.stock_type!=="carry_forward")
+    .reduce((sum,r)=>sum+Number(r.total_quantity||0),0);
   // remaining_quantity is a derived balance, not an independent source of truth.
   // Rebuild it from the original batch quantity, sold/damaged/lost units and unpaid
   // credit reservations. This keeps physical stock correct after edits and payments.
@@ -959,15 +971,24 @@ async function loadStock(){
   // Sales and realised profit INCLUDE carry-forward rows because this week's sales
   // are often recorded against the opening-stock batch created from last week.
   const purchaseRows=allRows.filter(r=>r.stock_type!=="carry_forward");
-  const dashBought=purchaseRows.reduce((sum,r)=>sum+Number(r.total_quantity||0),0);
-  const dashSold=allRows.reduce((sum,r)=>sum+Number(r.sold_quantity||0),0);
-  const actualSoldProfit=allRows.reduce((sum,r)=>sum+Number(r.profit_loss||0),0);
   const liveWeekStart=mondayDateISO(today());
-  const dashboardWeekRows=allRows.filter(r=>String(r.week_id||"")===String(currentStockWeek?.id||"")||mondayDateISO(r.stock_date||r.created_at||today())===liveWeekStart);
+  // A batch belongs to the week recorded in week_id even when its stock_date was
+  // backdated. Date matching is retained for legacy rows that have no week_id.
+  const dashboardWeekRows=allRows.filter(r=>
+    (currentStockWeek?.id && String(r.week_id||"")===String(currentStockWeek.id)) ||
+    (!r.week_id && mondayDateISO(r.stock_date||r.created_at||today())===liveWeekStart)
+  );
+  const dashBought=dashboardWeekRows.filter(r=>r.stock_type!=="carry_forward")
+    .reduce((sum,r)=>sum+Number(r.total_quantity||0),0);
+  const dashSold=dashboardWeekRows.reduce((sum,r)=>sum+Number(r.sold_quantity||0),0);
+  const actualSoldProfit=dashboardWeekRows.reduce((sum,r)=>sum+Number(r.profit_loss||0),0);
   const dashboardBatchIds=new Set(dashboardWeekRows.map(r=>String(r.id)));
   const openCreditRows=(creditRows||[]).filter(c=>Number(c.amount_paid||0)<Number(c.amount_due||0));
   const openDashboardWeekCredits=openCreditRows.filter(c=>dashboardBatchIds.has(String(c.stock_batch_id)));
   const unpaidCreditUnits=openDashboardWeekCredits.reduce((n,c)=>n+Number(c.quantity||0),0);
+  const dashboardAllTimePurchaseNote=$("dashboardAllTimePurchaseNote");
+  if(dashboardAllTimePurchaseNote) dashboardAllTimePurchaseNote.textContent=
+    `All-time purchases: ${allTimeCratesPurchased.toLocaleString()} crates`;
   // remaining_quantity is already reduced when credit stock is reserved. Do not add
   // unpaid credit crates back into physical remaining stock a second time.
   const availableRemaining=dashboardWeekRows.reduce((n,r)=>n+Number(r.remaining_quantity||0),0);
@@ -988,7 +1009,7 @@ async function loadStock(){
   // Project the profit on every unpaid credit record without recognising it as earned profit.
   // It is shown separately and added to actual sold profit only for the dashboard projection.
   const batchById=new Map(allRows.map(r=>[String(r.id),r]));
-  const unpaidCreditProfit=openCreditRows.reduce((sum,c)=>{
+  const unpaidCreditProfit=openDashboardWeekCredits.reduce((sum,c)=>{
     const batch=batchById.get(String(c.stock_batch_id));
     if(!batch)return sum;
     const qty=Math.max(0,Number(c.quantity||0));
@@ -1002,8 +1023,8 @@ async function loadStock(){
   $("allSales").textContent=money(dashCash);
   if($("dashboardRemaining"))$("dashboardRemaining").textContent=dashboardRemaining.toLocaleString();
   if($("dashboardRemainingBreakdown"))$("dashboardRemainingBreakdown").textContent=`${availableRemaining.toLocaleString()} available + ${unpaidCreditUnits.toLocaleString()} on-credit`;
-  if($("dashboardCreditUnits"))$("dashboardCreditUnits").textContent=openCreditRows.reduce((n,c)=>n+Number(c.quantity||0),0).toLocaleString();
-  if($("dashboardCreditBreakdown"))$("dashboardCreditBreakdown").textContent=`${money(openCreditRows.reduce((n,c)=>n+Math.max(0,Number(c.amount_due||0)-Number(c.amount_paid||0)),0))} outstanding · Tap to open On-Credit`;
+  if($("dashboardCreditUnits"))$("dashboardCreditUnits").textContent=openDashboardWeekCredits.reduce((n,c)=>n+Number(c.quantity||0),0).toLocaleString();
+  if($("dashboardCreditBreakdown"))$("dashboardCreditBreakdown").textContent=`${money(openDashboardWeekCredits.reduce((n,c)=>n+Math.max(0,Number(c.amount_due||0)-Number(c.amount_paid||0)),0))} outstanding this week · Tap to open On-Credit`;
   const dashboardActualProfit=actualSoldProfit+unpaidCreditProfit;
   if($("dashboardProfitValue"))$("dashboardProfitValue").textContent=money(dashboardActualProfit);
   if($("dashboardProfitNote"))$("dashboardProfitNote").textContent=`Realised: ${money(actualSoldProfit)} + unpaid-credit profit: ${money(unpaidCreditProfit)}`;
@@ -1011,9 +1032,23 @@ async function loadStock(){
   const chosenWeekId=selectedStockWeekId||currentStockWeek?.id||"";
   const chosenWeek=stockWeekRows.find(w=>String(w.id)===String(chosenWeekId))||currentStockWeek;
   const chosenStart=chosenWeek?.week_start||mondayDateISO(today());
-  const rows=allRows.filter(r=>String(r.week_id||"")===String(chosenWeekId)||mondayDateISO(r.stock_date||r.created_at||today())===String(chosenStart));
+  const rows=allRows.filter(r=>
+    (chosenWeekId && String(r.week_id||"")===String(chosenWeekId)) ||
+    (!r.week_id && mondayDateISO(r.stock_date||r.created_at||today())===String(chosenStart))
+  );
   let units=0,value=0,revenue=0,profit=0,cash=0,purchased=0,soldWeek=0;
-  rows.forEach(r=>{units+=Number(r.remaining_quantity||0);value+=Number(r.remaining_value||0);revenue+=Number(r.sales_revenue||0);profit+=Number(r.profit_loss||0);if(r.stock_type!=="carry_forward"&&mondayDateISO(r.stock_date||r.created_at||today())===String(chosenStart))purchased+=Number(r.total_quantity||0);soldWeek+=Number(r.sold_quantity||0);const cap=Number(r.capital_amount??r.purchase_total??0),pur=Number(r.purchase_total||0);cash+=Number(r.cash_in_hand??(cap+Number(r.sales_revenue||0)-pur));});
+  rows.forEach(r=>{
+    units+=Number(r.remaining_quantity||0);
+    value+=Number(r.remaining_value||0);
+    revenue+=Number(r.sales_revenue||0);
+    profit+=Number(r.profit_loss||0);
+    // Count every non-carry-forward batch attached to this week. Do not require
+    // stock_date to fall inside the week as well: week_id is the authoritative link.
+    if(r.stock_type!=="carry_forward")purchased+=Number(r.total_quantity||0);
+    soldWeek+=Number(r.sold_quantity||0);
+    const cap=Number(r.capital_amount??r.purchase_total??0),pur=Number(r.purchase_total||0);
+    cash+=Number(r.cash_in_hand??(cap+Number(r.sales_revenue||0)-pur));
+  });
   const displayedUnits=units;
   $("liveUnits").textContent=displayedUnits.toLocaleString();$("liveValue").textContent=money(value);$("liveRevenue").textContent=money(revenue);$("liveProfit").textContent=money(profit);$("liveProfitLabel").textContent=profit>=0?"selected week profit":"selected week loss";
   $("weekPurchased").textContent=purchased.toLocaleString();$("weekSold").textContent=soldWeek.toLocaleString();$("weekRemaining").textContent=displayedUnits.toLocaleString();
