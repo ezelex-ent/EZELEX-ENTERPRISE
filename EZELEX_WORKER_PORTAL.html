@@ -1099,14 +1099,15 @@ async function loadStock(){
   );
   const dashBought=dashboardWeekRows.filter(r=>r.stock_type!=="carry_forward")
     .reduce((sum,r)=>sum+Number(r.total_quantity||0),0);
-  const dashboardBatchPaidCreditProfit=creditPaymentProfitForRows(dashboardWeekRows);
-  const dashboardBatchPaidCreditQty=creditPaymentQtyForRows(dashboardWeekRows);
-  const currentWeekCreditPayments=creditPaymentsForWeek(liveWeekStart);
-  const currentWeekCreditProfit=currentWeekCreditPayments.reduce((n,p)=>n+Number(p.profit_amount||0),0);
-  const currentWeekCreditQty=currentWeekCreditPayments.reduce((n,p)=>n+Number(p.crates_paid||0),0);
-  // Sold crates are counted once from the authoritative stock-batch sold_quantity field, exactly as the live billboard does. Credit-payment ledger entries settle an existing credit sale; they are not additional sales.
-   const dashSold=dashboardWeekRows.reduce((sum,r)=>sum+Number(r.sold_quantity||0),0);
-  const actualSoldProfit=dashboardWeekRows.reduce((sum,r)=>sum+Number(r.profit_loss||0),0)-dashboardBatchPaidCreditProfit+currentWeekCreditProfit;
+  // Match the live billboard exactly: use the same live stock-batch cache,
+  // current-week filter, and profit_loss field. Do not add unpaid-credit profit
+  // or re-add credit-payment ledger profit on top of this figure.
+  const billboardWeekRows=(liveStockRows||[]).filter(r=>!r.deleted_at).filter(r=>
+    r.week_id?String(r.week_id)===String(currentStockWeek?.id||""):
+    mondayDateISO(r.stock_date||r.created_at||today())===liveWeekStart
+  );
+  const dashSold=billboardWeekRows.reduce((sum,r)=>sum+Number(r.sold_quantity||0),0);
+  const actualSoldProfit=billboardWeekRows.reduce((sum,r)=>sum+Number(r.profit_loss||0),0);
   const dashboardBatchIds=new Set(dashboardWeekRows.map(r=>String(r.id)));
   const openCreditRows=(creditRows||[]).filter(c=>Math.max(0,Number(c.amount_due||0)-Number(c.amount_paid||0))>0.009);
   // Match Management Centre current-stock accounting: include every still-open credit batch for this worker, including credit originating in an earlier week.
@@ -1156,9 +1157,12 @@ async function loadStock(){
   if($("dashboardRemainingBreakdown"))$("dashboardRemainingBreakdown").textContent=`${physicalRemaining.toLocaleString()} available + ${unpaidCreditRemaining.toLocaleString()} on-credit`;
   if($("dashboardCreditUnits"))$("dashboardCreditUnits").textContent=openDashboardWeekCredits.reduce((n,c)=>n+Math.max(0,Number(c.quantity||0)-Number(c.crates_paid||0)),0).toLocaleString();
   if($("dashboardCreditBreakdown"))$("dashboardCreditBreakdown").textContent=`${money(openDashboardWeekCredits.reduce((n,c)=>n+Math.max(0,Number(c.amount_due||0)-Number(c.amount_paid||0)),0))} outstanding · Tap to open On-Credit`;
-  const dashboardActualProfit=actualSoldProfit+unpaidCreditProfit;
+  // Profit is recognised only when the corresponding sale/credit payment is
+  // realised in the stock batch ledger. Unpaid credit remains separate and is
+  // not added to profit until payment is received.
+  const dashboardActualProfit=actualSoldProfit;
   if($("dashboardProfitValue"))$("dashboardProfitValue").textContent=money(dashboardActualProfit);
-  if($("dashboardProfitNote"))$("dashboardProfitNote").textContent=`Realised: ${money(actualSoldProfit)} + unpaid-credit profit: ${money(unpaidCreditProfit)}`;
+  if($("dashboardProfitNote"))$("dashboardProfitNote").textContent=`Realised profit: ${money(actualSoldProfit)} · unpaid-credit profit is not recognised until payment`;
   const dashboardProfitCard=$("dashboardProfitCard"); dashboardProfitCard?.classList.toggle("profit",dashboardActualProfit>=0); dashboardProfitCard?.classList.toggle("loss",dashboardActualProfit<0); if(dashboardProfitCard){dashboardProfitCard.style.background=dashboardActualProfit<0?"#fee2e2":"#dcfce7";dashboardProfitCard.style.borderColor=dashboardActualProfit<0?"#dc2626":"#16a34a";dashboardProfitCard.style.color=dashboardActualProfit<0?"#7f1d1d":"#14532d";}
   const chosenWeekId=selectedStockWeekId||currentStockWeek?.id||"";
   const chosenWeek=stockWeekRows.find(w=>String(w.id)===String(chosenWeekId))||currentStockWeek;
