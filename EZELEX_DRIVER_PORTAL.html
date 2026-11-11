@@ -252,6 +252,17 @@ th,td{padding:12px;border-bottom:1px solid #e6edf4}
  .driver-live-billboard-rotation{margin-left:auto}
 }
 
+
+/* Additive contract table and owing/payment-plan presentation. Existing portal styles remain intact. */
+.driver-contract-table{width:100%;min-width:0!important;border-collapse:separate;border-spacing:0}
+.driver-contract-table th{width:20%;white-space:normal;text-transform:uppercase;font-size:11px}
+.driver-contract-table td{font-weight:650;color:#1b2b42;overflow-wrap:anywhere}
+.driver-contract-table .contract-end-cell{font-weight:800;color:#174a78}
+.driver-contract-time{display:inline-block;padding:7px 10px;border-radius:9px;background:#eaf4fb;color:#174a78;font-weight:800;line-height:1.4}
+.driver-contract-progress{margin-top:14px;padding:14px;border:1px solid #dce7f1;border-radius:12px;background:#f7fafc}
+.driver-contract-progress strong{font-size:18px;color:#173d62}
+.driver-plan-action{white-space:normal;min-width:150px}
+@media(max-width:600px){.driver-contract-table th{width:22%}.driver-contract-table th,.driver-contract-table td{padding:10px 8px;font-size:12px}.driver-plan-action{width:100%;min-width:0}}
 </style>
 </head>
 <body>
@@ -266,6 +277,7 @@ th,td{padding:12px;border-bottom:1px solid #e6edf4}
     <nav id="driverMenu" class="driverMenu hidden" aria-label="Driver menu">
       <button type="button" data-driver-go="recordSale">Record Sale</button>
       <button type="button" data-driver-go="paymentWarnings">Payment Warnings &amp; Overdue Weeks</button>
+      <button type="button" data-driver-go="owingShortfall">Owing / Shortfall &amp; Payment Plan</button>
       <button type="button" data-driver-go="paymentHistory">Payment History Calendar</button>
       <button type="button" data-driver-go="approvalHistory">Approval/Reject History</button>
       <button type="button" data-driver-go="contract">My Contract</button>
@@ -607,6 +619,21 @@ th,td{padding:12px;border-bottom:1px solid #e6edf4}
       <div class="tablebox"><table><thead><tr><th>Week</th><th>Expected</th><th>Confirmed Paid</th><th>Outstanding</th><th>Report Status</th><th>Warning</th></tr></thead><tbody id="driverPaymentWarningsBody"><tr><td colspan="6">Loading payment warnings…</td></tr></tbody></table></div>
     </div>
   </section>
+  <section id="owingShortfall" class="section">
+    <div class="panel">
+      <h2>Owing / Shortfall &amp; Payment Plan</h2>
+      <p class="stockNote">This page shows weekly shortfalls from admin-approved weekly reports. Overdue contract payments are shown separately. Select a week to open the existing weekly sales/payment submission form. Every submission remains pending until Admin approval.</p>
+      <div id="driverOwingShortfallMsg" aria-live="polite"></div>
+      <div class="stockGrid">
+        <div class="stockCard"><small>Approved Weekly Shortfall</small><strong id="driverOwingShortfallTotal">GH₵0.00</strong></div>
+        <div class="stockCard"><small>Weeks with Shortfall</small><strong id="driverOwingShortfallCount">0</strong></div>
+      </div>
+      <div class="tablebox"><table><thead><tr><th>Contract Week</th><th>Weekly Target</th><th>Approved Payment</th><th>Shortfall / Owing</th><th>Report Status</th><th>Payment Option</th></tr></thead><tbody id="driverOwingShortfallBody"><tr><td colspan="6">Loading weekly shortfalls…</td></tr></tbody></table></div>
+      <div class="msg" style="margin-top:14px">To make a payment submission, choose <strong>Record Sales / Submit Payment</strong> beside the relevant week. Enter the sales amount, payment amount and any shortage, then submit for Admin approval. Pending submissions do not reduce your confirmed contract balance.</div>
+      <button type="button" class="primary" id="driverOpenRecordSale">Record Sales / Submit Payment</button>
+    </div>
+  </section>
+
   <section id="paymentHistory" class="section">
     <div class="panel">
       <h2>Payment History Calendar</h2>
@@ -829,7 +856,7 @@ function applyRoleNavigation(role){
     ["sales","stock","stockHistory","credit"].forEach(id=>$(id)?.classList.add("hidden"));
     document.querySelectorAll(".tabs .tab").forEach(b=>b.classList.add("hidden"));
     document.querySelectorAll(".section").forEach(sec=>{sec.classList.remove("active");sec.classList.add("hidden");});
-    ["dashboard","recordSale","profile","communication","contract","paymentHistory","approvalHistory","paymentWarnings"].forEach(id=>$(id)?.classList.remove("hidden"));
+    ["dashboard","recordSale","profile","communication","contract","paymentHistory","approvalHistory","paymentWarnings","owingShortfall"].forEach(id=>$(id)?.classList.remove("hidden"));
     $("dashboard")?.classList.add("active");
     $("driverWeeklyReportPanel")?.classList.remove("hidden");
     // Remove any legacy worker sales/stock panels from the driver dashboard.
@@ -845,68 +872,93 @@ function applyRoleNavigation(role){
   }
 }
 
+function driverContractRemainingParts(endISO){
+ const gh=driverGhanaClock(),todayISO=gh.iso;
+ if(!/^\d{4}-\d{2}-\d{2}$/.test(String(endISO||'')))return null;
+ const today=new Date(todayISO+'T00:00:00Z'),end=new Date(endISO+'T00:00:00Z');
+ if(end<today)return {months:0,weeks:0,days:0,expired:true,totalDays:Math.floor((today-end)/86400000)};
+ let months=(end.getUTCFullYear()-today.getUTCFullYear())*12+(end.getUTCMonth()-today.getUTCMonth());
+ const anchor=new Date(today);anchor.setUTCMonth(anchor.getUTCMonth()+months);
+ if(anchor>end){months--;anchor.setUTCMonth(anchor.getUTCMonth()-1);}
+ let days=Math.max(0,Math.floor((end-anchor)/86400000));
+ const weeks=Math.floor(days/7);days%=7;
+ return {months,weeks,days,expired:false,totalDays:Math.floor((end-today)/86400000)};
+}
+function driverContractScheduledPeriods(c){
+ const start=String(c?.contract_start_date||'').slice(0,10),end=String(c?.contract_end_date||'').slice(0,10);
+ if(!/^\d{4}-\d{2}-\d{2}$/.test(start)||!/^\d{4}-\d{2}-\d{2}$/.test(end)||end<start)return [];
+ const daily=Number(c.daily_target||200),weekly=Number(c.weekly_target||daily*7),out=[];
+ if(!(daily>0)||!(weekly>0))return out;
+ let cursor=new Date(start+'T12:00:00Z'),last=new Date(end+'T12:00:00Z');
+ while(cursor<=last){const ps=new Date(cursor),daysToSunday=(7-ps.getUTCDay())%7,pe=new Date(ps);pe.setUTCDate(pe.getUTCDate()+daysToSunday);if(pe>last)pe.setTime(last.getTime());const days=Math.floor((pe-ps)/86400000)+1,full=days===7&&ps.getUTCDay()===1;out.push({start:ps.toISOString().slice(0,10),end:pe.toISOString().slice(0,10),days,target:full?weekly:days*daily,key:ps.toISOString().slice(0,10)+'|'+pe.toISOString().slice(0,10)});cursor=new Date(pe);cursor.setUTCDate(cursor.getUTCDate()+1);}
+ return out;
+}
+function driverHistoricalAllocationInfo(p){
+ if(!p||!String(p.source_type||'').toLowerCase().includes('historical'))return null;
+ const note=String(p.notes||''),reference=String(p.reference||'');if(/historical excess credit/i.test(note))return null;
+ const m=note.match(/Historical allocation period (\d{4}-\d{2}-\d{2}) to (\d{4}-\d{2}-\d{2});\s*(\d+)\s*day\(s\);\s*target\s*([0-9.]+)/i);
+ const fallback=reference.match(/(\d{4}-\d{2}-\d{2})\s+to\s+(\d{4}-\d{2}-\d{2})/i);
+ const a=m?.[1]||fallback?.[1],b=m?.[2]||fallback?.[2],amount=Math.max(0,Number(p.amount||0));
+ if(!a||!b||!Number.isFinite(amount))return null;
+ return {start:a,end:b,target:m?Number(m[4]):0,amount,key:a+'|'+b};
+}
+function driverHistoricalWeeks(payments,contractId){
+ const map=new Map();(payments||[]).filter(p=>String(p.contract_id)===String(contractId)).forEach(p=>{const h=driverHistoricalAllocationInfo(p);if(!h)return;const x=map.get(h.key)||{start:h.start,end:h.end,target:h.target,paid:0};x.target=Math.max(x.target,h.target||h.amount);x.paid+=h.amount;map.set(h.key,x);});return map;
+}
+function driverContractRemainingWeeks(c,payments,reports){
+ const periods=driverContractScheduledPeriods(c);if(!periods.length)return null;const historical=driverHistoricalWeeks(payments,c.id);let complete=0;
+ periods.forEach(period=>{const h=historical.get(period.key),historicalPaid=h?Math.max(0,h.paid):0;const approved=(reports||[]).filter(r=>String(r.contract_id)===String(c.id)&&String(r.status||'').toLowerCase()==='approved'&&String(r.week_start||'').slice(0,10)===period.start&&String(r.week_end||'').slice(0,10)===period.end).reduce((best,r)=>Math.max(best,Math.max(0,Number(r.payment_amount||0))),0);const confirmed=Math.max(historicalPaid,approved);if(period.target>0&&confirmed+0.009>=period.target)complete++;});return Math.max(0,periods.length-complete);
+}
 async function loadDriverContract(){
-  const host=$("driverContractDetails"); if(!host||!currentUser)return;
-  host.innerHTML='<div class="driverContractCard">Checking your linked contract…</div>';
-  try {
-    const r=await db.from("tricycle_contracts").select("*").eq("driver_user_id",currentUser.id).order("created_at",{ascending:false}).limit(10);
-    if(r.error){
-      host.innerHTML='<div class="msg error">We could not load your contract right now. Please contact Ezelex Enterprise admin and share this message: '+esc(r.error.message)+'</div>';
-      console.warn("Tricycle contract query failed:",r.error.message);return;
-    }
-    const rows=(r.data||[]).filter(c=>String(c.driver_user_id||"")===String(currentUser.id));
-    // Load payment ledger separately so the driver sees the same confirmed payments
-    // that the admin contract balance uses. Pending reports are not counted as paid.
-    const contractIds=rows.map(c=>c.id).filter(Boolean);
-    let paymentRows=[];
-    if(contractIds.length){
-      const payments=await db.from("tricycle_contract_payments")
-        .select("id,contract_id,amount,payment_date,source_type")
-        .in("contract_id",contractIds)
-        .order("payment_date",{ascending:false});
-      if(payments.error){
-        host.innerHTML='<div class="msg error">Your contract loaded, but confirmed payments could not be loaded: '+esc(payments.error.message)+'. Please contact admin.</div>';
-        console.warn("Tricycle payment ledger query failed:",payments.error.message);return;
-      }
-      paymentRows=payments.data||[];
-    }
-    const banner=document.querySelector("#contract .stockNote");
-    if(banner)banner.style.display=rows.length?"none":"block";
-    if(!rows.length){host.innerHTML='<div class="driverContractCard"><h3>No contract linked yet</h3><p>Your driver login is working, but Ezelex Enterprise admin has not linked a tricycle contract to this account yet.</p><p>Once the contract is created and assigned to your driver account, return here and tap <strong>Refresh contract</strong>.</p><button type="button" class="primary" id="refreshDriverContract">Refresh contract</button></div>';$("refreshDriverContract")?.addEventListener("click",loadDriverContract);return;}
-    const moneyVal=v=>"GH₵"+Number(v||0).toLocaleString("en-GH",{minimumFractionDigits:2,maximumFractionDigits:2});
-    host.innerHTML=rows.map(c=>{
-      const status=String(c.status||"pending").replace(/[_-]/g," ");
-      const total=Number(c.total_contract_amount??c.total_amount??0);
-      const ledgerPaid=paymentRows.filter(p=>String(p.contract_id)===String(c.id)).reduce((sum,p)=>sum+Number(p.amount||0),0);
-      const openingPaid=Number(c.opening_paid_amount||0),paid=openingPaid+ledgerPaid;
-      const outstanding=Math.max(0,total-paid);
-      const start=c.contract_start_date||c.contract_start, end=c.contract_end_date||c.contract_end;
-      const startDate=start?new Date(String(start).slice(0,10)+"T00:00:00"):null;
-      const endDate=end?new Date(String(end).slice(0,10)+"T00:00:00"):null;
-      const months=startDate&&endDate&&!Number.isNaN(startDate.getTime())&&!Number.isNaN(endDate.getTime())?Math.max(1,Math.round((endDate-startDate)/(86400000*30.4375))):Number(c.contract_duration_months||0);
-      const monthlyTarget=months>0?total/months:0;
-      const currentMonth=new Date().toISOString().slice(0,7);
-      const paidThisMonth=paymentRows.filter(p=>String(p.contract_id)===String(c.id)&&String(p.payment_date||"").slice(0,7)===currentMonth).reduce((sum,p)=>sum+Number(p.amount||0),0);
-      return `<div class="driverContractCard">
-        <h3>${esc(c.vehicle_registration||c.vehicle_id||"Tricycle contract")}</h3>
-        <p><strong>Status:</strong> ${esc(status)}</p>
-        <p><strong>Contract period:</strong> ${esc(dateOnly(start))} – ${esc(dateOnly(end))}</p>
-        <p><strong>Contract amount:</strong> ${moneyVal(total)}</p>
-        <p><strong>Total amount paid:</strong> ${moneyVal(paid)}</p>
-        <p><strong>Outstanding balance:</strong> <strong>${moneyVal(outstanding)}</strong></p>
-        <p><strong>Estimated monthly target:</strong> ${moneyVal(monthlyTarget)}</p>
-        <p><strong>Payments recorded this month (${esc(currentMonth)}):</strong> ${moneyVal(paidThisMonth)}</p>
-        <p><strong>Opening amount paid:</strong> ${moneyVal(openingPaid)}</p>
-        <p><strong>Weekly target:</strong> ${moneyVal(c.weekly_target??1400)}</p>
-        <p><strong>Daily target:</strong> ${moneyVal(c.daily_target??200)}</p>
-        ${c.admin_notes?`<p><strong>Admin notes:</strong> ${esc(c.admin_notes)}</p>`:""}
-      </div>`;
-    }).join("");
-  } catch(err) {
-    console.error("Unexpected contract loading error:",err);
-    host.innerHTML='<div class="msg error">Something interrupted contract loading. Please try again.</div><button type="button" class="primary" id="retryDriverContract">Try again</button>';
-    $("retryDriverContract")?.addEventListener("click",loadDriverContract);
+ const host=$("driverContractDetails"); if(!host||!currentUser)return;
+ host.innerHTML='<div class="driverContractCard">Checking your linked contract…</div>';
+ try {
+  const r=await db.from("tricycle_contracts").select("*").eq("driver_user_id",currentUser.id).order("created_at",{ascending:false}).limit(10);
+  if(r.error){host.innerHTML='<div class="msg error">We could not load your contract right now. Please contact Ezelex Enterprise admin and share this message: '+esc(r.error.message)+'</div>';console.warn("Tricycle contract query failed:",r.error.message);return;}
+  const rows=(r.data||[]).filter(c=>String(c.driver_user_id||"")===String(currentUser.id));
+  const contractIds=rows.map(c=>c.id).filter(Boolean);let paymentRows=[],reportRows=[];
+  if(contractIds.length){
+   const [payments,reports]=await Promise.all([
+    db.from("tricycle_contract_payments").select("id,contract_id,amount,payment_date,created_at,source_type,notes,reference,payment_method").in("contract_id",contractIds).order("payment_date",{ascending:false}),
+    db.from("tricycle_weekly_reports").select("id,contract_id,week_start,week_end,payment_amount,status,submitted_at").in("contract_id",contractIds).order("submitted_at",{ascending:false})
+   ]);
+   if(payments.error||reports.error){const e=payments.error||reports.error;host.innerHTML='<div class="msg error">Your contract loaded, but payment or approval history could not be verified: '+esc(e.message)+'. Please contact admin.</div>';return;}
+   paymentRows=payments.data||[];reportRows=reports.data||[];
   }
+  const banner=document.querySelector("#contract .stockNote");if(banner)banner.style.display=rows.length?"none":"block";
+  if(!rows.length){host.innerHTML='<div class="driverContractCard"><h3>No contract linked yet</h3><p>Your driver login is working, but Ezelex Enterprise admin has not linked a tricycle contract to this account yet.</p><button type="button" class="primary" id="refreshDriverContract">Refresh contract</button></div>';$ ("refreshDriverContract")?.addEventListener("click",loadDriverContract);return;}
+  const moneyVal=v=>"GH₵"+Number(v||0).toLocaleString("en-GH",{minimumFractionDigits:2,maximumFractionDigits:2});
+  host.innerHTML=rows.map(c=>{
+   const status=String(c.status||"pending").replace(/[_-]/g," "),total=Number(c.total_contract_amount??c.total_amount??0);
+   const ledgerPaid=paymentRows.filter(p=>String(p.contract_id)===String(c.id)).reduce((sum,p)=>sum+Number(p.amount||0),0),openingPaid=Number(c.opening_paid_amount||0),paid=openingPaid+ledgerPaid,outstanding=Math.max(0,total-paid);
+   const start=c.contract_start_date||c.contract_start,end=c.contract_end_date||c.contract_end;
+   const duration=driverContractRemainingParts(String(end||'').slice(0,10));
+   const remainingText=!duration?'Unavailable':duration.expired?'Contract end date passed':`${duration.months} Months · ${duration.weeks} Weeks · ${duration.days} Days`;
+   const months=Number(c.contract_duration_months||0),monthlyTarget=months>0?total/months:0;
+   const gh=driverGhanaClock(),currentMonth=gh.iso.slice(0,7),paidThisMonth=paymentRows.filter(p=>String(p.contract_id)===String(c.id)&&String(p.payment_date||'').slice(0,7)===currentMonth).reduce((sum,p)=>sum+Number(p.amount||0),0);
+   const remainingWeeks=driverContractRemainingWeeks(c,paymentRows,reportRows),periods=driverContractScheduledPeriods(c),weekCap=periods.length;
+   const completedWeeks=remainingWeeks===null?null:Math.max(0,weekCap-remainingWeeks);
+   return `<div class="driverContractCard">
+    <h3>${esc(c.vehicle_registration||c.vehicle_id||"Tricycle contract")}</h3>
+    <div class="tablebox"><table class="driver-contract-table"><tbody>
+     <tr><th>Contract status</th><td><span class="badge">${esc(status)}</span></td></tr>
+     <tr><th>Contract period</th><td>${esc(dateOnly(start))} – ${esc(dateOnly(end))}</td></tr>
+     <tr><th>Contract start date</th><td>${esc(dateOnly(start))}</td></tr>
+     <tr><th>End date</th><td class="contract-end-cell">${esc(dateOnly(end))}</td><th>Remaining time</th><td><span class="driver-contract-time">${esc(remainingText)}</span></td></tr>
+     <tr><th>Contract amount</th><td>${moneyVal(total)}</td></tr>
+     <tr><th>Total amount paid</th><td>${moneyVal(paid)}</td></tr>
+     <tr><th>Outstanding balance</th><td><strong>${moneyVal(outstanding)}</strong></td></tr>
+     <tr><th>Estimated monthly target</th><td>${moneyVal(monthlyTarget)}</td></tr>
+     <tr><th>Payments recorded this month (${esc(currentMonth)})</th><td>${moneyVal(paidThisMonth)}</td></tr>
+     <tr><th>Opening amount paid</th><td>${moneyVal(openingPaid)}</td></tr>
+     <tr><th>Weekly target</th><td>${moneyVal(c.weekly_target??1400)}</td></tr>
+     <tr><th>Daily target</th><td>${moneyVal(c.daily_target??200)}</td></tr>
+     ${c.admin_notes?`<tr><th>Admin notes</th><td>${esc(c.admin_notes)}</td></tr>`:""}
+    </tbody></table></div>
+    <div class="driver-contract-progress"><strong>Contract week progress</strong><p>Week cap: <b>${weekCap||'—'}</b> scheduled weeks · Completed: <b>${completedWeeks===null?'—':completedWeeks}</b> · Remaining: <b>${remainingWeeks===null?'—':remainingWeeks}</b></p><small>Week cap and remaining weeks use the Admin Management Centre's scheduled Monday–Sunday periods and confirmed historical allocations / approved reports.</small></div>
+   </div>`;
+  }).join("");
+ } catch(err) {console.error("Unexpected contract loading error:",err);host.innerHTML='<div class="msg error">Something interrupted contract loading. Please try again.</div><button type="button" class="primary" id="retryDriverContract">Try again</button>';$("retryDriverContract")?.addEventListener("click",loadDriverContract);}
 }
 async function loadProfilePhoto(){
   if(!currentUser)return;
@@ -1069,6 +1121,7 @@ async function loadProfile(user){
       loadDriverWeeklyReports(),
       loadDriverApprovalHistory(),
       loadDriverPaymentWarnings(),
+      loadDriverOwingShortfall(),
       refreshDriverLiveBillboard()
     ]);
     await loadMessages();
@@ -1496,7 +1549,7 @@ async function loadDriverDashboardSummary(){
   const [contractsResult,reportsResult,paymentsResult]=await Promise.all([
    db.from("tricycle_contracts").select("id,total_contract_amount,opening_paid_amount,contract_end_date,weekly_target,daily_target").eq("driver_user_id",currentUser.id),
    db.from("tricycle_weekly_reports").select("id,contract_id,sales_reported,payment_amount,status,week_start,week_end,submitted_at,rejection_reason").eq("driver_user_id",currentUser.id),
-   db.from("tricycle_contract_payments").select("contract_id,amount,payment_date").order("payment_date",{ascending:false})
+   db.from("tricycle_contract_payments").select("contract_id,amount,payment_date,created_at,source_type,notes,reference").order("payment_date",{ascending:false})
   ]);
   const failed=[contractsResult,reportsResult,paymentsResult].find(x=>x.error);
   if(failed){if(summaryMsg)summaryMsg.innerHTML='<div class="msg error">Could not load driver balances: '+esc(failed.error.message)+'. Please ask admin to check database permissions.</div>';return;}
@@ -1738,7 +1791,7 @@ function driverGhanaClock(){
  const iso=`${v.year}-${v.month}-${v.day}`,time=`${v.hour}:${v.minute}:${v.second}`;
  return {iso,time,nowMs:Date.parse(`${iso}T${time}Z`)};
 }
-function driverWeekPaymentDueAt(sunday){return Date.parse(addDaysISO(sunday,1)+"T16:00:00Z");}
+function driverWeekPaymentDueAt(sunday){return Date.parse(addDaysISO(sunday,1)+"T15:00:00Z");}
 async function loadDriverPaymentWarnings(){
  const body=$("driverPaymentWarningsBody");if(!body||!currentUser)return;
  body.innerHTML='<tr><td colspan="6">Checking completed contract weeks…</td></tr>';
@@ -1749,49 +1802,63 @@ async function loadDriverPaymentWarnings(){
    db.from("tricycle_contract_payments").select("*").order("payment_date",{ascending:false})
   ]);
   const failed=[cr,rr,pr].find(x=>x.error);if(failed)throw failed.error;
-  const contracts=cr.data||[],contractIds=new Set(contracts.map(c=>String(c.id)));
-  const reports=(rr.data||[]).filter(r=>contractIds.has(String(r.contract_id)));
-  const payments=(pr.data||[]).filter(p=>contractIds.has(String(p.contract_id)));
-  const gh=driverGhanaClock(),todayISO=gh.iso,currentMonday=mondayISO(todayISO),rows=[];
+  const contracts=cr.data||[],ids=new Set(contracts.map(c=>String(c.id))),reports=(rr.data||[]).filter(r=>ids.has(String(r.contract_id))),payments=(pr.data||[]).filter(p=>ids.has(String(p.contract_id)));
+  const gh=driverGhanaClock(),today=gh.iso,currentMonday=mondayISO(today),rows=[];
   for(const c of contracts){
-   const start=String(c.contract_start_date||c.contract_start||"").slice(0,10);
-   const end=String(c.contract_end_date||c.contract_end||"").slice(0,10);
-   if(!start)continue;
-   let monday=mondayISO(start);
+   const start=String(c.contract_start_date||c.contract_start||'').slice(0,10),end=String(c.contract_end_date||c.contract_end||'').slice(0,10);if(!start||!end)continue;
+   const historical=driverHistoricalWeeks(payments,c.id);let monday=mondayISO(start);
    while(monday<currentMonday&&(!end||monday<=end)){
     const sunday=sundayISO(monday),dueAt=driverWeekPaymentDueAt(sunday),isDue=gh.nowMs>=dueAt;
     const activeStart=monday<start?start:monday,activeEnd=end&&end<sunday?end:sunday;
-    const activeDays=Math.max(0,Math.floor((new Date(activeEnd+"T12:00:00")-new Date(activeStart+"T12:00:00"))/86400000)+1);
-    const daily=Number(c.daily_target||0),weekly=Number(c.weekly_target||daily*7);
-    const expected=activeDays>=7?weekly:daily*activeDays;
-    const weekReports=reports.filter(r=>String(r.contract_id)===String(c.id)&&String(r.week_start||"").slice(0,10)===monday);
-    const approved=weekReports.filter(r=>String(r.status||"").toLowerCase()==="approved");
-    const pending=weekReports.some(r=>["pending","submitted","awaiting_review","awaiting review","pending_review"].includes(String(r.status||"").trim().toLowerCase()));
-    const ledgerPaid=payments.filter(p=>String(p.contract_id)===String(c.id)&&String(p.payment_date||p.created_at||"").slice(0,10)>=monday&&String(p.payment_date||p.created_at||"").slice(0,10)<=sunday).reduce((n,p)=>n+Math.max(0,Number(p.amount||0)),0);
+    const activeDays=Math.max(0,Math.floor((new Date(activeEnd+'T12:00:00Z')-new Date(activeStart+'T12:00:00Z'))/86400000)+1);
+    const daily=Number(c.daily_target||0),weekly=Number(c.weekly_target||daily*7),normalExpected=activeDays>=7?weekly:daily*activeDays;
+    const weekReports=reports.filter(r=>String(r.contract_id)===String(c.id)&&String(r.week_start||'').slice(0,10)===monday&&String(r.week_end||'').slice(0,10)===sunday);
+    const approved=weekReports.filter(r=>String(r.status||'').toLowerCase()==='approved');
+    const pending=weekReports.some(r=>['pending','submitted','awaiting_review','awaiting review','pending_review'].includes(String(r.status||'').trim().toLowerCase()));
+    const h=historical.get(monday+'|'+sunday)||null;
+    const ledgerPaid=payments.filter(p=>String(p.contract_id)===String(c.id)&&String(p.payment_date||p.created_at||'').slice(0,10)>=monday&&String(p.payment_date||p.created_at||'').slice(0,10)<=sunday&&!driverHistoricalAllocationInfo(p)).reduce((n,p)=>n+Math.max(0,Number(p.amount||0)),0);
     const reportPaid=approved.reduce((n,r)=>n+Math.max(0,Number(r.payment_amount||0)),0);
-    const confirmed=ledgerPaid>0?ledgerPaid:reportPaid,outstanding=Math.max(0,expected-confirmed);
-    // Payment becomes overdue only at 4:00 PM Ghana time on the Monday after the week.
-    // Weekly report shortfall is a separate measure and is never added to this balance.
-    const report=weekReports[0]||null;
+    const expected=h?(h.target||h.paid):normalExpected,confirmed=h?h.paid:(ledgerPaid>0?ledgerPaid:reportPaid),outstanding=Math.max(0,expected-confirmed);
+    const report=weekReports.slice().sort((a,b)=>String(b.submitted_at||'').localeCompare(String(a.submitted_at||'')))[0]||null;
     if(isDue&&outstanding>0.009)rows.push({monday,sunday,expected,confirmed,outstanding,pending,report});
     monday=addDaysISO(monday,7);
    }
   }
   rows.sort((a,b)=>b.monday.localeCompare(a.monday));
-  setText("driverOverdueWeekCount",rows.length);
-  setText("driverOverdueAmount",money(rows.reduce((n,r)=>n+r.outstanding,0)));
-  body.innerHTML=rows.length?rows.map(r=>`<tr><td>${esc(r.monday)} – ${esc(r.sunday)}</td><td>${money(r.expected)}</td><td>${money(r.confirmed)}</td><td><strong style="color:#b42318">${money(r.outstanding)}</strong></td><td>${r.pending?"Pending review":r.report?esc(r.report.status||"Submitted"):"Not submitted"}</td><td><span class="badge" style="background:#fee2e2;color:#991b1b">OVERDUE — PAYMENT REQUIRED</span></td></tr>`).join(""):'<tr><td colspan="6">No overdue payments. The previous week becomes overdue at 4:00 PM Ghana time on Monday.</td></tr>';
-  if(rows.length)msg("driverPaymentWarningsMsg","You have "+rows.length+" completed week(s) with payment outstanding after the Monday 4:00 PM Ghana deadline. Weekly report shortfalls are tracked separately.","error");
-  else msg("driverPaymentWarningsMsg","No overdue payment was identified. Weekly report shortfalls are tracked separately.","success");
+  setText("driverOverdueWeekCount",rows.length);setText("driverOverdueAmount",money(rows.reduce((n,r)=>n+r.outstanding,0)));
+  body.innerHTML=rows.length?rows.map(r=>`<tr><td>${esc(r.monday)} – ${esc(r.sunday)}</td><td>${money(r.expected)}</td><td>${money(r.confirmed)}</td><td><strong style="color:#b42318">${money(r.outstanding)}</strong></td><td>${r.pending?"Pending review":r.report?esc(r.report.status||"Submitted"):"Not submitted"}</td><td><button type="button" class="primary driver-plan-action" onclick="driverStartPaymentPlan('${r.monday}','${r.sunday}')">Record sales / payment</button></td></tr>`).join(""):'<tr><td colspan="6">No overdue payments. The previous Monday–Sunday week becomes overdue at 3:00 PM Ghana time on Monday.</td></tr>';
+  if(rows.length)msg("driverPaymentWarningsMsg","You have "+rows.length+" completed week(s) with payment outstanding after the Monday 3:00 PM Ghana deadline. Historical allocations and approved reports are recognised. Weekly report shortfalls are tracked separately.","error");
+  else msg("driverPaymentWarningsMsg","No overdue payment was identified. Historical allocations and approved reports are recognised. Weekly report shortfalls are tracked separately.","success");
  }catch(err){body.innerHTML='<tr><td colspan="6">Payment warnings could not be loaded.</td></tr>';msg("driverPaymentWarningsMsg","We could not verify your payment position. Please contact Ezelex Enterprise. "+esc(err?.message||""),"error");}
 }
+async function loadDriverOwingShortfall(){
+ const body=$("driverOwingShortfallBody");if(!body||!currentUser)return;
+ body.innerHTML='<tr><td colspan="6">Loading approved weekly shortfalls…</td></tr>';
+ try{
+  const [cr,rr]=await Promise.all([db.from('tricycle_contracts').select('*').eq('driver_user_id',currentUser.id),db.from('tricycle_weekly_reports').select('*').eq('driver_user_id',currentUser.id).order('submitted_at',{ascending:false})]);
+  if(cr.error||rr.error)throw cr.error||rr.error;
+  const contracts=cr.data||[],ids=new Set(contracts.map(c=>String(c.id))),reports=(rr.data||[]).filter(r=>ids.has(String(r.contract_id)));
+  const grouped=new Map();reports.filter(r=>String(r.status||'').toLowerCase()==='approved'&&r.week_start&&r.week_end).forEach(r=>{const key=String(r.contract_id)+'|'+String(r.week_start).slice(0,10)+'|'+String(r.week_end).slice(0,10),x=grouped.get(key)||{contractId:r.contract_id,start:String(r.week_start).slice(0,10),end:String(r.week_end).slice(0,10),paid:0,reports:[]};x.paid+=Math.max(0,Number(r.payment_amount||0));x.reports.push(r);grouped.set(key,x);});
+  const rows=[...grouped.values()].map(w=>{const c=contracts.find(x=>String(x.id)===String(w.contractId));if(!c)return null;const ws=new Date(w.start+'T00:00:00Z'),we=new Date(w.end+'T00:00:00Z'),cs=new Date(String(c.contract_start_date||w.start).slice(0,10)+'T00:00:00Z'),ce=new Date(String(c.contract_end_date||w.end).slice(0,10)+'T00:00:00Z'),a=new Date(Math.max(ws.getTime(),cs.getTime())),b=new Date(Math.min(we.getTime(),ce.getTime())),days=Math.max(0,Math.floor((b-a)/86400000)+1);if(!days)return null;const daily=Number(c.daily_target||0),weekly=Number(c.weekly_target||daily*7),expected=days>=7?weekly:days*daily,owing=Math.max(0,expected-w.paid);return {...w,c,expected,owing,report:w.reports[w.reports.length-1]};}).filter(x=>x&&x.owing>0.009).sort((a,b)=>b.end.localeCompare(a.end));
+  setText('driverOwingShortfallTotal',money(rows.reduce((n,x)=>n+x.owing,0)));setText('driverOwingShortfallCount',rows.length);
+  body.innerHTML=rows.length?rows.map(x=>`<tr><td>${esc(x.start)} → ${esc(x.end)}</td><td>${money(x.expected)}</td><td>${money(x.paid)}</td><td><strong style="color:#b42318">${money(x.owing)}</strong></td><td><span class="approval-status approved">Approved</span></td><td><button type="button" class="primary driver-plan-action" onclick="driverStartPaymentPlan('${x.start}','${x.end}')">Record sales / payment</button></td></tr>`).join(''):'<tr><td colspan="6">No approved weekly shortfalls found.</td></tr>';
+  msg('driverOwingShortfallMsg',rows.length?'These shortfalls are calculated from Admin-approved reports only. New submissions require Admin approval before they count.':'No approved weekly shortfalls are currently recorded.','success');
+ }catch(e){body.innerHTML='<tr><td colspan="6">Could not load weekly shortfalls.</td></tr>';msg('driverOwingShortfallMsg','We could not verify your shortfall position: '+esc(e?.message||''),'error');}
+}
+window.driverStartPaymentPlan=function(start,end){
+ if(!start||!end)return;
+ setValue('driverReportWeekStart',start);setValue('driverReportWeekEnd',end);setDriverSectionView('recordSale');
+ msg('driverReportMsg','You are preparing a sales/payment submission for '+esc(start)+' to '+esc(end)+'. The submission will remain pending until Admin approval.','');
+ $('driverWeeklyReportPanel')?.scrollIntoView({behavior:'smooth',block:'start'});window.scrollTo({top:0,behavior:'smooth'});
+};
+
 async function refreshDriverLiveBillboard(){
  if(!currentUser||!isDriverRole(profile?.role))return;
  try{
   const [cr,rr,pr]=await Promise.all([
    db.from("tricycle_contracts").select("id,weekly_target,daily_target,contract_start_date,contract_end_date,total_contract_amount").eq("driver_user_id",currentUser.id),
    db.from("tricycle_weekly_reports").select("id,contract_id,sales_reported,payment_amount,status,week_start,week_end,submitted_at,rejection_reason").eq("driver_user_id",currentUser.id).order("submitted_at",{ascending:false}),
-   db.from("tricycle_contract_payments").select("contract_id,amount,payment_date").order("payment_date",{ascending:false})
+   db.from("tricycle_contract_payments").select("contract_id,amount,payment_date,created_at,source_type,notes,reference").order("payment_date",{ascending:false})
   ]);
   if(cr.error||rr.error||pr.error)throw cr.error||rr.error||pr.error;
   const contracts=cr.data||[],ids=new Set(contracts.map(c=>String(c.id)));
@@ -1810,9 +1877,10 @@ async function refreshDriverLiveBillboard(){
     const activeStart=week<start?start:week,contractEnd=end&&end<sunday?end:sunday;
     const activeDays=Math.max(0,Math.floor((new Date(contractEnd+"T12:00:00")-new Date(activeStart+"T12:00:00"))/86400000)+1);
     const expected=activeDays>=7?weekly:daily*activeDays;
-    const ledgerPaid=payments.filter(p=>String(p.contract_id)===String(c.id)&&String(p.payment_date||p.created_at||"").slice(0,10)>=week&&String(p.payment_date||p.created_at||"").slice(0,10)<=sunday).reduce((n,p)=>n+Math.max(0,Number(p.amount||0)),0);
-    const approved=reports.filter(r=>String(r.contract_id)===String(c.id)&&String(r.week_start||"").slice(0,10)===week&&String(r.status||"").toLowerCase()==="approved").reduce((n,r)=>n+Math.max(0,Number(r.payment_amount||0)),0);
-    const confirmed=ledgerPaid>0?ledgerPaid:approved;const bal=Math.max(0,expected-confirmed);if(bal>0.009){overdue++;overdueAmount+=bal;}
+    const historical=driverHistoricalWeeks(payments,c.id).get(week+'|'+sunday)||null;
+    const ledgerPaid=payments.filter(p=>String(p.contract_id)===String(c.id)&&String(p.payment_date||p.created_at||"").slice(0,10)>=week&&String(p.payment_date||p.created_at||"").slice(0,10)<=sunday&&!driverHistoricalAllocationInfo(p)).reduce((n,p)=>n+Math.max(0,Number(p.amount||0)),0);
+    const approved=reports.filter(r=>String(r.contract_id)===String(c.id)&&String(r.week_start||"").slice(0,10)===week&&String(r.week_end||"").slice(0,10)===sunday&&String(r.status||"").toLowerCase()==="approved").reduce((n,r)=>n+Math.max(0,Number(r.payment_amount||0)),0);
+    const confirmed=historical?historical.paid:(ledgerPaid>0?ledgerPaid:approved),dueExpected=historical?(historical.target||historical.paid):expected;const bal=Math.max(0,dueExpected-confirmed);if(bal>0.009){overdue++;overdueAmount+=bal;}
     week=addDaysISO(week,7);
    }
   }
@@ -1831,15 +1899,17 @@ async function refreshDriverLiveBillboard(){
  }catch(err){console.warn("Driver live billboard refresh failed",err);setDriverBillboardItems([{label:"LIVE DRIVER UPDATE",value:"Temporarily unavailable",detail:"We could not refresh your latest payment and report information. Please try again shortly.",critical:true}]);}
 }
 function openDriverSection(target){
- if(!isDriverRole(profile?.role)||!['dashboard','approvalHistory','paymentWarnings','profile'].includes(target))return;
+ if(!isDriverRole(profile?.role)||!['dashboard','approvalHistory','paymentWarnings','owingShortfall','recordSale','profile'].includes(target))return;
  setDriverSectionView(target);
  closeDriverMenu();
  if(target==='approvalHistory')loadDriverApprovalHistory();
  if(target==='paymentWarnings')loadDriverPaymentWarnings();
+ if(target==='owingShortfall')loadDriverOwingShortfall();
  if(target==='profile')refreshDriverLiveBillboard();
  if(target==='dashboard'){loadDriverDashboardSummary();refreshDriverLiveBillboard();}
  window.scrollTo({top:0,behavior:'smooth'});
 }
+$("driverOpenRecordSale")?.addEventListener("click",()=>{setDriverSectionView("recordSale");window.scrollTo({top:0,behavior:"smooth"});});
 $("driverReturnDashboard")?.addEventListener('click',()=>openDriverSection('dashboard'));
 $("driverReportWeekStart")?.addEventListener("change",()=>{const a=$("driverReportWeekStart").value;if(a){const monday=mondayISO(a);$("driverReportWeekStart").value=monday;$("driverReportWeekEnd").value=sundayISO(monday);}});
 $("driverWeeklyReportForm")?.addEventListener("submit",async event=>{
@@ -1890,7 +1960,7 @@ $("driverWeeklyReportForm")?.addEventListener("submit",async event=>{
 });
 
 // Refresh the driver's report status every 30 seconds while the page is open so approval/rejection messages update without logout.
-setInterval(()=>{if(currentUser&&isDriverRole(profile?.role)&&!document.hidden){loadDriverDashboardSummary();loadDriverApprovalHistory();loadDriverPaymentWarnings();refreshDriverLiveBillboard();}},30000);
+setInterval(()=>{if(currentUser&&isDriverRole(profile?.role)&&!document.hidden){loadDriverDashboardSummary();loadDriverApprovalHistory();loadDriverPaymentWarnings();loadDriverOwingShortfall();refreshDriverLiveBillboard();}},30000);
 document.addEventListener("visibilitychange",()=>{if(!document.hidden&&currentUser&&isDriverRole(profile?.role)){loadDriverPaymentWarnings();refreshDriverLiveBillboard();}});
 
 async function loadMessages(){
@@ -2328,13 +2398,14 @@ driverMenuToggle?.addEventListener("click",()=>{
 document.querySelectorAll("[data-driver-go]").forEach(btn=>btn.addEventListener("click",async()=>{
   if(!isDriverRole(profile?.role))return;
   const target=btn.dataset.driverGo;
-  if(!["dashboard","recordSale","contract","paymentHistory","approvalHistory","paymentWarnings","profile","communication"].includes(target))return;
+  if(!["dashboard","recordSale","contract","paymentHistory","approvalHistory","paymentWarnings","owingShortfall","profile","communication"].includes(target))return;
   setDriverSectionView(target);
   closeDriverMenu();
   if(target==="contract")await loadDriverContract();
   if(target==="paymentHistory")await loadDriverPaymentHistory();
   if(target==="approvalHistory")await loadDriverApprovalHistory();
   if(target==="paymentWarnings")await loadDriverPaymentWarnings();
+  if(target==="owingShortfall")await loadDriverOwingShortfall();
   if(target==="dashboard")await loadDriverDashboardSummary();
   if(target==="communication")await loadMessages();
   if(target==="dashboard")await refreshDriverLiveBillboard();
