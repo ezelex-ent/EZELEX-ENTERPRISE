@@ -1157,12 +1157,12 @@ async function loadStock(){
   if($("dashboardRemainingBreakdown"))$("dashboardRemainingBreakdown").textContent=`${physicalRemaining.toLocaleString()} available + ${unpaidCreditRemaining.toLocaleString()} on-credit`;
   if($("dashboardCreditUnits"))$("dashboardCreditUnits").textContent=openDashboardWeekCredits.reduce((n,c)=>n+Math.max(0,Number(c.quantity||0)-Number(c.crates_paid||0)),0).toLocaleString();
   if($("dashboardCreditBreakdown"))$("dashboardCreditBreakdown").textContent=`${money(openDashboardWeekCredits.reduce((n,c)=>n+Math.max(0,Number(c.amount_due||0)-Number(c.amount_paid||0)),0))} outstanding · Tap to open On-Credit`;
-  // Profit is recognised only when the corresponding sale/credit payment is
-  // realised in the stock batch ledger. Unpaid credit remains separate and is
-  // not added to profit until payment is received.
-  const dashboardActualProfit=actualSoldProfit;
+  // Dashboard projection: realised sold profit PLUS the projected profit
+  // still tied up in unpaid customer credit. Keep the two components visible
+  // so unpaid credit is not mistaken for realised cash/profit.
+  const dashboardActualProfit=actualSoldProfit+unpaidCreditProfit;
   if($("dashboardProfitValue"))$("dashboardProfitValue").textContent=money(dashboardActualProfit);
-  if($("dashboardProfitNote"))$("dashboardProfitNote").textContent=`Realised profit: ${money(actualSoldProfit)} · unpaid-credit profit is not recognised until payment`;
+  if($("dashboardProfitNote"))$("dashboardProfitNote").textContent=`Realised profit: ${money(actualSoldProfit)} + unpaid-credit profit: ${money(unpaidCreditProfit)}`;
   const dashboardProfitCard=$("dashboardProfitCard"); dashboardProfitCard?.classList.toggle("profit",dashboardActualProfit>=0); dashboardProfitCard?.classList.toggle("loss",dashboardActualProfit<0); if(dashboardProfitCard){dashboardProfitCard.style.background=dashboardActualProfit<0?"#fee2e2":"#dcfce7";dashboardProfitCard.style.borderColor=dashboardActualProfit<0?"#dc2626":"#16a34a";dashboardProfitCard.style.color=dashboardActualProfit<0?"#7f1d1d":"#14532d";}
   const chosenWeekId=selectedStockWeekId||currentStockWeek?.id||"";
   const chosenWeek=stockWeekRows.find(w=>String(w.id)===String(chosenWeekId))||currentStockWeek;
