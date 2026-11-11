@@ -488,7 +488,7 @@ th,td{padding:12px;border-bottom:1px solid #e6ebf1;text-align:left;font-size:14p
  <div class="panel"><h2>Stock Management</h2><p>Manage reinvestment, cash movements, operating expenses and net profit. All entries are saved against your worker account.</p><div id="financeMsg" aria-live="polite"></div></div>
  <div class="panel financePane" data-finance-pane="reinvest">
   <h2>Reinvest Cash in Hand</h2><p class="stockNote">Choose an existing stock item. The new purchase is saved as a separate batch linked to that product, so its purchase cost and history remain traceable while the product's total stock increases.</p>
-  <div class="stats"><div class="stat"><small>Cash in Hand</small><strong id="financeCashAvailable">GH₵0.00</strong><div class="live">Spendable cash after purchases and expenses; unpaid credit is excluded.</div></div><div class="stat"><small>Current Week Purchases</small><strong id="financeWeekPurchases">GH₵0.00</strong></div></div>
+  <div class="stats"><div class="stat" id="reinvestCashCard"><small>Reinvestment Cash in Hand</small><strong id="financeCashAvailable">GH₵0.00</strong><div class="live">Only the original purchase cost recovered from paid crates sold. Profit is excluded. New reinvestment purchases reduce this balance.</div><div id="reinvestCashStatus" class="live" aria-live="polite"></div></div><div class="stat"><small>Current Week Purchases</small><strong id="financeWeekPurchases">GH₵0.00</strong></div></div>
   <form id="reinvestForm" class="grid">
    <div><label>Existing Stock Item</label><select id="reinvestProduct" required><option value="">Select an existing stock item</option></select></div>
    <div><label>Purchase Date</label><input id="reinvestDate" type="date" required></div>
@@ -497,13 +497,13 @@ th,td{padding:12px;border-bottom:1px solid #e6ebf1;text-align:left;font-size:14p
    <div><label>Selling Price per Crate (GH₵)</label><input id="reinvestSellPrice" type="number" min="0" step="0.01" required></div>
    <div><label>Supplier (optional)</label><input id="reinvestSupplier" type="text" maxlength="120"></div>
    <div class="full"><label>Notes (optional)</label><textarea id="reinvestNotes" maxlength="500"></textarea></div>
-   <div class="full infoBox"><strong>Total reinvestment: <span id="reinvestTotal">GH₵0.00</span></strong><br><small>Saving will reduce cash once, add the quantity to the selected product's stock, and create a separately traceable purchase batch.</small></div>
+   <div class="full infoBox"><strong>Total reinvestment: <span id="reinvestTotal">GH₵0.00</span></strong><br><small>The purchase is blocked if it exceeds Reinvestment Cash in Hand. Profit is never used to inflate this balance. Any existing deficit is displayed explicitly.</small></div>
    <div class="full"><button class="primary" id="reinvestSubmit" type="submit">Save Reinvestment Purchase</button></div>
   </form>
  </div>
  <div class="panel financePane" data-finance-pane="cash" style="display:none">
   <h2>Cash &amp; Capital Ledger</h2><p class="stockNote">Cash is calculated once per week: opening cash + recorded sales receipts − stock purchases − operating expenses. Carry-forward cash is not new capital.</p>
-  <div class="stats"><div class="stat"><small>Opening Cash This Week</small><strong id="cashOpeningDisplay">GH₵0.00</strong></div><div class="stat"><small>Cash Sales &amp; Collections</small><strong id="cashSalesDisplay">GH₵0.00</strong></div><div class="stat"><small>Stock Purchases</small><strong id="cashPurchasesDisplay">GH₵0.00</strong></div><div class="stat"><small>Operating Expenses</small><strong id="cashExpensesDisplay">GH₵0.00</strong></div><div class="stat profit"><small>Closing Cash / Available</small><strong id="cashClosingDisplay">GH₵0.00</strong></div></div>
+  <div class="stats"><div class="stat"><small>Opening Cash Adjustment (separate)</small><strong id="cashOpeningDisplay">GH₵0.00</strong></div><div class="stat"><small>Original Cost Recovered from Paid Sales</small><strong id="cashSalesDisplay">GH₵0.00</strong></div><div class="stat"><small>Reinvestment Purchases</small><strong id="cashPurchasesDisplay">GH₵0.00</strong></div><div class="stat"><small>Operating Expenses</small><strong id="cashExpensesDisplay">GH₵0.00</strong></div><div class="stat profit"><small>Reinvestment Cash Available</small><strong id="cashClosingDisplay">GH₵0.00</strong></div></div>
   <form id="openingCashForm" class="grid"><div><label>Set / Adjust Opening Cash (GH₵)</label><input id="openingCashInput" type="number" min="0" step="0.01" required></div><div style="align-self:end"><button class="primary" type="submit">Save Opening Cash</button></div></form>
   <p class="live">Adjustments are audited. On weekly close, the calculated closing cash is carried into the next week's opening balance automatically.</p>
  </div>
@@ -581,19 +581,25 @@ function weekLabel(w){return w?`${dateOnly(w.week_start)} – ${dateOnly(w.week_
 // using the visible worker ID, try that owner key as a read-only fallback.
 async function selectWorkerRows(table, columns="*", orderColumn=null, limitCount=null){
   if(!currentUser) return {data:[],error:new Error("No signed-in worker")};
-  const run=async owner=>{
+  // Older portal versions sometimes saved worker rows under the human-readable
+  // worker code while newer versions use the Supabase auth UUID. Read both owners
+  // and merge by primary key; a partial UUID result must never hide legacy history.
+  const owners=[currentUser.id,profile?.worker_id].filter((v,i,a)=>v&&a.findIndex(x=>String(x)===String(v))===i);
+  const results=await Promise.all(owners.map(async owner=>{
     let q=db.from(table).select(columns).eq("worker_id",owner);
     if(table==="worker_stock_batches")q=q.is("deleted_at",null);
-    if(orderColumn) q=q.order(orderColumn.column,{ascending:orderColumn.ascending!==false});
-    if(limitCount) q=q.limit(limitCount);
+    if(orderColumn)q=q.order(orderColumn.column,{ascending:orderColumn.ascending!==false});
+    if(limitCount)q=q.limit(limitCount);
     return await q;
-  };
-  let result=await run(currentUser.id);
-  if((result.error || !(result.data||[]).length) && profile?.worker_id && String(profile.worker_id)!==String(currentUser.id)){
-    const legacy=await run(profile.worker_id);
-    if(!legacy.error && (legacy.data||[]).length) return legacy;
-  }
-  return result;
+  }));
+  const good=results.filter(r=>!r.error);
+  if(!good.length)return results[0]||{data:[],error:new Error("No worker rows found")};
+  const merged=new Map();
+  for(const result of good)for(const row of (result.data||[]))merged.set(String(row.id??JSON.stringify(row)),row);
+  let data=[...merged.values()];
+  if(orderColumn){const key=orderColumn.column;data.sort((a,b)=>String(a[key]??"").localeCompare(String(b[key]??""))*(orderColumn.ascending===false?-1:1));}
+  if(limitCount)data=data.slice(0,limitCount);
+  return {data,error:null};
 }
 
 async function ensureCurrentStockWeek(){
@@ -616,26 +622,28 @@ async function ensureCurrentStockWeek(){
   if(priorCashWeek.data){
     const alreadyCash=await db.from("worker_weekly_cash_balances").select("id").eq("worker_id",currentUser.id).eq("week_id",currentStockWeek.id).maybeSingle();
     if(!alreadyCash.error&&!alreadyCash.data){
-      const [cashOpen,priorBatches,priorExpenses]=await Promise.all([
-        db.from("worker_weekly_cash_balances").select("opening_cash").eq("worker_id",currentUser.id).eq("week_id",priorCashWeek.data.id).maybeSingle(),
-        db.from("worker_stock_batches").select("sales_revenue,purchase_total,total_quantity,cost_per_unit,stock_type").eq("worker_id",currentUser.id).eq("week_id",priorCashWeek.data.id).is("deleted_at",null),
-        db.from("worker_stock_expenses").select("amount").eq("worker_id",currentUser.id).eq("week_id",priorCashWeek.data.id)
+      const [allPriorBatches,allPriorExpenses]=await Promise.all([
+        selectWorkerRows("worker_stock_batches","*",{column:"stock_date",ascending:true}),
+        selectWorkerRows("worker_stock_expenses","*")
       ]);
-      if(!cashOpen.error&&!priorBatches.error&&!priorExpenses.error){
-        const rows=(priorBatches.data||[]).filter(r=>r.stock_type!=="carry_forward");
-        const sales=rows.reduce((n,r)=>n+Number(r.sales_revenue||0),0);
-        const purchases=rows.reduce((n,r)=>n+Number(r.purchase_total??(Number(r.total_quantity||0)*Number(r.cost_per_unit||0)),0),0);
-        const expenses=(priorExpenses.data||[]).reduce((n,r)=>n+Number(r.amount||0),0);
-        const closing=Math.max(0,Number(cashOpen.data?.opening_cash||0)+sales-purchases-expenses);
-        const carry=await db.from("worker_weekly_cash_balances").insert({worker_id:currentUser.id,week_id:currentStockWeek.id,opening_cash:closing,adjustment_note:"Automatic carry-forward from week starting "+priorCashWeek.data.week_start});
+      if(!allPriorBatches.error&&!allPriorExpenses.error){
+        const priorRows=(allPriorBatches.data||[]).filter(r=>String(r.stock_date||r.created_at||"").slice(0,10)<start);
+        const tradingRows=priorRows.filter(r=>r.stock_type!=="carry_forward");
+        const firstCapital=[...tradingRows].filter(r=>Number(r.capital_amount||0)!==0).sort((a,b)=>String(a.stock_date||a.created_at||"").localeCompare(String(b.stock_date||b.created_at||"")))[0];
+        const initialCapital=Number(firstCapital?.capital_amount||0);
+        const receipts=priorRows.reduce((n,r)=>n+Number(r.sales_revenue||0),0); // includes paid sales from carry-forward batches
+        const purchases=tradingRows.reduce((n,r)=>n+Number(r.purchase_total??(Number(r.total_quantity||0)*Number(r.cost_per_unit||0)),0),0);
+        const expenses=(allPriorExpenses.data||[]).filter(r=>String(r.expense_date||r.created_at||"").slice(0,10)<start).reduce((n,r)=>n+Number(r.amount||0),0);
+        const closing=initialCapital+receipts-purchases-expenses;
+        const carry=await db.from("worker_weekly_cash_balances").insert({worker_id:currentUser.id,week_id:currentStockWeek.id,opening_cash:closing,adjustment_note:"Automatic opening cash reconciled from all prior purchases, cash receipts and expenses."});
         if(carry.error)console.warn("Weekly cash carry-forward could not be saved:",carry.error.message);
-        else await db.from("worker_stock_financial_events").insert({worker_id:currentUser.id,week_id:currentStockWeek.id,event_type:"weekly_cash_carry_forward",amount:closing,description:"Opening cash carried forward from prior week; not new capital."});
+        else await db.from("worker_stock_financial_events").insert({worker_id:currentUser.id,week_id:currentStockWeek.id,event_type:"weekly_cash_carry_forward",amount:closing,description:"Opening cash reconciled from prior business activity; not new capital."});
       }
     }
   }
   // When a new Monday book is first opened, carry forward each previous batch's unsold physical stock.
   // Carry-forward rows have zero new purchase quantity/cost and zero profit, so historical purchase/profit totals are not duplicated.
-  const existingWeekRows=await db.from("worker_stock_batches").select("id,stock_type").eq("worker_id",currentUser.id).eq("week_id",currentStockWeek.id).is("deleted_at",null).limit(1);
+  const existingWeekRows=await db.from("worker_stock_batches").select("id,stock_type").eq("worker_id",currentUser.id).eq("week_id",currentStockWeek.id).eq("stock_type","carry_forward").is("deleted_at",null).limit(1);
   if(!existingWeekRows.error&&!(existingWeekRows.data||[]).length){
     const prevWeek=await db.from("worker_stock_weeks").select("id,week_start").eq("worker_id",currentUser.id).lt("week_start",start).order("week_start",{ascending:false}).limit(1).maybeSingle();
     if(prevWeek.data){
@@ -856,7 +864,7 @@ async function loadSales(){
     return;
   }
   const rows=data||[];
-  liveStockRows = rows;
+  // Sales rows have their own cache. liveStockRows is reserved for stock batches.
   reportSalesRows=rows;
   const now=new Date();
   const startDay=new Date(now.getFullYear(),now.getMonth(),now.getDate());
@@ -919,22 +927,55 @@ async function loadStock(){
   const {data,error}=await selectWorkerRows("worker_stock_batches","*",{column:"stock_date",ascending:false});
   if(error){$("stockBody").innerHTML='<tr><td colspan="11">Stock records could not be loaded.</td></tr>';msg("stockLiveMsg","Could not load live stock: "+error.message,"error");return;}
   const allRows=data||[]; liveStockRows=allRows;
-  const dashBought=allRows.reduce((sum,r)=>sum+(r.stock_type==="carry_forward"?0:Number(r.total_quantity||0)),0);
+  // remaining_quantity is a derived balance, not an independent source of truth.
+  // Rebuild it from the original batch quantity, sold/damaged/lost units and unpaid
+  // credit reservations. This keeps physical stock correct after edits and payments.
+  if(creditRowsLoaded){
+    const unpaidByBatch=new Map();
+    for(const c of (creditRows||[]))if(Number(c.amount_paid||0)<Number(c.amount_due||0)){
+      const key=String(c.stock_batch_id||"");unpaidByBatch.set(key,(unpaidByBatch.get(key)||0)+Math.max(0,Number(c.quantity||0)));
+    }
+    for(const row of allRows){
+      const total=Number(row.total_quantity||0);
+      if(!Number.isFinite(total)||(total<=0&&Number(row.remaining_quantity||0)>0))continue;
+      const expected=Math.max(0,total-Number(row.sold_quantity||0)-Number(row.damage_quantity||0)-Number(row.loss_quantity||0)-(unpaidByBatch.get(String(row.id))||0));
+      if(Math.abs(expected-Number(row.remaining_quantity||0))>0.0001){
+        row.remaining_quantity=expected;row.remaining_value=expected*Number(row.cost_per_unit||0);
+        const repair=await db.from("worker_stock_batches").update({remaining_quantity:expected,remaining_value:row.remaining_value}).eq("id",row.id).eq("worker_id",row.worker_id||currentUser.id).is("deleted_at",null);
+        if(repair.error)console.warn("Derived remaining stock could not be persisted for batch",row.id,repair.error.message);
+      }
+    }
+  }
+  // All-time purchases exclude carry-forward rows (they are not new purchases).
+  // Sales and realised profit INCLUDE carry-forward rows because this week's sales
+  // are often recorded against the opening-stock batch created from last week.
+  const purchaseRows=allRows.filter(r=>r.stock_type!=="carry_forward");
+  const dashBought=purchaseRows.reduce((sum,r)=>sum+Number(r.total_quantity||0),0);
   const dashSold=allRows.reduce((sum,r)=>sum+Number(r.sold_quantity||0),0);
   const actualSoldProfit=allRows.reduce((sum,r)=>sum+Number(r.profit_loss||0),0);
-  // Legacy cash_in_hand is a batch snapshot, not an additive value. Use the single
-  // reconciled weekly ledger when available; otherwise preserve one latest legacy snapshot.
-  const cashSnapshots=allRows.filter(r=>r.stock_type!=="carry_forward"&&r.stock_type!=="reinvestment"&&Number(r.cash_in_hand||0)!==0)
-    .sort((a,b)=>String(b.stock_date||b.created_at||"").localeCompare(String(a.stock_date||a.created_at||"")));
-  const dashCash=Number(window.ezelexCurrentCashBalance ?? cashSnapshots[0]?.cash_in_hand ?? 0);
   const liveWeekStart=mondayDateISO(today());
-  const dashboardWeekRows=allRows.filter(r=>String(r.week_id||"")===String(currentStockWeek?.id||"")||mondayDateISO(r.stock_date||r.created_at||today())===liveWeekStart);
+  const dashboardWeekRows=allRows.filter(r=>r.week_id?String(r.week_id)===String(currentStockWeek?.id||""):mondayDateISO(r.stock_date||r.created_at||today())===liveWeekStart);
   const dashboardBatchIds=new Set(dashboardWeekRows.map(r=>String(r.id)));
   const openCreditRows=(creditRows||[]).filter(c=>Number(c.amount_paid||0)<Number(c.amount_due||0));
   const openDashboardWeekCredits=openCreditRows.filter(c=>dashboardBatchIds.has(String(c.stock_batch_id)));
   const unpaidCreditUnits=openDashboardWeekCredits.reduce((n,c)=>n+Number(c.quantity||0),0);
+  // remaining_quantity is already reduced when credit stock is reserved. Do not add
+  // unpaid credit crates back into physical remaining stock a second time.
   const availableRemaining=dashboardWeekRows.reduce((n,r)=>n+Number(r.remaining_quantity||0),0);
-  const dashboardRemaining=availableRemaining+unpaidCreditUnits;
+  const dashboardRemaining=availableRemaining;
+  // Cash is a business-wide running balance: initial capital + cash actually received
+  // from paid sales - every purchase/reinvestment - operating expenses. Unpaid credit
+  // is excluded until payment is confirmed. Batch cash_in_hand values are snapshots,
+  // so summing or selecting one of them is not a valid ledger calculation.
+  const expenseResult=await selectWorkerRows("worker_stock_expenses","*");
+  const firstCapital=[...purchaseRows].filter(r=>Number(r.capital_amount||0)!==0).sort((a,b)=>String(a.stock_date||a.created_at||"").localeCompare(String(b.stock_date||b.created_at||"")))[0];
+  const openingBusinessCapital=Number(firstCapital?.capital_amount||0);
+  const reinvestmentLedger=calculateReinvestmentCash(allRows);
+  // Reinvestment cash is strictly the original cost basis recovered from paid sales,
+  // less purchases made from this reinvestment pool. Sales profit is never included.
+  window.ezelexReinvestmentCashBalance=reinvestmentLedger.balance;
+  window.ezelexCurrentCashBalance=reinvestmentLedger.balance;
+  if(expenseResult.error)console.warn("Operating expense ledger could not be read:",expenseResult.error.message);
   // Project the profit on every unpaid credit record without recognising it as earned profit.
   // It is shown separately and added to actual sold profit only for the dashboard projection.
   const batchById=new Map(allRows.map(r=>[String(r.id),r]));
@@ -948,7 +989,7 @@ async function loadStock(){
   },0);
   // Dashboard profit is intentionally not displayed here; projected values belong in P&L.
   $("todaySales").textContent=dashBought.toLocaleString(); $("weekSales").textContent=dashSold.toLocaleString();
-  $("allSales").textContent=money(dashCash);
+  $("allSales").textContent=expenseResult.error?"Check ledger":money(dashCash);
   if($("dashboardRemaining"))$("dashboardRemaining").textContent=dashboardRemaining.toLocaleString();
   if($("dashboardRemainingBreakdown"))$("dashboardRemainingBreakdown").textContent=`${availableRemaining.toLocaleString()} available + ${unpaidCreditUnits.toLocaleString()} on-credit`;
   if($("dashboardCreditUnits"))$("dashboardCreditUnits").textContent=openCreditRows.reduce((n,c)=>n+Number(c.quantity||0),0).toLocaleString();
@@ -960,12 +1001,10 @@ async function loadStock(){
   const chosenWeekId=selectedStockWeekId||currentStockWeek?.id||"";
   const chosenWeek=stockWeekRows.find(w=>String(w.id)===String(chosenWeekId))||currentStockWeek;
   const chosenStart=chosenWeek?.week_start||mondayDateISO(today());
-  const rows=allRows.filter(r=>mondayDateISO(r.stock_date||r.created_at||today())===String(chosenStart)||String(r.week_id||"")===String(chosenWeekId));
+  const rows=allRows.filter(r=>r.week_id?String(r.week_id)===String(chosenWeekId):mondayDateISO(r.stock_date||r.created_at||today())===String(chosenStart));
   let units=0,value=0,revenue=0,profit=0,cash=0,purchased=0,soldWeek=0;
   rows.forEach(r=>{units+=Number(r.remaining_quantity||0);value+=Number(r.remaining_value||0);revenue+=Number(r.sales_revenue||0);profit+=Number(r.profit_loss||0);if(r.stock_type!=="carry_forward"&&mondayDateISO(r.stock_date||r.created_at||today())===String(chosenStart))purchased+=Number(r.total_quantity||0);soldWeek+=Number(r.sold_quantity||0);const cap=Number(r.capital_amount??r.purchase_total??0),pur=Number(r.purchase_total||0);cash+=Number(r.cash_in_hand??(cap+Number(r.sales_revenue||0)-pur));});
-  const selectedBatchIds=new Set(rows.map(r=>String(r.id)));
-  const selectedUnpaidCredit=(creditRows||[]).filter(c=>selectedBatchIds.has(String(c.stock_batch_id))&&Number(c.amount_paid||0)<Number(c.amount_due||0)).reduce((n,c)=>n+Number(c.quantity||0),0);
-  const displayedUnits=units+selectedUnpaidCredit;
+  const displayedUnits=units;
   $("liveUnits").textContent=displayedUnits.toLocaleString();$("liveValue").textContent=money(value);$("liveRevenue").textContent=money(revenue);$("liveProfit").textContent=money(profit);$("liveProfitLabel").textContent=profit>=0?"selected week profit":"selected week loss";
   $("weekPurchased").textContent=purchased.toLocaleString();$("weekSold").textContent=soldWeek.toLocaleString();$("weekRemaining").textContent=displayedUnits.toLocaleString();
   const weekProfitCard=$("weekProfitCard"); $("weekProfit").textContent=money(profit);weekProfitCard.classList.toggle("profit",profit>0);weekProfitCard.classList.toggle("loss",profit<0);$("weekProfitLabel").textContent=profit>0?"You're gaining this week":profit<0?"You're losing money this week":"Break-even so far";
@@ -975,6 +1014,7 @@ async function loadStock(){
   const sel=$("creditStockBatch");if(sel){const prev=sel.value;sel.innerHTML='<option value="">Choose stock batch</option>'+allRows.filter(r=>String(r.week_id||"")===String(currentStockWeek?.id||"")&&Number(r.remaining_quantity||0)>0).map(r=>`<option value="${esc(r.id)}">${esc(dateOnly(r.stock_date))} — ${esc(r.product_service||"Stock")} (remaining ${Number(r.remaining_quantity||0)})</option>`).join("");if(allRows.some(r=>r.id===prev))sel.value=prev;}
   $("saveStockBtn").disabled=!!currentStockWeek&&currentStockWeek.status!=="open"&&!editingStockId;
   await loadDeletedStock();
+  if(typeof window.updateEzelexBillboard==="function")window.updateEzelexBillboard();
 }
 async function loadDeletedStock(){
   if(!currentUser||!$("deletedStockBody"))return;
@@ -1271,7 +1311,9 @@ $("saveStockBtn").onclick=async()=>{
       const originalPatch={...record,total_quantity:baseTotal,capital_amount:Number(editingStockOriginal?.capital_amount||0),cost_per_unit:beforeUnit,purchase_total:Number(editingStockOriginal?.purchase_total??(baseTotal*beforeUnit)),sold_quantity:baseSold,damage_quantity:baseDamage,loss_quantity:baseLoss,sales_revenue:baseSoldRevenue,sold_cost:baseSold*beforeUnit,damage_value:baseDamage*beforeUnit,loss_value:baseLoss*beforeUnit,remaining_quantity:baseRemaining,remaining_value:baseRemaining*beforeUnit,profit_loss:baseProfit,week_id:editingStockOriginal.week_id,stock_date:editingStockOriginal.stock_date};
       const updBase=await db.from("worker_stock_batches").update(originalPatch).eq("id",editingStockId).eq("worker_id",currentUser.id).select("id");
       if(updBase.error||!updBase.data?.length){msg("stockMsg","Could not preserve the original purchase while adding the new quantity: "+(updBase.error?.message||"No row updated"),"error");return;}
-      const addBatch={worker_id:currentUser.id,week_id:currentStockWeek.id,stock_type:"purchase",stock_date:today(),product_service:record.product_service,total_quantity:addedPurchaseQty,capital_amount:0,cash_in_hand:0,purchase_total:addedPurchaseQty*unitCost,cost_per_unit:unitCost,selling_price_per_unit:price,sold_quantity:0,damage_quantity:0,loss_quantity:0,sales_revenue:0,sold_cost:0,damage_value:0,loss_value:0,remaining_quantity:addedPurchaseQty,remaining_value:addedPurchaseQty*unitCost,profit_loss:0,credit_quantity:0,credit_outstanding:0,credit_sales_normalized:true,notes:"Additional purchase quantity added while editing an existing stock item. Original batch preserved."};
+      const addBatch={worker_id:currentUser.id,week_id:currentStockWeek.id,stock_type:"reinvestment",stock_date:today(),product_service:record.product_service,total_quantity:addedPurchaseQty,capital_amount:0,cash_in_hand:0,purchase_total:addedPurchaseQty*unitCost,cost_per_unit:unitCost,selling_price_per_unit:price,sold_quantity:0,damage_quantity:0,loss_quantity:0,sales_revenue:0,sold_cost:0,damage_value:0,loss_value:0,remaining_quantity:addedPurchaseQty,remaining_value:addedPurchaseQty*unitCost,profit_loss:0,credit_quantity:0,credit_outstanding:0,credit_sales_normalized:true,notes:"Additional purchase quantity added while editing an existing stock item. Original batch preserved."};
+      const reinvestmentLedger=calculateReinvestmentCash(liveStockRows||[]),purchaseDebit=addedPurchaseQty*unitCost;
+      if(reinvestmentLedger.balance<0||purchaseDebit>reinvestmentLedger.balance){msg("stockMsg","Additional purchase blocked. Reinvestment Cash in Hand is "+fmt(reinvestmentLedger.balance)+" and this addition costs "+fmt(purchaseDebit)+". "+(reinvestmentLedger.balance<0?"Current overspending: "+fmt(Math.abs(reinvestmentLedger.balance))+".":"Shortfall: "+fmt(purchaseDebit-reinvestmentLedger.balance)+"."),"error");return;}
       const inserted=await db.from("worker_stock_batches").insert(addBatch).select("*").single();
       if(inserted.error){msg("stockMsg","Original stock was preserved, but the additional purchase could not be saved: "+inserted.error.message+". Please retry after checking the stock records.","error");return;}
       const h1=await writeStockHistory(editingStockOriginal,originalPatch,"Original purchase preserved while recording additional purchase");
@@ -1314,8 +1356,8 @@ async function loadCredits(){
   if(!$('creditBody'))return;
   const r=await selectWorkerRows("worker_stock_credit_sales","*",{column:"credit_date",ascending:false});
   if(r.error){$('creditBody').innerHTML='<tr><td colspan="9">Credit records unavailable. Check the supplied credit SQL and policies.</td></tr>';msg('creditMsg','Could not load credit records: '+esc(r.error.message),'error');return;}
-  creditRows=r.data||[];
-  const stockSnapshot=await db.from('worker_stock_batches').select('*').eq('worker_id',currentUser.id).is('deleted_at',null);
+  creditRows=r.data||[];creditRowsLoaded=true;
+  const stockSnapshot=await selectWorkerRows('worker_stock_batches','*',{column:'stock_date',ascending:false});
   if(!stockSnapshot.error)liveStockRows=stockSnapshot.data||[];
   // One-time migration of legacy batches: remove all credit transactions from the old
   // sold/revenue/profit totals, then add back only credit transactions marked fully paid.
@@ -1406,11 +1448,16 @@ async function loadMessages(){
 function stockMoney(v){
   return "GHS "+Number(v||0).toFixed(2);
 }
+function currentPhysicalStockRows(rows=liveStockRows||[]){
+  const carriedSourceIds=new Set(rows.filter(r=>r.stock_type==="carry_forward"&&r.source_batch_id).map(r=>String(r.source_batch_id)));
+  return rows.filter(r=>!carriedSourceIds.has(String(r.id)));
+}
 
 function buildLiveStockReportText(){
   const rows=liveStockRows||[];
-  const totalRemaining=rows.reduce((n,s)=>n+Number(s.remaining_quantity||0),0);
-  const totalValue=rows.reduce((n,s)=>n+Number(s.remaining_value||0),0);
+  const physicalRows=currentPhysicalStockRows(rows);
+  const totalRemaining=physicalRows.reduce((n,s)=>n+Number(s.remaining_quantity||0),0);
+  const totalValue=physicalRows.reduce((n,s)=>n+Number(s.remaining_value||0),0);
   const totalProfit=rows.reduce((n,s)=>n+Number(s.profit_loss||0),0);
 
   const lines=[
@@ -1452,14 +1499,17 @@ function downloadLiveStockPDF(){
   }
 
   const rows=liveStockRows||[];
-  const totalQty=rows.reduce((n,s)=>n+Number(s.total_quantity||0),0);
+  const purchaseRows=rows.filter(s=>s.stock_type!=="carry_forward");
+  const physicalRows=currentPhysicalStockRows(rows);
+  const totalQty=purchaseRows.reduce((n,s)=>n+Number(s.total_quantity||0),0);
   const totalSold=rows.reduce((n,s)=>n+Number(s.sold_quantity||0),0);
   const totalDamage=rows.reduce((n,s)=>n+Number(s.damage_quantity||0),0);
-  const totalRemaining=rows.reduce((n,s)=>n+Number(s.remaining_quantity||0),0);
-  const totalValue=rows.reduce((n,s)=>n+Number(s.remaining_value||0),0);
-  const totalCapital=rows.reduce((n,s)=>n+Number(s.capital_amount ?? s.purchase_total ?? 0),0);
-  const totalPurchase=rows.reduce((n,s)=>n+Number(s.purchase_total||0),0);
-  const totalCash=rows.reduce((n,s)=>n+Number(s.cash_in_hand ?? ((s.capital_amount ?? s.purchase_total)+Number(s.sales_revenue||0)-Number(s.purchase_total||0))),0);
+  const totalRemaining=physicalRows.reduce((n,s)=>n+Number(s.remaining_quantity||0),0);
+  const totalValue=physicalRows.reduce((n,s)=>n+Number(s.remaining_value||0),0);
+  const firstCapital=[...purchaseRows].filter(s=>Number(s.capital_amount||0)!==0).sort((a,b)=>String(a.stock_date||a.created_at||"").localeCompare(String(b.stock_date||b.created_at||"")))[0];
+  const totalCapital=Number(firstCapital?.capital_amount||0);
+  const totalPurchase=purchaseRows.reduce((n,s)=>n+Number(s.purchase_total||0),0);
+  const totalCash=Number(window.ezelexReinvestmentCashBalance??window.ezelexCurrentCashBalance??0);
   const totalProfit=rows.reduce((n,s)=>n+Number(s.profit_loss||0),0);
 
   const {jsPDF}=window.jspdf;
@@ -1914,6 +1964,9 @@ start();
 (()=>{
  const $f=id=>document.getElementById(id), fmt=n=>'GH₵'+Number(n||0).toLocaleString('en-GH',{minimumFractionDigits:2,maximumFractionDigits:2});
  let financeWeeks=[],financeExpenses=[],financeCashRow=null,financeWeekId=null;
+ const reinvestmentSpendRows=rows=>(rows||[]).filter(r=>r.stock_type==='reinvestment'||(r.stock_type!=='carry_forward'&&String(r.notes||'').toLowerCase().includes('additional purchase quantity added while editing an existing stock item')));
+ function calculateReinvestmentCash(rows){const active=(rows||[]).filter(r=>!r.deleted_at);const recovered=active.reduce((n,r)=>n+Math.max(0,Number(r.sold_cost||0)),0);const spent=reinvestmentSpendRows(active).reduce((n,r)=>n+Math.max(0,Number(r.purchase_total??(Number(r.total_quantity||0)*Number(r.cost_per_unit||0)))),0);return {recovered,spent,balance:recovered-spent};}
+ function paintReinvestmentCash(result){const amount=$f('financeCashAvailable'),status=$f('reinvestCashStatus'),card=$f('reinvestCashCard');if(amount){amount.textContent=fmt(result.balance);amount.style.color=result.balance<0?'#b42318':'#14532d';}if(card)card.classList.toggle('loss',result.balance<0);if(status){status.textContent=result.balance<0?'OVERSPENT: '+fmt(Math.abs(result.balance))+' must be recovered before another purchase.':'Recovered purchase cost: '+fmt(result.recovered)+' · Reinvested: '+fmt(result.spent);status.style.color=result.balance<0?'#b42318':'#52647a';}}
  const finMsg=(t,err=false)=>{const el=$f('financeMsg');if(el)el.innerHTML=t?`<div class="msg ${err?'error':'success'}">${String(t).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]))}</div>`:''};
  const weekStart=d=>{let x=new Date(String(d||new Date().toISOString().slice(0,10)).slice(0,10)+'T12:00:00');x.setDate(x.getDate()-(x.getDay()+6)%7);return x.toISOString().slice(0,10)};
  const getWeek=()=>currentStockWeek?.id||null;
@@ -1925,29 +1978,26 @@ start();
  ['reinvestQty','reinvestUnitCost'].forEach(id=>$f(id)?.addEventListener('input',recalcReinvest));
  $f('reinvestProduct')?.addEventListener('change',()=>{let r=liveStockRows.find(x=>String(x.id)===$f('reinvestProduct').value);if(r){$f('reinvestUnitCost').value=Number(r.cost_per_unit||0);$f('reinvestSellPrice').value=Number(r.selling_price_per_unit||0);recalcReinvest();}});
  async function loadFinance(){if(!currentUser||!getWeek())return;financeWeekId=getWeek();
-  const [w,e,allE]=await Promise.all([db.from('worker_weekly_cash_balances').select('*').eq('worker_id',currentUser.id).eq('week_id',financeWeekId).maybeSingle(),db.from('worker_stock_expenses').select('*').eq('worker_id',currentUser.id).eq('week_id',financeWeekId).order('expense_date',{ascending:false}),db.from('worker_stock_expenses').select('amount').eq('worker_id',currentUser.id)]);
+  const [w,e,allE]=await Promise.all([db.from('worker_weekly_cash_balances').select('*').eq('worker_id',currentUser.id).eq('week_id',financeWeekId).maybeSingle(),selectWorkerRows('worker_stock_expenses','*'),selectWorkerRows('worker_stock_expenses','*')]);
   if(w.error||e.error||allE.error){finMsg('Financial Management database setup is required. Run EZELEX_WORKER_STOCK_MANAGEMENT.sql in Supabase SQL Editor. '+(w.error?.message||e.error?.message||allE.error?.message),true);return;}
-  financeCashRow=w.data;financeExpenses=e.data||[];
-  let stock=(liveStockRows||[]).filter(r=>r.stock_type!=='carry_forward'&&(String(r.week_id||'')===String(financeWeekId)||weekStart(r.stock_date||r.created_at)===weekStart(currentStockWeek?.week_start||today())));
-  let sales=stock.reduce((n,r)=>n+Number(r.sales_revenue||0),0),purchases=stock.reduce((n,r)=>n+Number(r.purchase_total??(Number(r.total_quantity||0)*Number(r.cost_per_unit||0)),0),0),trading=(liveStockRows||[]).filter(r=>r.stock_type!=='carry_forward').reduce((n,r)=>n+Number(r.profit_loss||0),0);
+  financeCashRow=w.data;financeExpenses=(e.data||[]).filter(r=>String(r.week_id||'')===String(financeWeekId)).sort((a,b)=>String(b.expense_date||'').localeCompare(String(a.expense_date||'')));
+  let stock=(liveStockRows||[]).filter(r=>r.week_id?String(r.week_id)===String(financeWeekId):weekStart(r.stock_date||r.created_at)===weekStart(currentStockWeek?.week_start||today()));
+  let sales=stock.reduce((n,r)=>n+Number(r.sales_revenue||0),0),purchases=stock.filter(r=>r.stock_type!=='carry_forward').reduce((n,r)=>n+Number(r.purchase_total??(Number(r.total_quantity||0)*Number(r.cost_per_unit||0)),0),0),trading=(liveStockRows||[]).reduce((n,r)=>n+Number(r.profit_loss||0),0);
   let expenses=financeExpenses.reduce((n,r)=>n+Number(r.amount||0),0),opening=Number(financeCashRow?.opening_cash||0);
-  const allBatches=(liveStockRows||[]).filter(r=>r.stock_type!=='carry_forward');
-  const firstCapitalBatch=[...allBatches].sort((a,b)=>String(a.stock_date||a.created_at||'').localeCompare(String(b.stock_date||b.created_at||'')))[0];
+  const allBatches=(liveStockRows||[]);
+  const purchaseBatches=allBatches.filter(r=>r.stock_type!=='carry_forward');
+  const firstCapitalBatch=[...purchaseBatches].filter(r=>Number(r.capital_amount||0)!==0).sort((a,b)=>String(a.stock_date||a.created_at||'').localeCompare(String(b.stock_date||b.created_at||'')))[0];
   const openingBusinessCapital=Number(firstCapitalBatch?.capital_amount||0);
-  const lifetimeReceipts=allBatches.reduce((n,r)=>n+Number(r.sales_revenue||0),0);
-  const lifetimePurchases=allBatches.reduce((n,r)=>n+Number(r.purchase_total??(Number(r.total_quantity||0)*Number(r.cost_per_unit||0)),0),0);
-  const lifetimeExpenses=(allE.data||[]).reduce((n,r)=>n+Number(r.amount||0),0);
-  const reconciledLegacyCash=openingBusinessCapital+lifetimeReceipts-lifetimePurchases-lifetimeExpenses;
-  const hasLedger=!!financeCashRow;
-  const cash=hasLedger?opening+sales-purchases-expenses:reconciledLegacyCash;
-  window.ezelexCurrentCashBalance=cash;
+  const reinvestmentLedger=calculateReinvestmentCash(allBatches);
+  const cash=reinvestmentLedger.balance;
+  window.ezelexReinvestmentCashBalance=cash;window.ezelexCurrentCashBalance=cash;
   if($f('allSales'))$f('allSales').textContent=fmt(cash);
-  $f('financeCashAvailable').textContent=fmt(cash);$f('financeWeekPurchases').textContent=fmt(purchases);$f('cashOpeningDisplay').textContent=fmt(opening);$f('cashSalesDisplay').textContent=fmt(sales);$f('cashPurchasesDisplay').textContent=fmt(purchases);$f('cashExpensesDisplay').textContent=fmt(expenses);$f('cashClosingDisplay').textContent=fmt(cash);$f('openingCashInput').value=opening.toFixed(2);
+  paintReinvestmentCash(reinvestmentLedger);$f('financeWeekPurchases').textContent=fmt(purchases);$f('cashOpeningDisplay').textContent=fmt(opening);$f('cashSalesDisplay').textContent=fmt(reinvestmentLedger.recovered);$f('cashPurchasesDisplay').textContent=fmt(reinvestmentLedger.spent);$f('cashExpensesDisplay').textContent=fmt(expenses);$f('cashClosingDisplay').textContent=fmt(cash);$f('openingCashInput').value=opening.toFixed(2);
   const lifetimeOperatingExpenses=(allE.data||[]).reduce((n,r)=>n+Number(r.amount||0),0);
   const netProfit=trading-lifetimeOperatingExpenses;
   const openCredits=(creditRows||[]).filter(c=>Number(c.amount_paid||0)<Number(c.amount_due||0));
   const creditUnitsByBatch=new Map();openCredits.forEach(c=>creditUnitsByBatch.set(String(c.stock_batch_id),(creditUnitsByBatch.get(String(c.stock_batch_id))||0)+Number(c.quantity||0)));
-  const remainingProjection=(liveStockRows||[]).filter(r=>r.stock_type!=='carry_forward'&&!r.deleted_at).reduce((n,r)=>n+Math.max(0,Number(r.remaining_quantity||0))*Math.max(0,Number(r.selling_price_per_unit||0)-Number(r.cost_per_unit||0)),0);
+  const remainingProjection=currentPhysicalStockRows((liveStockRows||[]).filter(r=>!r.deleted_at)).reduce((n,r)=>n+Math.max(0,Number(r.remaining_quantity||0))*Math.max(0,Number(r.selling_price_per_unit||0)-Number(r.cost_per_unit||0)),0);
   const creditProjection=openCredits.reduce((n,c)=>{const b=(liveStockRows||[]).find(r=>String(r.id)===String(c.stock_batch_id));if(!b)return n;const qty=Math.max(0,Number(c.quantity||0)),due=Math.max(0,Number(c.amount_due||0)-Number(c.amount_paid||0));return n+Math.max(0,due-qty*Number(b.cost_per_unit||0));},0);
   const potentialProfit=netProfit+remainingProjection+creditProjection;
   $f('pnlTrading').textContent=fmt(trading);$f('pnlExpenses').textContent=fmt(lifetimeOperatingExpenses);$f('pnlNet').textContent=fmt(netProfit);$f('pnlNetCard').classList.toggle('loss',netProfit<0);$f('pnlNetCard').classList.toggle('profit',netProfit>=0);
@@ -1959,11 +2009,11 @@ start();
   $f('reinvestProduct').innerHTML='<option value="">Select an existing stock item</option>'+[...products.entries()].map(([name,r])=>`<option value="${r.id}">${name}</option>`).join('');
  }
  rf?.addEventListener('submit',async ev=>{ev.preventDefault();let source=liveStockRows.find(r=>String(r.id)===$f('reinvestProduct').value);if(!source){finMsg('Select an existing stock item.',true);return;}let qty=Number($f('reinvestQty').value),unit=Number($f('reinvestUnitCost').value),sell=Number($f('reinvestSellPrice').value),total=qty*unit;
-  if(!Number.isInteger(qty)||qty<1||unit<=0||!Number.isFinite(total)){finMsg('Enter a valid quantity and unit cost.',true);return;}let opening=Number(financeCashRow?.opening_cash||0),weekRows=(liveStockRows||[]).filter(r=>String(r.week_id||'')===String(financeWeekId)&&r.stock_type!=='carry_forward'),cash=opening+weekRows.reduce((n,r)=>n+Number(r.sales_revenue||0)-Number(r.purchase_total??(Number(r.total_quantity||0)*Number(r.cost_per_unit||0)),0),0)-financeExpenses.reduce((n,r)=>n+Number(r.amount||0),0);if(total>cash){finMsg('This purchase exceeds available cash. Available: '+fmt(cash),true);return;}
+  if(!Number.isInteger(qty)||qty<1||unit<=0||!Number.isFinite(total)){finMsg('Enter a valid quantity and unit cost.',true);return;}const freshRows=await selectWorkerRows('worker_stock_batches','*');if(freshRows.error){finMsg('Purchase stopped: the latest stock and reinvestment ledger could not be verified. '+freshRows.error.message,true);return;}const freshLedger=calculateReinvestmentCash(freshRows.data||[]);let cash=freshLedger.balance;window.ezelexReinvestmentCashBalance=cash;window.ezelexCurrentCashBalance=cash;paintReinvestmentCash(freshLedger);if(cash<0){finMsg('Purchase blocked. Reinvestment is already OVERSPENT by '+fmt(Math.abs(cash))+'. Recover this amount from paid crate sales before purchasing again.',true);return;}if(total>cash){finMsg('Purchase blocked: insufficient Reinvestment Cash in Hand. Available: '+fmt(cash)+'. Purchase cost: '+fmt(total)+'. Shortfall: '+fmt(total-cash)+'. Profit is excluded and cannot cover this purchase.',true);return;}
   const payload={worker_id:currentUser.id,week_id:financeWeekId,stock_type:'reinvestment',stock_date:$f('reinvestDate').value||today(),product_service:source.product_service,total_quantity:qty,capital_amount:0,cost_per_unit:unit,selling_price_per_unit:sell,sold_quantity:0,damage_quantity:0,loss_quantity:0,sales_revenue:0,sold_cost:0,damage_value:0,loss_value:0,remaining_quantity:qty,remaining_value:qty*unit,purchase_total:total,cash_in_hand:0,credit_quantity:0,credit_outstanding:0,profit_loss:0,notes:'Reinvestment from cash in hand. '+($f('reinvestSupplier').value?'Supplier: '+$f('reinvestSupplier').value+'. ':'')+$f('reinvestNotes').value};
   $f('reinvestSubmit').disabled=true;try{let ins=await db.from('worker_stock_batches').insert(payload).select('*').single();if(ins.error)throw ins.error;let audit=await db.from('worker_stock_financial_events').insert({worker_id:currentUser.id,week_id:financeWeekId,event_type:'reinvestment',amount:total,stock_batch_id:ins.data.id,description:'Reinvestment purchase: '+source.product_service});if(audit.error){await db.from('worker_stock_batches').delete().eq('id',ins.data.id).eq('worker_id',currentUser.id);throw audit.error;}rf.reset();$f('reinvestDate').value=today();await Promise.all([loadStock(),loadStockHistory(),loadCredits()]);await loadFinance();finMsg('Reinvestment saved. '+qty+' crates added to '+source.product_service+' as a new traceable purchase batch.');}catch(e){finMsg('Could not save reinvestment: '+(e.message||e),true);}finally{$f('reinvestSubmit').disabled=false;}
  });
- ef?.addEventListener('submit',async ev=>{ev.preventDefault();let amount=Number($f('expenseAmount').value);if(!(amount>0)){finMsg('Enter an expense greater than zero.',true);return;}let weekRows=(liveStockRows||[]).filter(r=>String(r.week_id||'')===String(financeWeekId)&&r.stock_type!=='carry_forward'),sales=weekRows.reduce((n,r)=>n+Number(r.sales_revenue||0),0),purchases=weekRows.reduce((n,r)=>n+Number(r.purchase_total??(Number(r.total_quantity||0)*Number(r.cost_per_unit||0)),0),0),cash=Number(financeCashRow?.opening_cash||0)+sales-purchases-financeExpenses.reduce((n,r)=>n+Number(r.amount||0),0);if(amount>cash){finMsg('Expense exceeds available cash of '+fmt(cash)+'.',true);return;}let ins=await db.from('worker_stock_expenses').insert({worker_id:currentUser.id,week_id:financeWeekId,expense_date:$f('expenseDate').value||today(),category:$f('expenseCategory').value,amount,description:$f('expenseDescription').value.trim()});if(ins.error){finMsg('Could not save expense: '+ins.error.message,true);return;}ef.reset();$f('expenseDate').value=today();await loadFinance();finMsg('Expense saved and included in the net profit calculation.');});
+ ef?.addEventListener('submit',async ev=>{ev.preventDefault();let amount=Number($f('expenseAmount').value);if(!(amount>0)){finMsg('Enter an expense greater than zero.',true);return;}let ins=await db.from('worker_stock_expenses').insert({worker_id:currentUser.id,week_id:financeWeekId,expense_date:$f('expenseDate').value||today(),category:$f('expenseCategory').value,amount,description:$f('expenseDescription').value.trim()});if(ins.error){finMsg('Could not save expense: '+ins.error.message,true);return;}ef.reset();$f('expenseDate').value=today();await loadFinance();finMsg('Expense saved and included in the net profit calculation.');});
  of?.addEventListener('submit',async ev=>{ev.preventDefault();let amount=Number($f('openingCashInput').value);if(amount<0||!Number.isFinite(amount)){finMsg('Enter a valid opening cash amount.',true);return;}let old=Number(financeCashRow?.opening_cash||0);let r=await db.from('worker_weekly_cash_balances').upsert({worker_id:currentUser.id,week_id:financeWeekId,opening_cash:amount,adjustment_note:amount!==old?'Worker opening cash adjustment':''},{onConflict:'worker_id,week_id'});if(r.error){finMsg('Could not save opening cash: '+r.error.message,true);return;}await loadFinance();finMsg('Opening cash saved. This is a balance adjustment, not new capital.');});
  // Initialise date controls; the actual weekly opening carry-forward is handled by the close-week hook below.
  document.addEventListener('DOMContentLoaded',()=>{['reinvestDate','expenseDate'].forEach(id=>{if($f(id))$f(id).value=today();});});
@@ -1974,8 +2024,27 @@ start();
 // Five-second live performance billboard beside the Menu.
 (function(){
  const labels=['Profit Made This Week','All-Time Realised Profit','Sold Today','Sold This Week','Remaining Stock','On-Credit Crates'];let idx=0;
- function update(){if(!currentUser)return;const rows=(liveStockRows||[]).filter(r=>!r.deleted_at&&r.stock_type!=='carry_forward');const start=mondayDateISO(today());const thisWeek=rows.filter(r=>mondayDateISO(r.stock_date||r.created_at||today())===start);const soldToday=(stockHistoryRows||[]).filter(h=>dateOnly(h.changed_at)===today()).reduce((n,h)=>n+Math.max(0,Number(h.sold_delta||0)),0);const soldWeek=thisWeek.reduce((n,r)=>n+Number(r.sold_quantity||0),0);const remaining=thisWeek.reduce((n,r)=>n+Number(r.remaining_quantity||0),0);const onCredit=(creditRows||[]).filter(c=>Number(c.amount_paid||0)<Number(c.amount_due||0)).reduce((n,c)=>n+Number(c.quantity||0),0);const allProfit=rows.reduce((n,r)=>n+Number(r.profit_loss||0),0);const weekProfit=thisWeek.reduce((n,r)=>n+Number(r.profit_loss||0),0);const vals=[money(weekProfit),money(allProfit),soldToday.toLocaleString()+' crates',soldWeek.toLocaleString()+' crates',remaining.toLocaleString()+' crates',onCredit.toLocaleString()+' crates'];const l=document.getElementById('billboardLabel'),v=document.getElementById('billboardValue');if(l&&v){l.textContent=labels[idx];v.textContent=vals[idx];idx=(idx+1)%labels.length;}}
- setInterval(update,5000);document.addEventListener('visibilitychange',()=>{if(!document.hidden)update();});setTimeout(update,1200);
+ function update(){
+  if(!currentUser)return;
+  // Use the stock-batch cache only. It is intentionally separate from Recent Sales.
+  const rows=(liveStockRows||[]).filter(r=>!r.deleted_at);
+  const weekId=String(currentStockWeek?.id||'');
+  const start=mondayDateISO(today());
+  const thisWeek=rows.filter(r=>r.week_id?String(r.week_id)===weekId:mondayDateISO(r.stock_date||r.created_at||today())===start);
+  const soldToday=(stockHistoryRows||[]).filter(h=>dateOnly(h.changed_at)===today()).reduce((n,h)=>n+Math.max(0,Number(h.sold_delta||0)),0);
+  const soldWeek=thisWeek.reduce((n,r)=>n+Number(r.sold_quantity||0),0);
+  const remaining=thisWeek.reduce((n,r)=>n+Number(r.remaining_quantity||0),0);
+  const onCredit=(creditRows||[]).filter(c=>Number(c.amount_paid||0)<Number(c.amount_due||0)).reduce((n,c)=>n+Number(c.quantity||0),0);
+  const allProfit=rows.reduce((n,r)=>n+Number(r.profit_loss||0),0);
+  const weekProfit=thisWeek.reduce((n,r)=>n+Number(r.profit_loss||0),0);
+  const vals=[money(weekProfit),money(allProfit),soldToday.toLocaleString()+' crates',soldWeek.toLocaleString()+' crates',remaining.toLocaleString()+' crates',onCredit.toLocaleString()+' crates'];
+  const l=document.getElementById('billboardLabel'),v=document.getElementById('billboardValue');
+  if(l&&v){l.textContent=labels[idx];v.textContent=vals[idx];idx=(idx+1)%labels.length;}
+ }
+ window.updateEzelexBillboard=update;
+ setInterval(update,5000);
+ document.addEventListener('visibilitychange',()=>{if(!document.hidden)update();});
+ setTimeout(update,1200);
 })();
 </script>
 
