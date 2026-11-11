@@ -1118,9 +1118,12 @@ async function loadStock(){
   // remaining_quantity is already reduced when credit stock is reserved. Do not add
   // unpaid credit crates back into physical remaining stock a second time.
   const availableRemaining=dashboardWeekRows.reduce((n,r)=>n+Number(r.remaining_quantity||0),0);
-  // Dashboard's labelled "including unpaid credit" total is the projected inventory:
-  // available physical crates plus the still-unpaid crates reserved for customers.
-  const dashboardRemaining=availableRemaining+unpaidCreditUnits;
+  // Keep physical stock and customer-credit stock separate.
+  // Unpaid credit is NOT counted as sold. It remains part of projected stock
+  // until payment is made; only the unpaid crate balance is added here.
+  const physicalRemaining=availableRemaining;
+  const unpaidCreditRemaining=unpaidCreditUnits;
+  const dashboardRemaining=physicalRemaining+unpaidCreditRemaining;
   // Cash is a business-wide running balance: initial capital + cash actually received
   // from paid sales - every purchase/reinvestment - operating expenses. Unpaid credit
   // is excluded until payment is confirmed. Batch cash_in_hand values are snapshots,
@@ -1149,8 +1152,8 @@ async function loadStock(){
   $("todaySales").textContent=dashBought.toLocaleString(); $("weekSales").textContent=dashSold.toLocaleString();
   const dashCash=reinvestmentLedger.balance;
   $("allSales").textContent=money(dashCash);
-  if($("dashboardRemaining"))$("dashboardRemaining").textContent=dashboardRemaining.toLocaleString();
-  if($("dashboardRemainingBreakdown"))$("dashboardRemainingBreakdown").textContent=`${availableRemaining.toLocaleString()} available + ${unpaidCreditUnits.toLocaleString()} on-credit`;
+  if($("dashboardRemaining"))$("dashboardRemaining").textContent=(physicalRemaining+unpaidCreditRemaining).toLocaleString();
+  if($("dashboardRemainingBreakdown"))$("dashboardRemainingBreakdown").textContent=`${physicalRemaining.toLocaleString()} available + ${unpaidCreditRemaining.toLocaleString()} on-credit`;
   if($("dashboardCreditUnits"))$("dashboardCreditUnits").textContent=openDashboardWeekCredits.reduce((n,c)=>n+Math.max(0,Number(c.quantity||0)-Number(c.crates_paid||0)),0).toLocaleString();
   if($("dashboardCreditBreakdown"))$("dashboardCreditBreakdown").textContent=`${money(openDashboardWeekCredits.reduce((n,c)=>n+Math.max(0,Number(c.amount_due||0)-Number(c.amount_paid||0)),0))} outstanding · Tap to open On-Credit`;
   const dashboardActualProfit=actualSoldProfit+unpaidCreditProfit;
