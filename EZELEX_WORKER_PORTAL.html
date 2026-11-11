@@ -149,7 +149,7 @@ th,td{padding:12px;border-bottom:1px solid #e6ebf1;text-align:left;font-size:14p
 
 /* Compact rotating worker performance billboard */
 .menuActions{min-width:0;flex:1;justify-content:flex-end}
-.workerBillboard{display:flex;align-items:center;gap:8px;min-width:230px;max-width:360px;padding:7px 11px;border:1px solid rgba(255,255,255,.28);border-radius:10px;background:rgba(255,255,255,.13);color:#fff;box-shadow:0 2px 8px rgba(0,0,0,.12);font-size:12px;line-height:1.2}
+.workerBillboard{display:flex;align-items:center;gap:8px;min-width:230px;max-width:360px;padding:7px 11px;border:1px solid #315b86;border-radius:10px;background:#123b69!important;color:#fff!important;box-shadow:0 2px 8px rgba(0,0,0,.18);font-size:12px;line-height:1.2}.workerBillboard .bbLabel,.workerBillboard strong{color:#fff!important}.workerBillboard .bbLabel{opacity:1!important}
 .workerBillboard .bbLabel{opacity:.82;white-space:nowrap}.workerBillboard strong{font-size:14px;white-space:nowrap}.workerBillboard .bbDot{width:7px;height:7px;border-radius:50%;background:#55e39a;flex:0 0 auto;box-shadow:0 0 0 3px rgba(85,227,154,.15)}
 @media(max-width:700px){.menuActions{width:100%;justify-content:space-between}.workerBillboard{min-width:0;flex:1;max-width:none;padding:7px 8px}.workerBillboard strong{font-size:12px}.workerBillboard .bbLabel{font-size:10px}header{gap:8px}}
 
@@ -242,7 +242,8 @@ th,td{padding:12px;border-bottom:1px solid #e6ebf1;text-align:left;font-size:14p
     <div class="stats">
       <div class="stat"><small>Total Crates Bought</small><strong id="todaySales">0</strong></div>
       <div class="stat"><small>Total Crates Sold</small><strong id="weekSales">0</strong></div>
-      <div class="stat"><small>Cash In Hand</small><strong id="allSales">GH₵0.00</strong><div class="live">Unpaid credit is excluded until fully paid.</div></div>
+      <div class="stat"><small>Cash In Hand</small><strong id="allSales">GH₵0.00</strong><div class="live">Actual available cash after purchases and expenses.</div></div>
+      <div class="stat profit" id="dashboardProfitCard" style="background:#dcfce7;border-color:#16a34a;color:#14532d"><small>Actual Profit + On-Credit</small><strong id="dashboardProfitValue">GH₵0.00</strong><div class="live" id="dashboardProfitNote">Realised profit plus unpaid-credit profit only.</div></div>
       <div class="stat" id="dashboardRemainingCard"><small>Remaining Stock (including unpaid credit)</small><strong id="dashboardRemaining">0</strong><div id="dashboardRemainingBreakdown">0 available + 0 on-credit</div></div>
       <button type="button" class="stat statAction" id="dashboardCreditCard" aria-label="Open On-Credit records"><small>On-Credit Crates (unpaid) — Open records</small><strong id="dashboardCreditUnits">0</strong><div id="dashboardCreditBreakdown" class="live">View outstanding customer credit</div></button>
     </div>
@@ -487,7 +488,7 @@ th,td{padding:12px;border-bottom:1px solid #e6ebf1;text-align:left;font-size:14p
  <div class="panel"><h2>Stock Management</h2><p>Manage reinvestment, cash movements, operating expenses and net profit. All entries are saved against your worker account.</p><div id="financeMsg" aria-live="polite"></div></div>
  <div class="panel financePane" data-finance-pane="reinvest">
   <h2>Reinvest Cash in Hand</h2><p class="stockNote">Choose an existing stock item. The new purchase is saved as a separate batch linked to that product, so its purchase cost and history remain traceable while the product's total stock increases.</p>
-  <div class="stats"><div class="stat"><small>Available Cash</small><strong id="financeCashAvailable">GH₵0.00</strong></div><div class="stat"><small>Current Week Purchases</small><strong id="financeWeekPurchases">GH₵0.00</strong></div></div>
+  <div class="stats"><div class="stat"><small>Cash in Hand</small><strong id="financeCashAvailable">GH₵0.00</strong><div class="live">Spendable cash after purchases and expenses; unpaid credit is excluded.</div></div><div class="stat"><small>Current Week Purchases</small><strong id="financeWeekPurchases">GH₵0.00</strong></div></div>
   <form id="reinvestForm" class="grid">
    <div><label>Existing Stock Item</label><select id="reinvestProduct" required><option value="">Select an existing stock item</option></select></div>
    <div><label>Purchase Date</label><input id="reinvestDate" type="date" required></div>
@@ -669,25 +670,28 @@ function renderStockWeekControls(){
 }
 function renderPreviousStockRecords(){
   const body=$("previousStockRecordsBody");if(!body)return;
-  const weeks=stockWeekRows.filter(w=>w.status==="closed"&&!w._derived&&String(w.id)!==String(currentStockWeek?.id||""));
+  const weeks=stockWeekRows.filter(w=>w.status==="closed"&&String(w.id)!==String(currentStockWeek?.id||""));
   if(!weeks.length){body.innerHTML='<tr><td colspan="4">No previous closed stock books found.</td></tr>';return;}
   body.innerHTML=weeks.map(w=>{
     const c=stockWeekCorrections.find(x=>String(x.week_id)===String(w.id));
     const isActive=!!activeWeekCorrection&&String(activeWeekCorrection.week_id)===String(w.id);
     const state=isActive?'CORRECTION OPEN':c?'CORRECTION USED — LOCKED':'AVAILABLE — NOT USED';
-    const action=isActive?'<span class="badge">Edit allowed now</span>':c?'<span class="badge">Permanently locked</span>':`<button type="button" class="primary" onclick="beginHistoricalWeekCorrection('${esc(w.id)}')" ${activeWeekCorrection?'disabled':''}>Open Once</button>`;
+    const action=w._derived?'<span class="badge">Legacy history — view only</span>':isActive?'<span class="badge">Edit allowed now</span>':c?'<span class="badge">Permanently locked</span>':`<button type="button" class="primary" onclick="beginHistoricalWeekCorrection('${esc(w.id)}')" ${activeWeekCorrection?'disabled':''}>Open Once</button>`;
     return `<tr><td>${esc(weekLabel(w))}</td><td>CLOSED</td><td>${esc(state)}</td><td>${action}</td></tr>`;
   }).join("");
 }
 async function loadStockWeeks(){
   if(!currentUser)return;
-  const r=await db.from("worker_stock_weeks").select("*").eq("worker_id",currentUser.id).order("week_start",{ascending:false}).limit(100);
-  if(r.error){msg("weeklyStockMsg","Weekly stock books could not be loaded: "+esc(r.error.message),"error");return;}
-  stockWeekRows=r.data||[];
+  const r=await db.from("worker_stock_weeks").select("*").eq("worker_id",currentUser.id).order("week_start",{ascending:false}).limit(500);
+  stockWeekRows=r.error?[]:(r.data||[]);
+  if(r.error)msg("weeklyStockMsg","The weekly index could not be read, so previous weeks are being reconstructed from your original stock records: "+esc(r.error.message),"info");
   const cr=await db.from("worker_stock_week_corrections").select("id,worker_id,week_id,status,opened_at,closed_at").eq("worker_id",currentUser.id);
-  if(cr.error){msg("weeklyStockMsg","Previous-week correction status could not be checked. Run the one-time correction SQL setup: "+esc(cr.error.message),"error");stockWeekCorrections=[];}else stockWeekCorrections=cr.data||[];
-  const batches=await db.from("worker_stock_batches").select("id,week_id,stock_date,created_at").eq("worker_id",currentUser.id).is("deleted_at",null).order("stock_date",{ascending:false}).limit(2000);
+  if(cr.error){msg("weeklyStockMsg","Previous-week correction status could not be checked. Historical weeks remain viewable; correction controls require the one-time correction SQL setup: "+esc(cr.error.message),"error");stockWeekCorrections=[];}else stockWeekCorrections=cr.data||[];
+  // Include archived batches when deriving the history list. Archiving a batch must not
+  // make its week disappear from the weekly history selector or previous-stock register.
+  const batches=await db.from("worker_stock_batches").select("id,week_id,stock_date,created_at,deleted_at").eq("worker_id",currentUser.id).order("stock_date",{ascending:false}).limit(5000);
   if(!batches.error){for(const b of (batches.data||[])){const start=mondayDateISO(b.stock_date||b.created_at||today()),weekId=String(b.week_id||"");if(!stockWeekRows.some(w=>(weekId&&String(w.id)===weekId)||String(w.week_start||"")===start))stockWeekRows.push({id:weekId||("date:"+start),week_start:start,week_end:addDaysISO(start,6),status:start===mondayDateISO(today())?"open":"closed",_derived:true});}}
+  else msg("weeklyStockMsg","Original stock records could not be read to reconstruct weekly history: "+esc(batches.error.message),"error");
   stockWeekRows.sort((a,b)=>String(b.week_start||"").localeCompare(String(a.week_start||"")));
   renderStockWeekControls();
 }
@@ -835,6 +839,9 @@ async function loadProfile(user){
   await loadActiveWeekCorrection();
   renderStockWeekControls();
   await Promise.all([loadSales(),loadStock(),loadStockHistory(),loadCredits()]);
+  // Load the reconciled weekly cash ledger immediately after login so the dashboard
+  // Cash in Hand card is current without requiring the worker to open Stock Management.
+  if(typeof window.ezelexLoadFinance==='function')await window.ezelexLoadFinance();
   await loadMessages();
 }
 
@@ -946,11 +953,14 @@ async function loadStock(){
   if($("dashboardRemainingBreakdown"))$("dashboardRemainingBreakdown").textContent=`${availableRemaining.toLocaleString()} available + ${unpaidCreditUnits.toLocaleString()} on-credit`;
   if($("dashboardCreditUnits"))$("dashboardCreditUnits").textContent=openCreditRows.reduce((n,c)=>n+Number(c.quantity||0),0).toLocaleString();
   if($("dashboardCreditBreakdown"))$("dashboardCreditBreakdown").textContent=`${money(openCreditRows.reduce((n,c)=>n+Math.max(0,Number(c.amount_due||0)-Number(c.amount_paid||0)),0))} outstanding · Tap to open On-Credit`;
-  const dashboardProfitCard=$("dashboardProfitCard"); dashboardProfitCard?.classList.toggle("profit",projectedLiveProfit>0); dashboardProfitCard?.classList.toggle("loss",projectedLiveProfit<0);
+  const dashboardActualProfit=actualSoldProfit+unpaidCreditProfit;
+  if($("dashboardProfitValue"))$("dashboardProfitValue").textContent=money(dashboardActualProfit);
+  if($("dashboardProfitNote"))$("dashboardProfitNote").textContent=`Realised: ${money(actualSoldProfit)} + unpaid-credit profit: ${money(unpaidCreditProfit)}`;
+  const dashboardProfitCard=$("dashboardProfitCard"); dashboardProfitCard?.classList.toggle("profit",dashboardActualProfit>=0); dashboardProfitCard?.classList.toggle("loss",dashboardActualProfit<0); if(dashboardProfitCard){dashboardProfitCard.style.background=dashboardActualProfit<0?"#fee2e2":"#dcfce7";dashboardProfitCard.style.borderColor=dashboardActualProfit<0?"#dc2626":"#16a34a";dashboardProfitCard.style.color=dashboardActualProfit<0?"#7f1d1d":"#14532d";}
   const chosenWeekId=selectedStockWeekId||currentStockWeek?.id||"";
   const chosenWeek=stockWeekRows.find(w=>String(w.id)===String(chosenWeekId))||currentStockWeek;
   const chosenStart=chosenWeek?.week_start||mondayDateISO(today());
-  const rows=allRows.filter(r=>mondayDateISO(r.stock_date||r.created_at||today())===String(chosenStart));
+  const rows=allRows.filter(r=>mondayDateISO(r.stock_date||r.created_at||today())===String(chosenStart)||String(r.week_id||"")===String(chosenWeekId));
   let units=0,value=0,revenue=0,profit=0,cash=0,purchased=0,soldWeek=0;
   rows.forEach(r=>{units+=Number(r.remaining_quantity||0);value+=Number(r.remaining_value||0);revenue+=Number(r.sales_revenue||0);profit+=Number(r.profit_loss||0);if(r.stock_type!=="carry_forward"&&mondayDateISO(r.stock_date||r.created_at||today())===String(chosenStart))purchased+=Number(r.total_quantity||0);soldWeek+=Number(r.sold_quantity||0);const cap=Number(r.capital_amount??r.purchase_total??0),pur=Number(r.purchase_total||0);cash+=Number(r.cash_in_hand??(cap+Number(r.sales_revenue||0)-pur));});
   const selectedBatchIds=new Set(rows.map(r=>String(r.id)));
@@ -993,7 +1003,7 @@ function dateTime(v){if(!v)return "—";const d=new Date(v);return Number.isNaN(
 async function loadStockHistory(){
   await loadDeletedStock();
   const {data,error}=await selectWorkerRows("worker_stock_edit_history","*",{column:"changed_at",ascending:false},1000);
-  if(error){$("stockHistoryBody").innerHTML='<tr><td colspan="8">History unavailable. Please run the supplied stock history SQL in Supabase.</td></tr>';$("stockDailyBody").innerHTML='<tr><td colspan="4">History unavailable.</td></tr>';msg("stockHistoryMsg","Could not load stock history: "+esc(error.message),"error");return;}
+  if(error){$("stockHistoryBody").innerHTML='<tr><td colspan="9">History unavailable. Please run the supplied stock history SQL in Supabase.</td></tr>';$("stockDailyBody").innerHTML='<tr><td colspan="4">History unavailable.</td></tr>';msg("stockHistoryMsg","Could not load stock history: "+esc(error.message),"error");return;}
   stockHistoryRows=data||[];renderStockHistory();
 }
 function drawDailyPerformanceChart(daily){
@@ -1122,11 +1132,24 @@ window.archiveOriginalStock=async function(id){
 };
 
 window.deleteStockHistoryEntry=async function(historyId){
-  const row=stockHistoryRows.find(x=>String(x.id)===String(historyId));if(!row)return;
-  if(!confirm('Delete this edit-history entry only? The original stock record and its quantities will NOT be deleted or changed.'))return;
-  const {error}=await db.from('worker_stock_edit_history').delete().eq('id',historyId).eq('worker_id',currentUser.id);
-  if(error){msg('stockHistoryMsg','Could not delete this edit-history entry: '+error.message,'error');return;}
-  stockHistoryRows=stockHistoryRows.filter(x=>String(x.id)!==String(historyId));renderStockHistory();msg('stockHistoryMsg','Edit-history entry deleted. The original stock record was left untouched.','success');
+  const h=stockHistoryRows.find(x=>String(x.id)===String(historyId));if(!h)return;
+  const batchId=historyLinkedBatchId(h);const batch=[...liveStockRows,...deletedStockRows].find(r=>String(r.id)===String(batchId));
+  if(!batch){msg('stockHistoryMsg','The original stock batch linked to this edit could not be found. Nothing was deleted.','error');return;}
+  const later=stockHistoryRows.some(x=>String(historyLinkedBatchId(x))===String(batchId)&&new Date(x.changed_at||0)>new Date(h.changed_at||0));
+  if(later){msg('stockHistoryMsg','This is not the latest edit for this stock batch. Delete the newer edit entries first so the stock can be safely restored in order.','error');return;}
+  if(h.sold_before==null||h.damage_before==null){msg('stockHistoryMsg','This older history entry does not contain the original quantities needed for a safe reversal. No records were changed.','error');return;}
+  if(!confirm('Delete this edit and reverse its effect on the original stock? Sold, damage, remaining stock and profit will be recalculated. The original purchase record will remain.'))return;
+  const sold=Math.max(0,Number(h.sold_before||0)),damage=Math.max(0,Number(h.damage_before||0)),loss=Math.max(0,Number(batch.loss_quantity||0)),total=Math.max(0,Number(batch.total_quantity||0)),unit=Math.max(0,Number(batch.cost_per_unit||0)),price=Math.max(0,Number(batch.selling_price_per_unit||0));
+  const unpaid=(creditRows||[]).filter(c=>String(c.stock_batch_id)===String(batchId)&&Number(c.amount_paid||0)<Number(c.amount_due||0)).reduce((n,c)=>n+Number(c.quantity||0),0);
+  const paid=(creditRows||[]).filter(c=>String(c.stock_batch_id)===String(batchId)&&Number(c.amount_paid||0)>=Number(c.amount_due||0)).reduce((o,c)=>({qty:o.qty+Number(c.quantity||0),amount:o.amount+Number(c.amount_paid||0)}),{qty:0,amount:0});
+  const remaining=Math.max(0,total-sold-damage-loss-unpaid),revenue=Math.max(0,sold-paid.qty)*price+paid.amount,soldCost=sold*unit,damageValue=damage*unit,lossValue=loss*unit,profit=revenue-soldCost-damageValue-lossValue;
+  const upd=await db.from('worker_stock_batches').update({sold_quantity:sold,damage_quantity:damage,remaining_quantity:remaining,remaining_value:remaining*unit,sales_revenue:revenue,sold_cost:soldCost,damage_value:damageValue,loss_value:lossValue,profit_loss:profit}).eq('id',batchId).eq('worker_id',currentUser.id).select('id');
+  if(upd.error||!upd.data?.length){msg('stockHistoryMsg','Could not restore the original stock figures: '+(upd.error?.message||'No matching stock record updated')+'. History was not deleted.','error');return;}
+  const del=await db.from('worker_stock_edit_history').delete().eq('id',historyId).eq('worker_id',currentUser.id);
+  if(del.error){msg('stockHistoryMsg','Stock figures were restored, but the history row could not be deleted: '+del.error.message+'. Refresh before continuing.','error');return;}
+  await Promise.all([loadStock(),loadStockHistory(),loadStockWeeks(),loadCredits()]);
+  if(typeof window.ezelexLoadFinance==='function')await window.ezelexLoadFinance();
+  msg('stockHistoryMsg','Edit reversed and deleted. Stock, remaining quantities, sales revenue, profit and Cash in Hand have been refreshed.','success');
 };
 let stockCorrectionMode=false;
 window.correctStockFromHistory=async function(id){
@@ -1947,8 +1970,6 @@ start();
  const oldClose=window.closeCurrentStockWeek; if(typeof oldClose==='function'){window.closeCurrentStockWeek=async function(){await oldClose();};}
  window.ezelexLoadFinance=loadFinance;
 })();
-</script>
-
 
 // Five-second live performance billboard beside the Menu.
 (function(){
@@ -1956,6 +1977,8 @@ start();
  function update(){if(!currentUser)return;const rows=(liveStockRows||[]).filter(r=>!r.deleted_at&&r.stock_type!=='carry_forward');const start=mondayDateISO(today());const thisWeek=rows.filter(r=>mondayDateISO(r.stock_date||r.created_at||today())===start);const soldToday=(stockHistoryRows||[]).filter(h=>dateOnly(h.changed_at)===today()).reduce((n,h)=>n+Math.max(0,Number(h.sold_delta||0)),0);const soldWeek=thisWeek.reduce((n,r)=>n+Number(r.sold_quantity||0),0);const remaining=thisWeek.reduce((n,r)=>n+Number(r.remaining_quantity||0),0);const onCredit=(creditRows||[]).filter(c=>Number(c.amount_paid||0)<Number(c.amount_due||0)).reduce((n,c)=>n+Number(c.quantity||0),0);const allProfit=rows.reduce((n,r)=>n+Number(r.profit_loss||0),0);const weekProfit=thisWeek.reduce((n,r)=>n+Number(r.profit_loss||0),0);const vals=[money(weekProfit),money(allProfit),soldToday.toLocaleString()+' crates',soldWeek.toLocaleString()+' crates',remaining.toLocaleString()+' crates',onCredit.toLocaleString()+' crates'];const l=document.getElementById('billboardLabel'),v=document.getElementById('billboardValue');if(l&&v){l.textContent=labels[idx];v.textContent=vals[idx];idx=(idx+1)%labels.length;}}
  setInterval(update,5000);document.addEventListener('visibilitychange',()=>{if(!document.hidden)update();});setTimeout(update,1200);
 })();
+</script>
+
 
 </body>
 </html>
