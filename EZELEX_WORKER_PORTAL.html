@@ -531,6 +531,7 @@ let deletedStockRows=[];
 let stockHistoryRows=[];
 let editingStockOriginal=null;
 let creditRows=[];
+let creditRowsLoaded=false;
 let currentStockWeek=null;
 let stockWeekRows=[];
 let selectedStockWeekId="";
@@ -612,14 +613,21 @@ async function ensureCurrentStockWeek(){
     if(closedOld.error) console.warn("Could not auto-close previous weekly book:",closedOld.error.message);
     else { const notice=await db.functions.invoke("worker-weekly-stock-closed",{body:{week_id:oldWeek.id}}); if(notice.error)console.warn("Weekly admin email failed:",notice.error.message); }
   }
-  let q=await db.from("worker_stock_weeks").select("*").eq("worker_id",currentUser.id).eq("week_start",start).maybeSingle();
-  if(q.error){msg("weeklyStockMsg","Weekly stock setup needs the supplied SQL to be run in Supabase: "+esc(q.error.message),"error");return null;}
-  if(!q.data){q=await db.from("worker_stock_weeks").insert({worker_id:currentUser.id,week_start:start,week_end:end,status:"open"}).select("*").single();}
-  if(q.error){msg("weeklyStockMsg","Could not open this week's stock book: "+esc(q.error.message),"error");return null;}
-  currentStockWeek=q.data;
+  // Read weekly books using both the auth UUID and the legacy worker code. Older portal
+  // records may have been saved under either owner value. Do not create a duplicate
+  // empty current week when a matching historical/current book already exists.
+  const weekRead=await selectWorkerRows("worker_stock_weeks","*",{column:"week_start",ascending:false},1000);
+  if(weekRead.error){msg("weeklyStockMsg","Weekly stock books could not be read: "+esc(weekRead.error.message)+". No replacement week was created, to protect your history.","error");return null;}
+  let currentExisting=(weekRead.data||[]).find(w=>String(w.week_start||"")===start);
+  if(!currentExisting){
+    const created=await db.from("worker_stock_weeks").insert({worker_id:currentUser.id,week_start:start,week_end:end,status:"open"}).select("*").single();
+    if(created.error){msg("weeklyStockMsg","Could not open this week's stock book: "+esc(created.error.message),"error");return null;}
+    currentExisting=created.data;
+  }
+  currentStockWeek=currentExisting;
   // Carry forward the previous week's single cash balance once; never add it as fresh capital.
-  const priorCashWeek=await db.from("worker_stock_weeks").select("id,week_start").eq("worker_id",currentUser.id).lt("week_start",start).order("week_start",{ascending:false}).limit(1).maybeSingle();
-  if(priorCashWeek.data){
+  const priorCashWeek=(weekRead.data||[]).filter(w=>String(w.week_start||"")<start).sort((a,b)=>String(b.week_start||"").localeCompare(String(a.week_start||"")))[0]||null;
+  if(priorCashWeek){
     const alreadyCash=await db.from("worker_weekly_cash_balances").select("id").eq("worker_id",currentUser.id).eq("week_id",currentStockWeek.id).maybeSingle();
     if(!alreadyCash.error&&!alreadyCash.data){
       const [allPriorBatches,allPriorExpenses]=await Promise.all([
@@ -645,11 +653,12 @@ async function ensureCurrentStockWeek(){
   // Carry-forward rows have zero new purchase quantity/cost and zero profit, so historical purchase/profit totals are not duplicated.
   const existingWeekRows=await db.from("worker_stock_batches").select("id,stock_type").eq("worker_id",currentUser.id).eq("week_id",currentStockWeek.id).eq("stock_type","carry_forward").is("deleted_at",null).limit(1);
   if(!existingWeekRows.error&&!(existingWeekRows.data||[]).length){
-    const prevWeek=await db.from("worker_stock_weeks").select("id,week_start").eq("worker_id",currentUser.id).lt("week_start",start).order("week_start",{ascending:false}).limit(1).maybeSingle();
-    if(prevWeek.data){
-      const prevBatches=await db.from("worker_stock_batches").select("*").eq("worker_id",currentUser.id).eq("week_id",prevWeek.data.id).is("deleted_at",null).gt("remaining_quantity",0);
+    const prevWeek=priorCashWeek;
+    if(prevWeek){
+      const prevBatchRead=await selectWorkerRows("worker_stock_batches","*",{column:"stock_date",ascending:false},5000);
+      const prevBatches={data:(prevBatchRead.data||[]).filter(b=>String(b.week_id||"")===String(prevWeek.id)&&Number(b.remaining_quantity||0)>0),error:prevBatchRead.error};
       if(!prevBatches.error&&prevBatches.data?.length){
-        const carryRows=prevBatches.data.map(b=>({worker_id:currentUser.id,week_id:currentStockWeek.id,source_batch_id:b.id,stock_type:"carry_forward",stock_date:start,product_service:b.product_service||"Opening stock",total_quantity:Number(b.remaining_quantity||0),capital_amount:0,cost_per_unit:Number(b.cost_per_unit||0),selling_price_per_unit:Number(b.selling_price_per_unit||0),sold_quantity:0,damage_quantity:0,loss_quantity:0,sales_revenue:0,sold_cost:0,damage_value:0,loss_value:0,remaining_quantity:Number(b.remaining_quantity||0),remaining_value:Number(b.remaining_quantity||0)*Number(b.cost_per_unit||0),purchase_total:0,cash_in_hand:0,credit_quantity:0,credit_outstanding:0,profit_loss:0,notes:`Opening balance carried forward from week starting ${prevWeek.data.week_start}. Original purchase and profit remain in the previous week's record.`}));
+        const carryRows=prevBatches.data.map(b=>({worker_id:currentUser.id,week_id:currentStockWeek.id,source_batch_id:b.id,stock_type:"carry_forward",stock_date:start,product_service:b.product_service||"Opening stock",total_quantity:Number(b.remaining_quantity||0),capital_amount:0,cost_per_unit:Number(b.cost_per_unit||0),selling_price_per_unit:Number(b.selling_price_per_unit||0),sold_quantity:0,damage_quantity:0,loss_quantity:0,sales_revenue:0,sold_cost:0,damage_value:0,loss_value:0,remaining_quantity:Number(b.remaining_quantity||0),remaining_value:Number(b.remaining_quantity||0)*Number(b.cost_per_unit||0),purchase_total:0,cash_in_hand:0,credit_quantity:0,credit_outstanding:0,profit_loss:0,notes:`Opening balance carried forward from week starting ${prevWeek.week_start}. Original purchase and profit remain in the previous week's record.`}));
         const inserted=await db.from("worker_stock_batches").insert(carryRows);
         if(inserted.error)msg("weeklyStockMsg","Weekly book opened, but previous unsold stock could not be carried forward automatically: "+esc(inserted.error.message)+". Please contact admin before recording sales.","error");
       }
@@ -690,14 +699,14 @@ function renderPreviousStockRecords(){
 }
 async function loadStockWeeks(){
   if(!currentUser)return;
-  const r=await db.from("worker_stock_weeks").select("*").eq("worker_id",currentUser.id).order("week_start",{ascending:false}).limit(500);
+  const r=await selectWorkerRows("worker_stock_weeks","*",{column:"week_start",ascending:false},500);
   stockWeekRows=r.error?[]:(r.data||[]);
   if(r.error)msg("weeklyStockMsg","The weekly index could not be read, so previous weeks are being reconstructed from your original stock records: "+esc(r.error.message),"info");
-  const cr=await db.from("worker_stock_week_corrections").select("id,worker_id,week_id,status,opened_at,closed_at").eq("worker_id",currentUser.id);
+  const cr=await selectWorkerRows("worker_stock_week_corrections","id,worker_id,week_id,status,opened_at,closed_at");
   if(cr.error){msg("weeklyStockMsg","Previous-week correction status could not be checked. Historical weeks remain viewable; correction controls require the one-time correction SQL setup: "+esc(cr.error.message),"error");stockWeekCorrections=[];}else stockWeekCorrections=cr.data||[];
   // Include archived batches when deriving the history list. Archiving a batch must not
   // make its week disappear from the weekly history selector or previous-stock register.
-  const batches=await db.from("worker_stock_batches").select("id,week_id,stock_date,created_at,deleted_at").eq("worker_id",currentUser.id).order("stock_date",{ascending:false}).limit(5000);
+  const batches=await selectWorkerRows("worker_stock_batches","id,week_id,stock_date,created_at,deleted_at",{column:"stock_date",ascending:false},5000);
   if(!batches.error){for(const b of (batches.data||[])){const start=mondayDateISO(b.stock_date||b.created_at||today()),weekId=String(b.week_id||"");if(!stockWeekRows.some(w=>(weekId&&String(w.id)===weekId)||String(w.week_start||"")===start))stockWeekRows.push({id:weekId||("date:"+start),week_start:start,week_end:addDaysISO(start,6),status:start===mondayDateISO(today())?"open":"closed",_derived:true});}}
   else msg("weeklyStockMsg","Original stock records could not be read to reconstruct weekly history: "+esc(batches.error.message),"error");
   stockWeekRows.sort((a,b)=>String(b.week_start||"").localeCompare(String(a.week_start||"")));
@@ -954,7 +963,7 @@ async function loadStock(){
   const dashSold=allRows.reduce((sum,r)=>sum+Number(r.sold_quantity||0),0);
   const actualSoldProfit=allRows.reduce((sum,r)=>sum+Number(r.profit_loss||0),0);
   const liveWeekStart=mondayDateISO(today());
-  const dashboardWeekRows=allRows.filter(r=>r.week_id?String(r.week_id)===String(currentStockWeek?.id||""):mondayDateISO(r.stock_date||r.created_at||today())===liveWeekStart);
+  const dashboardWeekRows=allRows.filter(r=>String(r.week_id||"")===String(currentStockWeek?.id||"")||mondayDateISO(r.stock_date||r.created_at||today())===liveWeekStart);
   const dashboardBatchIds=new Set(dashboardWeekRows.map(r=>String(r.id)));
   const openCreditRows=(creditRows||[]).filter(c=>Number(c.amount_paid||0)<Number(c.amount_due||0));
   const openDashboardWeekCredits=openCreditRows.filter(c=>dashboardBatchIds.has(String(c.stock_batch_id)));
@@ -989,7 +998,8 @@ async function loadStock(){
   },0);
   // Dashboard profit is intentionally not displayed here; projected values belong in P&L.
   $("todaySales").textContent=dashBought.toLocaleString(); $("weekSales").textContent=dashSold.toLocaleString();
-  $("allSales").textContent=expenseResult.error?"Check ledger":money(dashCash);
+  const dashCash=reinvestmentLedger.balance;
+  $("allSales").textContent=money(dashCash);
   if($("dashboardRemaining"))$("dashboardRemaining").textContent=dashboardRemaining.toLocaleString();
   if($("dashboardRemainingBreakdown"))$("dashboardRemainingBreakdown").textContent=`${availableRemaining.toLocaleString()} available + ${unpaidCreditUnits.toLocaleString()} on-credit`;
   if($("dashboardCreditUnits"))$("dashboardCreditUnits").textContent=openCreditRows.reduce((n,c)=>n+Number(c.quantity||0),0).toLocaleString();
@@ -1001,7 +1011,7 @@ async function loadStock(){
   const chosenWeekId=selectedStockWeekId||currentStockWeek?.id||"";
   const chosenWeek=stockWeekRows.find(w=>String(w.id)===String(chosenWeekId))||currentStockWeek;
   const chosenStart=chosenWeek?.week_start||mondayDateISO(today());
-  const rows=allRows.filter(r=>r.week_id?String(r.week_id)===String(chosenWeekId):mondayDateISO(r.stock_date||r.created_at||today())===String(chosenStart));
+  const rows=allRows.filter(r=>String(r.week_id||"")===String(chosenWeekId)||mondayDateISO(r.stock_date||r.created_at||today())===String(chosenStart));
   let units=0,value=0,revenue=0,profit=0,cash=0,purchased=0,soldWeek=0;
   rows.forEach(r=>{units+=Number(r.remaining_quantity||0);value+=Number(r.remaining_value||0);revenue+=Number(r.sales_revenue||0);profit+=Number(r.profit_loss||0);if(r.stock_type!=="carry_forward"&&mondayDateISO(r.stock_date||r.created_at||today())===String(chosenStart))purchased+=Number(r.total_quantity||0);soldWeek+=Number(r.sold_quantity||0);const cap=Number(r.capital_amount??r.purchase_total??0),pur=Number(r.purchase_total||0);cash+=Number(r.cash_in_hand??(cap+Number(r.sales_revenue||0)-pur));});
   const displayedUnits=units;
