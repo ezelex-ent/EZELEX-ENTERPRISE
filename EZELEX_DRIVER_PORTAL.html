@@ -296,6 +296,14 @@ th,td{padding:12px;border-bottom:1px solid #e6edf4}
 @media(max-width:600px){.driver-contract-dates{grid-template-columns:1fr 1fr;gap:8px}.driver-contract-date-card{padding:12px 10px}.driver-contract-time{font-size:11px;padding:6px 8px}.driver-contract-financials{grid-template-columns:1fr;gap:8px}.driver-contract-finance-card{padding:12px}.driver-contract-details-grid{grid-template-columns:1fr 1fr;gap:7px}.driver-contract-detail{padding:10px}.driver-contract-detail>strong{font-size:14px}.driver-contract-heading{gap:8px}}
 @media(max-width:360px){.driver-contract-dates,.driver-contract-details-grid{grid-template-columns:1fr}.driver-contract-status{font-size:11px}}
 
+
+/* Compact Driver Portal copy: keep operational labels and live feedback, remove repetitive help paragraphs. */
+.stockNote,
+.dailyChartAccessible,
+.driver-contract-progress > small {display:none!important}
+.panel > p:not(.msg):not(.error):not(.success),
+.section > p:not(.msg):not(.error):not(.success) {display:none!important}
+
 </style>
 </head>
 <body>
@@ -938,9 +946,48 @@ function driverHistoricalAllocationInfo(p){
 function driverHistoricalWeeks(payments,contractId){
  const map=new Map();(payments||[]).filter(p=>String(p.contract_id)===String(contractId)).forEach(p=>{const h=driverHistoricalAllocationInfo(p);if(!h)return;const x=map.get(h.key)||{start:h.start,end:h.end,target:h.target,paid:0};x.target=Math.max(x.target,h.target||h.amount);x.paid+=h.amount;map.set(h.key,x);});return map;
 }
+function driverPeriodConfirmedAmounts(contractId,period,payments,reports){
+ const pStart=String(period.start||'').slice(0,10),pEnd=String(period.end||'').slice(0,10);
+ const overlaps=(a,b)=>String(a)<=pEnd&&String(b)>=pStart;
+ const rows=(payments||[]).filter(p=>String(p.contract_id)===String(contractId));
+ const historicalAllocations=rows.map(p=>({payment:p,allocation:driverHistoricalAllocationInfo(p)}))
+  .filter(x=>x.allocation&&overlaps(x.allocation.start,x.allocation.end));
+ const historicalPaid=historicalAllocations.reduce((sum,x)=>sum+Math.max(0,Number(x.payment.amount||0)),0);
+ const historicalTarget=historicalAllocations.reduce((sum,x)=>sum+Math.max(0,Number(x.allocation.target||0)),0);
+ const fallbackHistorical=rows.filter(p=>{
+  const source=String(p.source_type||'').toLowerCase();
+  if(!source.includes('historical')||/historical excess credit/i.test(String(p.notes||'')))return false;
+  if(driverHistoricalAllocationInfo(p))return false;
+  const d=String(p.payment_date||p.created_at||'').slice(0,10);
+  return d>=pStart&&d<=pEnd;
+ }).reduce((sum,p)=>sum+Math.max(0,Number(p.amount||0)),0);
+ const ordinaryLedger=rows.filter(p=>{
+  const source=String(p.source_type||'').toLowerCase();
+  if(source.includes('historical'))return false;
+  const d=String(p.payment_date||p.created_at||'').slice(0,10);
+  return d>=pStart&&d<=pEnd;
+ }).reduce((sum,p)=>sum+Math.max(0,Number(p.amount||0)),0);
+ const approved=(reports||[])
+  .filter(r=>String(r.contract_id)===String(contractId)
+   &&String(r.status||'').toLowerCase()==='approved'
+   &&String(r.week_start||'').slice(0,10)===pStart
+   &&String(r.week_end||'').slice(0,10)===pEnd)
+  .reduce((sum,r)=>sum+Math.max(0,Number(r.payment_amount||0)),0);
+ // Historical allocations and ordinary ledger entries are distinct sources.
+ // Approved reports can represent the same payment, so compare rather than add.
+ const ledgerConfirmed=historicalPaid+fallbackHistorical+ordinaryLedger;
+ return {historicalPaid,historicalTarget,ledgerConfirmed,approved,confirmed:Math.max(ledgerConfirmed,approved)};
+}
 function driverContractRemainingWeeks(c,payments,reports){
- const periods=driverContractScheduledPeriods(c);if(!periods.length)return null;const historical=driverHistoricalWeeks(payments,c.id);let complete=0;
- periods.forEach(period=>{const h=historical.get(period.key),historicalPaid=h?Math.max(0,h.paid):0;const approved=(reports||[]).filter(r=>String(r.contract_id)===String(c.id)&&String(r.status||'').toLowerCase()==='approved'&&String(r.week_start||'').slice(0,10)===period.start&&String(r.week_end||'').slice(0,10)===period.end).reduce((best,r)=>Math.max(best,Math.max(0,Number(r.payment_amount||0))),0);const confirmed=Math.max(historicalPaid,approved);if(period.target>0&&confirmed+0.009>=period.target)complete++;});return Math.max(0,periods.length-complete);
+ const periods=driverContractScheduledPeriods(c);
+ if(!periods.length)return null;
+ let complete=0;
+ periods.forEach(period=>{
+  const amounts=driverPeriodConfirmedAmounts(c.id,period,payments,reports);
+  const expected=amounts.historicalTarget>0?amounts.historicalTarget:period.target;
+  if(expected>0&&amounts.confirmed+0.009>=expected)complete++;
+ });
+ return Math.max(0,periods.length-complete);
 }
 async function loadDriverContract(){
  const host=$("driverContractDetails"); if(!host||!currentUser)return;
@@ -993,7 +1040,7 @@ async function loadDriverContract(){
      <div class="driver-contract-detail"><span>Payments recorded this month</span><strong>${moneyVal(paidThisMonth)}</strong><small>${esc(currentMonth)}</small></div>
      <div class="driver-contract-detail"><span>Opening amount paid</span><strong>${moneyVal(openingPaid)}</strong></div>
     </div>
-    <div class="driver-contract-progress"><div class="driver-contract-progress-top"><strong>Contract week progress</strong><b>${completedWeeks===null?'—':completedWeeks} / ${weekCap||'—'} weeks</b></div><div class="driver-contract-progress-track" role="progressbar" aria-label="Completed contract weeks" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${Math.round(progressPct)}"><span style="width:${progressPct}%"></span></div><p>Week cap: <b>${weekCap||'—'}</b> · Completed: <b>${completedWeeks===null?'—':completedWeeks}</b> · Remaining: <b>${remainingWeeks===null?'—':remainingWeeks}</b></p><small>Week progress follows the Admin Management Centre's scheduled contract periods and confirmed historical allocations / approved reports.</small></div>
+    <div class="driver-contract-progress"><div class="driver-contract-progress-top"><strong>Contract week progress</strong><b>${completedWeeks===null?'—':completedWeeks} / ${weekCap||'—'} weeks</b></div><div class="driver-contract-progress-track" role="progressbar" aria-label="Completed contract weeks" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${Math.round(progressPct)}"><span style="width:${progressPct}%"></span></div><p>Week cap: <b>${weekCap||'—'}</b> · Completed: <b>${completedWeeks===null?'—':completedWeeks}</b> · Remaining: <b>${remainingWeeks===null?'—':remainingWeeks}</b></p></div>
     ${c.admin_notes?`<div class="driver-contract-notes"><span>Admin notes</span><p>${esc(c.admin_notes)}</p></div>`:""}
    </div>`;
   }).join("");
@@ -1845,7 +1892,7 @@ async function loadDriverPaymentWarnings(){
   const gh=driverGhanaClock(),today=gh.iso,currentMonday=mondayISO(today),rows=[];
   for(const c of contracts){
    const start=String(c.contract_start_date||c.contract_start||'').slice(0,10),end=String(c.contract_end_date||c.contract_end||'').slice(0,10);if(!start||!end)continue;
-   const historical=driverHistoricalWeeks(payments,c.id);let monday=mondayISO(start);
+   let monday=mondayISO(start);
    while(monday<currentMonday&&(!end||monday<=end)){
     const sunday=sundayISO(monday),dueAt=driverWeekPaymentDueAt(sunday),isDue=gh.nowMs>=dueAt;
     const activeStart=monday<start?start:monday,activeEnd=end&&end<sunday?end:sunday;
@@ -1854,12 +1901,10 @@ async function loadDriverPaymentWarnings(){
     const weekReports=reports.filter(r=>String(r.contract_id)===String(c.id)&&String(r.week_start||'').slice(0,10)===monday&&String(r.week_end||'').slice(0,10)===sunday);
     const approved=weekReports.filter(r=>String(r.status||'').toLowerCase()==='approved');
     const pending=weekReports.some(r=>['pending','submitted','awaiting_review','awaiting review','pending_review'].includes(String(r.status||'').trim().toLowerCase()));
-    const h=historical.get(monday+'|'+sunday)||null;
-    // Match Admin Management Centre: include every ledger payment dated in this Monday–Sunday week.
-    // Do not discard a historical row just because its allocation metadata uses a partial-period key.
-    const ledgerPaid=payments.filter(p=>String(p.contract_id)===String(c.id)&&String(p.payment_date||p.created_at||'').slice(0,10)>=monday&&String(p.payment_date||p.created_at||'').slice(0,10)<=sunday).reduce((n,p)=>n+Math.max(0,Number(p.amount||0)),0);
-    const reportPaid=approved.reduce((n,r)=>n+Math.max(0,Number(r.payment_amount||0)),0);
-    const expected=h?(h.target||h.paid):normalExpected,confirmed=h?h.paid:(ledgerPaid>0?ledgerPaid:reportPaid),outstanding=Math.max(0,expected-confirmed);
+    const periodAmounts=driverPeriodConfirmedAmounts(c.id,{start:monday,end:sunday},payments,reports);
+    const expected=periodAmounts.historicalTarget>0?periodAmounts.historicalTarget:normalExpected;
+    const confirmed=periodAmounts.confirmed;
+    const outstanding=Math.max(0,expected-confirmed);
     const report=weekReports.slice().sort((a,b)=>String(b.submitted_at||'').localeCompare(String(a.submitted_at||'')))[0]||null;
     if(isDue&&outstanding>0.009)rows.push({monday,sunday,expected,confirmed,outstanding,pending,report});
     monday=addDaysISO(monday,7);
