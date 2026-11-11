@@ -1108,7 +1108,8 @@ async function loadStock(){
   const actualSoldProfit=dashboardWeekRows.reduce((sum,r)=>sum+Number(r.profit_loss||0),0)-dashboardBatchPaidCreditProfit+currentWeekCreditProfit;
   const dashboardBatchIds=new Set(dashboardWeekRows.map(r=>String(r.id)));
   const openCreditRows=(creditRows||[]).filter(c=>Math.max(0,Number(c.amount_due||0)-Number(c.amount_paid||0))>0.009);
-  const openDashboardWeekCredits=openCreditRows.filter(c=>dashboardBatchIds.has(String(c.stock_batch_id)));
+  // Match Management Centre current-stock accounting: include every still-open credit batch for this worker, including credit originating in an earlier week.
+  const openDashboardWeekCredits=openCreditRows;
   const unpaidCreditUnits=openDashboardWeekCredits.reduce((n,c)=>n+Math.max(0,Number(c.quantity||0)-Number(c.crates_paid||0)),0);
   const dashboardAllTimePurchaseNote=$("dashboardAllTimePurchaseNote");
   if(dashboardAllTimePurchaseNote) dashboardAllTimePurchaseNote.textContent=
@@ -1150,7 +1151,7 @@ async function loadStock(){
   if($("dashboardRemaining"))$("dashboardRemaining").textContent=dashboardRemaining.toLocaleString();
   if($("dashboardRemainingBreakdown"))$("dashboardRemainingBreakdown").textContent=`${availableRemaining.toLocaleString()} available + ${unpaidCreditUnits.toLocaleString()} on-credit`;
   if($("dashboardCreditUnits"))$("dashboardCreditUnits").textContent=openDashboardWeekCredits.reduce((n,c)=>n+Math.max(0,Number(c.quantity||0)-Number(c.crates_paid||0)),0).toLocaleString();
-  if($("dashboardCreditBreakdown"))$("dashboardCreditBreakdown").textContent=`${money(openDashboardWeekCredits.reduce((n,c)=>n+Math.max(0,Number(c.amount_due||0)-Number(c.amount_paid||0)),0))} outstanding this week · Tap to open On-Credit`;
+  if($("dashboardCreditBreakdown"))$("dashboardCreditBreakdown").textContent=`${money(openDashboardWeekCredits.reduce((n,c)=>n+Math.max(0,Number(c.amount_due||0)-Number(c.amount_paid||0)),0))} outstanding · Tap to open On-Credit`;
   const dashboardActualProfit=actualSoldProfit+unpaidCreditProfit;
   if($("dashboardProfitValue"))$("dashboardProfitValue").textContent=money(dashboardActualProfit);
   if($("dashboardProfitNote"))$("dashboardProfitNote").textContent=`Realised: ${money(actualSoldProfit)} + unpaid-credit profit: ${money(unpaidCreditProfit)}`;
