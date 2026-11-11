@@ -1104,7 +1104,8 @@ async function loadStock(){
   const currentWeekCreditPayments=creditPaymentsForWeek(liveWeekStart);
   const currentWeekCreditProfit=currentWeekCreditPayments.reduce((n,p)=>n+Number(p.profit_amount||0),0);
   const currentWeekCreditQty=currentWeekCreditPayments.reduce((n,p)=>n+Number(p.crates_paid||0),0);
-  const dashSold=Math.max(0,dashboardWeekRows.reduce((sum,r)=>sum+Number(r.sold_quantity||0),0)-dashboardBatchPaidCreditQty+currentWeekCreditQty);
+  // Sold crates are counted once from the authoritative stock-batch sold_quantity field, exactly as the live billboard does. Credit-payment ledger entries settle an existing credit sale; they are not additional sales.
+   const dashSold=dashboardWeekRows.reduce((sum,r)=>sum+Number(r.sold_quantity||0),0);
   const actualSoldProfit=dashboardWeekRows.reduce((sum,r)=>sum+Number(r.profit_loss||0),0)-dashboardBatchPaidCreditProfit+currentWeekCreditProfit;
   const dashboardBatchIds=new Set(dashboardWeekRows.map(r=>String(r.id)));
   const openCreditRows=(creditRows||[]).filter(c=>Math.max(0,Number(c.amount_due||0)-Number(c.amount_paid||0))>0.009);
@@ -1182,7 +1183,8 @@ async function loadStock(){
     cash+=Number(r.cash_in_hand??(cap+Number(r.sales_revenue||0)-pur));
   });
   profit=profit-selectedBatchPaidCreditProfit+selectedWeekPaymentProfit;
-  soldWeek=Math.max(0,soldWeek-selectedBatchPaidCreditQty+selectedWeekPaymentQty);
+  // Match the dashboard and live billboard: credit repayments do not create extra sold crates.
+   // The original sale is already represented once in each stock batch sold_quantity. 
   const selectedWeekUnpaidCredit=(creditRows||[]).filter(c=>
     (rows||[]).some(r=>String(r.id)===String(c.stock_batch_id)) &&
     Math.max(0,Number(c.amount_due||0)-Number(c.amount_paid||0))>0.009
