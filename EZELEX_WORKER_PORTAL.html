@@ -606,6 +606,25 @@ function mondayDateISO(value=today()){
   d.setDate(d.getDate()-(day===0?6:day-1));
   return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
 }
+// SINGLE SOURCE OF TRUTH for weekly stock figures.
+// Dashboard, Weekly Stock Book and live billboard must all use this exact
+// week filter and these exact batch fields. Credit ledgers are not added here.
+function getAuthoritativeWeekStockRows(weekId,weekStart,source=liveStockRows){
+  const id=String(weekId||"");
+  const start=String(weekStart||mondayDateISO(today()));
+  return (source||[]).filter(r=>!r.deleted_at).filter(r=>
+    r.week_id?String(r.week_id)===id:
+    mondayDateISO(r.stock_date||r.created_at||today())===start
+  );
+}
+function getAuthoritativeWeekTotals(weekId,weekStart,source=liveStockRows){
+  const rows=getAuthoritativeWeekStockRows(weekId,weekStart,source);
+  return {
+    rows,
+    sold:rows.reduce((n,r)=>n+Number(r.sold_quantity||0),0),
+    realisedProfit:rows.reduce((n,r)=>n+Number(r.profit_loss||0),0)
+  };
+}
 function addDaysISO(value,days){const d=new Date(String(value).slice(0,10)+"T12:00:00");d.setDate(d.getDate()+days);return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");}
 function weekLabel(w){return w?`${dateOnly(w.week_start)} – ${dateOnly(w.week_end)}`:"No weekly book";}
 // Read existing records by the authenticated Supabase UUID first. If older rows were saved
@@ -1102,12 +1121,9 @@ async function loadStock(){
   // Match the live billboard exactly: use the same live stock-batch cache,
   // current-week filter, and profit_loss field. Do not add unpaid-credit profit
   // or re-add credit-payment ledger profit on top of this figure.
-  const billboardWeekRows=(liveStockRows||[]).filter(r=>!r.deleted_at).filter(r=>
-    r.week_id?String(r.week_id)===String(currentStockWeek?.id||""):
-    mondayDateISO(r.stock_date||r.created_at||today())===liveWeekStart
-  );
-  const dashSold=billboardWeekRows.reduce((sum,r)=>sum+Number(r.sold_quantity||0),0);
-  const actualSoldProfit=billboardWeekRows.reduce((sum,r)=>sum+Number(r.profit_loss||0),0);
+  const currentWeekTotals=getAuthoritativeWeekTotals(currentStockWeek?.id,liveWeekStart);
+  const dashSold=currentWeekTotals.sold;
+  const actualSoldProfit=currentWeekTotals.realisedProfit;
   const dashboardBatchIds=new Set(dashboardWeekRows.map(r=>String(r.id)));
   const openCreditRows=(creditRows||[]).filter(c=>Math.max(0,Number(c.amount_due||0)-Number(c.amount_paid||0))>0.009);
   // Match Management Centre current-stock accounting: include every still-open credit batch for this worker, including credit originating in an earlier week.
@@ -1172,26 +1188,24 @@ async function loadStock(){
     (!r.week_id && mondayDateISO(r.stock_date||r.created_at||today())===String(chosenStart))
   );
   let units=0,value=0,revenue=0,profit=0,cash=0,purchased=0,soldWeek=0;
-  const selectedBatchPaidCreditProfit=creditPaymentProfitForRows(rows);
-  const selectedBatchPaidCreditQty=creditPaymentQtyForRows(rows);
-  const selectedWeekPayments=creditPaymentsForWeek(chosenStart);
-  const selectedWeekPaymentProfit=selectedWeekPayments.reduce((n,p)=>n+Number(p.profit_amount||0),0);
-  const selectedWeekPaymentQty=selectedWeekPayments.reduce((n,p)=>n+Number(p.crates_paid||0),0);
+  // One authoritative weekly source for sold quantity and profit: this is the
+  // same liveStockRows cache and week-selection rule used by the live billboard.
+  // Credit-payment ledger rows must never be added to batch profit a second time.
+  const authoritativeWeekRows=getAuthoritativeWeekStockRows(chosenWeekId,chosenStart);
   rows.forEach(r=>{
     units+=Number(r.remaining_quantity||0);
     value+=Number(r.remaining_value||0);
     revenue+=Number(r.sales_revenue||0);
-    profit+=Number(r.profit_loss||0);
     // Count every non-carry-forward batch attached to this week. Do not require
     // stock_date to fall inside the week as well: week_id is the authoritative link.
     if(r.stock_type!=="carry_forward")purchased+=Number(r.total_quantity||0);
-    soldWeek+=Number(r.sold_quantity||0);
     const cap=Number(r.capital_amount??r.purchase_total??0),pur=Number(r.purchase_total||0);
     cash+=Number(r.cash_in_hand??(cap+Number(r.sales_revenue||0)-pur));
   });
-  profit=profit-selectedBatchPaidCreditProfit+selectedWeekPaymentProfit;
-  // Match the dashboard and live billboard: credit repayments do not create extra sold crates.
-   // The original sale is already represented once in each stock batch sold_quantity. 
+  soldWeek=authoritativeWeekRows.reduce((sum,r)=>sum+Number(r.sold_quantity||0),0);
+  profit=authoritativeWeekRows.reduce((sum,r)=>sum+Number(r.profit_loss||0),0);
+  // Unpaid credit stays visible in the stock projection, but is not counted as
+  // another sale or added to realised weekly profit.
   const selectedWeekUnpaidCredit=(creditRows||[]).filter(c=>
     (rows||[]).some(r=>String(r.id)===String(c.stock_batch_id)) &&
     Math.max(0,Number(c.amount_due||0)-Number(c.amount_paid||0))>0.009
@@ -2474,7 +2488,7 @@ window.addEventListener("load",()=>start(),{once:true});
   const rows=(liveStockRows||[]).filter(r=>!r.deleted_at);
   const weekId=String(currentStockWeek?.id||'');
   const start=mondayDateISO(today());
-  const thisWeek=rows.filter(r=>r.week_id?String(r.week_id)===weekId:mondayDateISO(r.stock_date||r.created_at||today())===start);
+  const thisWeek=getAuthoritativeWeekStockRows(weekId,start,rows);
   const soldToday=(stockHistoryRows||[]).filter(h=>dateOnly(h.changed_at)===today()).reduce((n,h)=>n+Math.max(0,Number(h.sold_delta||0)),0);
   const soldWeek=thisWeek.reduce((n,r)=>n+Number(r.sold_quantity||0),0);
   const remaining=thisWeek.reduce((n,r)=>n+Number(r.remaining_quantity||0),0);
