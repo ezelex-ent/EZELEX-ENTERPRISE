@@ -343,7 +343,7 @@ th,td{padding:12px;border-bottom:1px solid #e6ebf1;text-align:left;font-size:14p
         <div><label>Stock Date (you can backdate stock)</label><input id="stockDate" type="date" required></div>
         <div><label>Product / Stock Item</label><input id="stockProduct" type="text" placeholder="e.g. Eggs - 30 crate" required></div>
         <div><label>Total Quantity Bought</label><input id="stockTotal" type="number" min="0" step="1" placeholder="100" required></div>
-        <div id="capitalAmountField"><label>Starting Capital (GHS)</label><input id="capitalAmount" type="number" min="0" step="0.01" placeholder="5000" required></div>
+        <div id="capitalAmountEditField"><label>Starting Capital (GHS)</label><input id="capitalAmount" type="number" min="0" step="0.01" placeholder="5000" required></div>
         <div><label>Purchase Cost per Unit (GHS)</label><input id="costPerUnit" type="number" min="0" step="0.01" placeholder="50" required></div>
         <div><label>Selling Price Per Unit (GHS)</label><input id="sellPrice" type="number" min="0" step="0.01" placeholder="50" required></div>
         <div><label>Sold Quantity</label><input id="stockSold" type="number" min="0" step="1" value="0"></div>
@@ -1647,11 +1647,10 @@ function startStockEdit(r){
   $("stockDate").value=dateOnly(r.stock_date)||today(); $("stockProduct").value=r.product_service||"";
   $("stockTotal").value=Number(r.total_quantity||0); $("capitalAmount").value=Number(r.capital_amount ?? r.purchase_total ?? 0); $("costPerUnit").value=Number(r.cost_per_unit ?? (Number(r.total_quantity||0)>0?Number(r.purchase_total||0)/Number(r.total_quantity||0):0));
   $("sellPrice").value=Number(r.selling_price_per_unit||0); $("stockSold").value=stockCorrectionMode?Number(r.sold_quantity||0):0; $("stockDamage").value=Number(r.damage_quantity||0); $("stockNotes").value=r.notes||"";
-  $("capitalAmountField")?.classList.add("hidden");
-  const soldLabel=$("stockSold")?.previousElementSibling;
-  if(soldLabel)soldLabel.textContent=stockCorrectionMode?"Sold Quantity (correct total)":"Sold Quantity to Add";
+  $("capitalAmountEditField")?.classList.add("hidden");
+  const soldLabel=$("stockSold")?.previousElementSibling;if(soldLabel)soldLabel.textContent=stockCorrectionMode?"Sold Quantity (correct total)":"Sold Quantity to Add";
   $("saveStockBtn").textContent="Update Stock Record"; $("cancelEditStockBtn").style.display="inline-block"; updateStockFormCreditSummary(r.id); calculateStock(); document.getElementById("stockForm").scrollIntoView({behavior:"smooth",block:"center"});
-  msg("stockMsg",stockCorrectionMode?"Correction mode: enter the corrected cumulative sold quantity.":"Enter only the quantity sold in this new transaction. It will be added to the previously recorded sold total automatically. Starting Capital is preserved.","success");
+  msg("stockMsg",stockCorrectionMode?"Correction mode: enter the corrected cumulative sold quantity.":"Enter only the quantity sold in this transaction. It will be added to the previous sold total. Starting Capital is preserved.","success");
 }
 window.editStock=async function(id){
   if(!currentUser||!profile){msg("stockMsg","Please sign in again before editing stock.","error");return;}
@@ -1670,7 +1669,7 @@ window.editStock=async function(id){
   setTimeout(()=>$("manageStockPanel")?.scrollIntoView({behavior:"smooth",block:"start"}),50);
 };
 function cancelStockEdit(){
-  editingStockId=""; editingStockOriginal=null; stockCorrectionMode=false; $("editingStockId").value=""; $("stockForm").reset(); $("capitalAmountField")?.classList.remove("hidden"); const soldLabel=$("stockSold")?.previousElementSibling;if(soldLabel)soldLabel.textContent="Sold Quantity"; $("stockDate").value=today(); $("stockSold").value=0; $("stockDamage").value=0; $("saveStockBtn").textContent="Save Stock Record"; $("cancelEditStockBtn").style.display="none"; $("deleteStockBtn").style.display="none"; updateStockFormCreditSummary(""); calculateStock(); msg("stockMsg","Edit cancelled","");
+  editingStockId=""; editingStockOriginal=null; stockCorrectionMode=false; $("editingStockId").value=""; $("stockForm").reset(); $("capitalAmountEditField")?.classList.remove("hidden"); const soldLabel=$("stockSold")?.previousElementSibling;if(soldLabel)soldLabel.textContent="Sold Quantity"; $("stockDate").value=today(); $("stockSold").value=0; $("stockDamage").value=0; $("saveStockBtn").textContent="Save Stock Record"; $("cancelEditStockBtn").style.display="none"; $("deleteStockBtn").style.display="none"; updateStockFormCreditSummary(""); calculateStock(); msg("stockMsg","Edit cancelled","");
 }
 $("cancelEditStockBtn").onclick=cancelStockEdit;
 $("deleteStockBtn").onclick=async()=>{
@@ -1695,7 +1694,7 @@ $("saveStockBtn").onclick=async()=>{
   if(!editingStockId&&(!intakeWeek||(!activeWeekCorrection&&intakeWeek.status!=="open"))){msg("stockMsg","The selected weekly stock book is not open for a new purchase.","error");return;}
   if(editingStockId&&editingStockOriginal?.week_id&&String(editingStockOriginal.week_id)!==String(currentStockWeek?.id||"")&&(!activeWeekCorrection||String(activeWeekCorrection.week_id)!==String(editingStockOriginal.week_id))){msg("stockMsg","Open the selected closed week for correction before saving its records.","error");return;}
   if(!editingStockId&&selectedStockWeekId&&selectedStockWeekId!==String(currentStockWeek?.id||"")&&(!activeWeekCorrection||String(activeWeekCorrection.week_id)!==String(selectedStockWeekId))){msg("stockMsg","You are viewing a previous week. Enter a backdated stock date to open its one-time historical entry session.","error");return;}
-  const total=num("stockTotal"),capital=num("capitalAmount"),unitCost=num("costPerUnit"),price=num("sellPrice"),purchase=(editingStockId&&editingStockOriginal?.stock_type==="carry_forward")?0:total*unitCost;
+  const total=num("stockTotal"),capital=editingStockId?Number(editingStockOriginal?.capital_amount??editingStockOriginal?.purchase_total??0):num("capitalAmount"),unitCost=num("costPerUnit"),price=num("sellPrice"),purchase=(editingStockId&&editingStockOriginal?.stock_type==="carry_forward")?0:total*unitCost;
   const enteredSold=num("stockSold"),enteredDamage=num("stockDamage");
   const old=editingStockOriginal||{};
   const oldSold=Number(old.sold_quantity||0),oldDamage=Number(old.damage_quantity||0),lossQuantity=Number(old.loss_quantity||0);
@@ -1741,7 +1740,7 @@ $("saveStockBtn").onclick=async()=>{
       const h2=await writeStockHistory(null,inserted.data,"Additional purchase created from stock edit");
       if(h1||h2)msg("stockMsg","Additional purchase saved. One of the audit entries needs administrator review.","error");
       else msg("stockMsg",addedPurchaseQty+" additional crates saved as a new purchase this week. Original purchase history preserved.","success");
-      const savedDate=today();editingStockId="";editingStockOriginal=null;stockCorrectionMode=false;$('editingStockId').value="";$('stockForm').reset();$('capitalAmountField')?.classList.remove('hidden');const soldLabel=$('stockSold')?.previousElementSibling;if(soldLabel)soldLabel.textContent="Sold Quantity";$('stockDate').value=savedDate;$('stockSold').value=0;$('stockDamage').value=0;$('saveStockBtn').textContent="Save Stock Record";$('cancelEditStockBtn').style.display="none";$('deleteStockBtn').style.display="none";updateStockFormCreditSummary("");calculateStock();await Promise.all([loadStock(),loadStockHistory(),loadStockWeeks()]);return;
+      const savedDate=today();editingStockId="";editingStockOriginal=null;stockCorrectionMode=false;$('editingStockId').value="";$('stockForm').reset();$('capitalAmountEditField')?.classList.remove('hidden');const soldLabel=$('stockSold')?.previousElementSibling;if(soldLabel)soldLabel.textContent="Sold Quantity";$('stockDate').value=savedDate;$('stockSold').value=0;$('stockDamage').value=0;$('saveStockBtn').textContent="Save Stock Record";$('cancelEditStockBtn').style.display="none";$('deleteStockBtn').style.display="none";updateStockFormCreditSummary("");calculateStock();await Promise.all([loadStock(),loadStockHistory(),loadStockWeeks()]);return;
     }
     const purchaseChanged=beforeTotal!==total||Math.abs(beforeUnit-unitCost)>0.0001;
     const historyAction=purchaseChanged?"Stock updated — purchase quantity/unit cost changed":"Stock updated";
@@ -1763,7 +1762,7 @@ $("saveStockBtn").onclick=async()=>{
   }
   const savedStockDate=record.stock_date;
   msg("stockMsg",wasEditing?"Stock updated and date/time history recorded.":"Stock record saved successfully and sent to Ezelex admin.","success");
-  editingStockId=""; editingStockOriginal=null; $("editingStockId").value=""; $("stockForm").reset(); $("capitalAmountField")?.classList.remove("hidden"); const soldLabel=$("stockSold")?.previousElementSibling;if(soldLabel)soldLabel.textContent="Sold Quantity"; $("stockDate").value=savedStockDate||today(); $("stockSold").value=0; $("stockDamage").value=0; $("saveStockBtn").textContent="Save Stock Record"; $("cancelEditStockBtn").style.display="none"; $("deleteStockBtn").style.display="none"; updateStockFormCreditSummary(""); calculateStock(); await Promise.all([loadStock(),loadStockHistory(),loadStockWeeks()]);
+  editingStockId=""; editingStockOriginal=null; $("editingStockId").value=""; $("stockForm").reset(); $("capitalAmountEditField")?.classList.remove("hidden"); const soldLabel=$("stockSold")?.previousElementSibling;if(soldLabel)soldLabel.textContent="Sold Quantity"; $("stockDate").value=savedStockDate||today(); $("stockSold").value=0; $("stockDamage").value=0; $("saveStockBtn").textContent="Save Stock Record"; $("cancelEditStockBtn").style.display="none"; $("deleteStockBtn").style.display="none"; updateStockFormCreditSummary(""); calculateStock(); await Promise.all([loadStock(),loadStockHistory(),loadStockWeeks()]);
   if(activeWeekCorrection)msg("weeklyStockMsg","Historical record saved. Continue correcting this week, then finish the one-time correction to reconcile and permanently lock it.","success");
   }catch(error){
     console.error("Stock save/update failed:",error);
