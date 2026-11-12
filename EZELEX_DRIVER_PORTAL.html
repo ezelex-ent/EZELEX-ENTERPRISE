@@ -317,14 +317,14 @@ th,td{padding:12px;border-bottom:1px solid #e6edf4}
     <button type="button" id="driverMenuToggle" class="primary" aria-expanded="false" aria-controls="driverMenu">☰ Menu</button>
     <nav id="driverMenu" class="driverMenu hidden" aria-label="Driver menu">
       <button type="button" data-driver-go="recordSale">Record Sale</button>
-      <button type="button" data-driver-go="paymentWarnings">Payment Warnings &amp; Overdue Weeks</button>
-      <button type="button" data-driver-go="owingShortfall">Owing / Shortfall &amp; Payment Plan</button>
-      <button type="button" data-driver-go="paymentHistory">Payment History Calendar</button>
-      <button type="button" data-driver-go="approvalHistory">Approval/Reject History</button>
-      <button type="button" data-driver-go="contract">My Contract</button>
-      <button type="button" data-driver-go="profile">Profile</button>
-      <button type="button" data-driver-go="communication">Communication</button>
-      <button type="button" data-driver-go="dashboard">Back to dashboard</button>
+      <button type="button" data-driver-go="owingShortfall">Contract Shortfalls &amp; Payment Plan</button>
+      <button type="button" data-driver-go="paymentWarnings">Payment Due &amp; Overdue</button>
+      <button type="button" data-driver-go="contract">Contract Overview</button>
+      <button type="button" data-driver-go="paymentHistory">Payment Ledger &amp; Calendar</button>
+      <button type="button" data-driver-go="approvalHistory">Sales Approval History</button>
+      <button type="button" data-driver-go="profile">My Profile</button>
+      <button type="button" data-driver-go="communication">Messages &amp; Updates</button>
+      <button type="button" data-driver-go="dashboard">Back to Dashboard</button>
       <button type="button" id="driverMenuLogout" class="menuLogout">Log Out</button>
     </nav>
   </div>
@@ -1878,9 +1878,66 @@ function driverGhanaClock(){
  return {iso,time,nowMs:Date.parse(`${iso}T${time}Z`)};
 }
 function driverWeekPaymentDueAt(sunday){return Date.parse(addDaysISO(sunday,1)+"T15:00:00Z");}
+function driverAdminCompatibleOverdueRows(contracts,reports,payments,gh){
+ const today=new Date(gh.iso+'T12:00:00Z');
+ const currentMonday=new Date(today);
+ currentMonday.setUTCDate(currentMonday.getUTCDate()-((currentMonday.getUTCDay()+6)%7));
+ const rows=[];
+ (contracts||[]).forEach(c=>{
+  const startISO=String(c.contract_start_date||c.contract_start||'').slice(0,10);
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(startISO))return;
+  const startDate=new Date(startISO+'T00:00:00Z');
+  let wsDate=new Date(startDate);
+  wsDate.setUTCDate(wsDate.getUTCDate()-((wsDate.getUTCDay()+6)%7));
+  const endISO=String(c.contract_end_date||c.contract_end||'').slice(0,10);
+  const historicalWeeks=driverHistoricalWeeks(payments,c.id);
+  for(let guard=0;guard<520;guard++){
+   const weDate=new Date(wsDate);
+   weDate.setUTCDate(weDate.getUTCDate()+6);
+   if(weDate>=currentMonday)break;
+   const ws=wsDate.toISOString().slice(0,10);
+   const we=weDate.toISOString().slice(0,10);
+   if(endISO&&ws>endISO)break;
+   const dueAt=driverWeekPaymentDueAt(we);
+   const isOverdue=gh.nowMs>=dueAt;
+   const weekReports=(reports||[]).filter(r=>
+    String(r.contract_id)===String(c.id)&&
+    String(r.week_start||'').slice(0,10)===ws&&
+    String(r.week_end||'').slice(0,10)===we
+   );
+   const weekLedger=(payments||[]).filter(p=>
+    String(p.contract_id)===String(c.id)&&
+    String(p.payment_date||p.created_at||'').slice(0,10)>=ws&&
+    String(p.payment_date||p.created_at||'').slice(0,10)<=we
+   );
+   const ledgerPaid=weekLedger.reduce((n,p)=>n+Math.max(0,Number(p.amount||0)),0);
+   const historical=historicalWeeks.get(ws+'|'+we)||null;
+   const approvedReport=weekReports
+    .filter(r=>String(r.status||'').toLowerCase()==='approved')
+    .reduce((n,r)=>n+Math.max(0,Number(r.payment_amount||0)),0);
+   const activeStart=new Date(Math.max(wsDate.getTime(),startDate.getTime()));
+   const contractEnd=endISO?new Date(endISO+'T00:00:00Z'):null;
+   const activeEnd=contractEnd&&contractEnd<weDate?contractEnd:weDate;
+   const activeDays=Math.max(0,Math.floor((activeEnd-activeStart)/86400000)+1);
+   const daily=Number(c.daily_target||0);
+   const weekly=Number(c.weekly_target||daily*7);
+   const normalExpected=activeDays>=7?weekly:daily*activeDays;
+   const expected=historical?(historical.target||historical.paid):normalExpected;
+   const confirmed=historical?historical.paid:(ledgerPaid>0?ledgerPaid:approvedReport);
+   const outstanding=Math.max(0,expected-confirmed);
+   const sortedReports=weekReports.slice().sort((a,b)=>String(b.submitted_at||'').localeCompare(String(a.submitted_at||'')));
+   const report=sortedReports[0]||null;
+   const pending=weekReports.some(r=>['pending','submitted','awaiting_review','awaiting review','pending_review'].includes(String(r.status||'').trim().toLowerCase()));
+   if(isOverdue&&outstanding>0.009)rows.push({monday:ws,sunday:we,expected,confirmed,outstanding,pending,report});
+   wsDate.setUTCDate(wsDate.getUTCDate()+7);
+  }
+ });
+ return rows.sort((a,b)=>b.monday.localeCompare(a.monday));
+}
+
 async function loadDriverPaymentWarnings(){
  const body=$("driverPaymentWarningsBody");if(!body||!currentUser)return;
- body.innerHTML='<tr><td colspan="6">Checking completed contract weeks…</td></tr>';
+ body.innerHTML='<tr><td colspan="6">Loading…</td></tr>';
  try{
   const [cr,rr,pr]=await Promise.all([
    db.from("tricycle_contracts").select("*").eq("driver_user_id",currentUser.id),
@@ -1888,34 +1945,19 @@ async function loadDriverPaymentWarnings(){
    db.from("tricycle_contract_payments").select("*").order("payment_date",{ascending:false})
   ]);
   const failed=[cr,rr,pr].find(x=>x.error);if(failed)throw failed.error;
-  const contracts=cr.data||[],ids=new Set(contracts.map(c=>String(c.id))),reports=(rr.data||[]).filter(r=>ids.has(String(r.contract_id))),payments=(pr.data||[]).filter(p=>ids.has(String(p.contract_id)));
-  const gh=driverGhanaClock(),today=gh.iso,currentMonday=mondayISO(today),rows=[];
-  for(const c of contracts){
-   const start=String(c.contract_start_date||c.contract_start||'').slice(0,10),end=String(c.contract_end_date||c.contract_end||'').slice(0,10);if(!start||!end)continue;
-   let monday=mondayISO(start);
-   while(monday<currentMonday&&(!end||monday<=end)){
-    const sunday=sundayISO(monday),dueAt=driverWeekPaymentDueAt(sunday),isDue=gh.nowMs>=dueAt;
-    const activeStart=monday<start?start:monday,activeEnd=end&&end<sunday?end:sunday;
-    const activeDays=Math.max(0,Math.floor((new Date(activeEnd+'T12:00:00Z')-new Date(activeStart+'T12:00:00Z'))/86400000)+1);
-    const daily=Number(c.daily_target||0),weekly=Number(c.weekly_target||daily*7),normalExpected=activeDays>=7?weekly:daily*activeDays;
-    const weekReports=reports.filter(r=>String(r.contract_id)===String(c.id)&&String(r.week_start||'').slice(0,10)===monday&&String(r.week_end||'').slice(0,10)===sunday);
-    const approved=weekReports.filter(r=>String(r.status||'').toLowerCase()==='approved');
-    const pending=weekReports.some(r=>['pending','submitted','awaiting_review','awaiting review','pending_review'].includes(String(r.status||'').trim().toLowerCase()));
-    const periodAmounts=driverPeriodConfirmedAmounts(c.id,{start:monday,end:sunday},payments,reports);
-    const expected=periodAmounts.historicalTarget>0?periodAmounts.historicalTarget:normalExpected;
-    const confirmed=periodAmounts.confirmed;
-    const outstanding=Math.max(0,expected-confirmed);
-    const report=weekReports.slice().sort((a,b)=>String(b.submitted_at||'').localeCompare(String(a.submitted_at||'')))[0]||null;
-    if(isDue&&outstanding>0.009)rows.push({monday,sunday,expected,confirmed,outstanding,pending,report});
-    monday=addDaysISO(monday,7);
-   }
-  }
-  rows.sort((a,b)=>b.monday.localeCompare(a.monday));
-  setText("driverOverdueWeekCount",rows.length);setText("driverOverdueAmount",money(rows.reduce((n,r)=>n+r.outstanding,0)));
-  body.innerHTML=rows.length?rows.map(r=>`<tr><td>${esc(r.monday)} – ${esc(r.sunday)}</td><td>${money(r.expected)}</td><td>${money(r.confirmed)}</td><td><strong style="color:#b42318">${money(r.outstanding)}</strong></td><td>${r.pending?"Pending review":r.report?esc(r.report.status||"Submitted"):"Not submitted"}</td><td><button type="button" class="primary driver-plan-action" onclick="driverStartPaymentPlan('${r.monday}','${r.sunday}')">Record sales / payment</button></td></tr>`).join(""):'<tr><td colspan="6">No overdue payments. The previous Monday–Sunday week becomes overdue at 3:00 PM Ghana time on Monday.</td></tr>';
-  if(rows.length)msg("driverPaymentWarningsMsg","You have "+rows.length+" completed week(s) with payment outstanding after the Monday 3:00 PM Ghana deadline. Historical allocations and approved reports are recognised. Weekly report shortfalls are tracked separately.","error");
-  else msg("driverPaymentWarningsMsg","No overdue payment was identified. Historical allocations and approved reports are recognised. Weekly report shortfalls are tracked separately.","success");
- }catch(err){body.innerHTML='<tr><td colspan="6">Payment warnings could not be loaded.</td></tr>';msg("driverPaymentWarningsMsg","We could not verify your payment position. Please contact Ezelex Enterprise. "+esc(err?.message||""),"error");}
+  const contracts=cr.data||[],ids=new Set(contracts.map(c=>String(c.id)));
+  const reports=(rr.data||[]).filter(r=>ids.has(String(r.contract_id)));
+  const payments=(pr.data||[]).filter(p=>ids.has(String(p.contract_id)));
+  const rows=driverAdminCompatibleOverdueRows(contracts,reports,payments,driverGhanaClock());
+  setText("driverOverdueWeekCount",rows.length);
+  setText("driverOverdueAmount",money(rows.reduce((n,r)=>n+r.outstanding,0)));
+  body.innerHTML=rows.length?rows.map(r=>`<tr><td>${esc(r.monday)} – ${esc(r.sunday)}</td><td>${money(r.expected)}</td><td>${money(r.confirmed)}</td><td><strong style="color:#b42318">${money(r.outstanding)}</strong></td><td>${r.pending?"Pending review":r.report?esc(r.report.status||"Submitted"):"Not submitted"}</td><td><button type="button" class="primary driver-plan-action" onclick="driverStartPaymentPlan('${r.monday}','${r.sunday}')">Record sales / payment</button></td></tr>`).join(""):'<tr><td colspan="6">No overdue payments.</td></tr>';
+  if(rows.length)msg("driverPaymentWarningsMsg",rows.length+" completed week(s) have an outstanding payment.","error");
+  else msg("driverPaymentWarningsMsg","No overdue payments.","success");
+ }catch(err){
+  body.innerHTML='<tr><td colspan="6">Payment warnings could not be loaded.</td></tr>';
+  msg("driverPaymentWarningsMsg","Payment position could not be verified. Please contact admin. "+esc(err?.message||""),"error");
+ }
 }
 async function loadDriverOwingShortfall(){
  const body=$("driverOwingShortfallBody");if(!body||!currentUser)return;
@@ -1950,27 +1992,9 @@ async function refreshDriverLiveBillboard(){
   const contracts=cr.data||[],ids=new Set(contracts.map(c=>String(c.id)));
   const reports=(rr.data||[]).filter(r=>ids.has(String(r.contract_id)));
   const payments=(pr.data||[]).filter(p=>ids.has(String(p.contract_id)));
-  const gh=driverGhanaClock(),currentMonday=mondayISO(gh.iso);
-  let overdue=0,overdueAmount=0;
-  for(const c of contracts){
-   const start=String(c.contract_start_date||"").slice(0,10);if(!start)continue;
-   const end=String(c.contract_end_date||"").slice(0,10);
-   let week=mondayISO(start);
-   while(week<currentMonday&&(!end||week<=end)){
-    const sunday=sundayISO(week),dueAt=driverWeekPaymentDueAt(sunday);
-    if(gh.nowMs<dueAt){week=addDaysISO(week,7);continue;}
-    const daily=Number(c.daily_target||0),weekly=Number(c.weekly_target||daily*7);
-    const activeStart=week<start?start:week,contractEnd=end&&end<sunday?end:sunday;
-    const activeDays=Math.max(0,Math.floor((new Date(contractEnd+"T12:00:00")-new Date(activeStart+"T12:00:00"))/86400000)+1);
-    const expected=activeDays>=7?weekly:daily*activeDays;
-    const historical=driverHistoricalWeeks(payments,c.id).get(week+'|'+sunday)||null;
-    // Same ledger inclusion rule as Admin: keep historical rows dated in this week, even when allocation metadata is partial-period.
-    const ledgerPaid=payments.filter(p=>String(p.contract_id)===String(c.id)&&String(p.payment_date||p.created_at||"").slice(0,10)>=week&&String(p.payment_date||p.created_at||"").slice(0,10)<=sunday).reduce((n,p)=>n+Math.max(0,Number(p.amount||0)),0);
-    const approved=reports.filter(r=>String(r.contract_id)===String(c.id)&&String(r.week_start||"").slice(0,10)===week&&String(r.week_end||"").slice(0,10)===sunday&&String(r.status||"").toLowerCase()==="approved").reduce((n,r)=>n+Math.max(0,Number(r.payment_amount||0)),0);
-    const confirmed=historical?historical.paid:(ledgerPaid>0?ledgerPaid:approved),dueExpected=historical?(historical.target||historical.paid):expected;const bal=Math.max(0,dueExpected-confirmed);if(bal>0.009){overdue++;overdueAmount+=bal;}
-    week=addDaysISO(week,7);
-   }
-  }
+  const overdueRows=driverAdminCompatibleOverdueRows(contracts,reports,payments,driverGhanaClock());
+  const overdue=overdueRows.length;
+  const overdueAmount=overdueRows.reduce((sum,row)=>sum+row.outstanding,0);
   const pending=reports.filter(r=>["pending","submitted","awaiting_review","awaiting review","pending_review"].includes(String(r.status||"").trim().toLowerCase()));
   const approved=reports.filter(r=>String(r.status||"").toLowerCase()==="approved");
   const rejected=reports.filter(r=>["rejected","declined"].includes(String(r.status||"").toLowerCase()));
