@@ -1044,13 +1044,18 @@ function creditPaymentsForWeek(weekStart){return (creditPaymentRows||[]).filter(
 function calculateStock(){
   const total=num("stockTotal"),capital=editingStockId?Number(editingStockOriginal?.capital_amount??editingStockOriginal?.purchase_total??0):num("capitalAmount"),unitCost=num("costPerUnit"),purchase=total*unitCost,price=num("sellPrice"),enteredSold=num("stockSold"),sold=editingStockId&&!stockCorrectionMode?Number(editingStockOriginal?.sold_quantity||0)+enteredSold:enteredSold,damage=num("stockDamage"),loss=Number(editingStockOriginal?.loss_quantity||0);
   const unpaidQty=editingStockId?unpaidCreditForBatch(editingStockId):0,paidCredit=editingStockId?creditPaidForBatch(editingStockId):{qty:0,amount:0};
-  const remaining=Math.max(0,total-sold-damage-loss-unpaidQty),revenue=Math.max(0,sold-paidCredit.qty)*price+paidCredit.amount,soldCost=sold*unitCost,damageValue=damage*unitCost,remainingValue=remaining*unitCost,profit=revenue-soldCost-damageValue-loss*unitCost,accounted=sold+damage+loss+unpaidQty,cash=capital+revenue-purchase;
+  const remaining=Math.max(0,total-sold-damage-loss-unpaidQty),revenue=Math.max(0,sold-paidCredit.qty)*price+paidCredit.amount,soldCost=sold*unitCost,damageValue=damage*unitCost,remainingValue=remaining*unitCost,profit=revenue-soldCost-damageValue-loss*unitCost,accounted=sold+damage+loss+unpaidQty;
+  // Unsold reinvestment stock is still the worker's invested capital, not a cash loss.
+  // Move its remaining cost value into Starting Capital and out of the cash deficit.
+  const reinvestmentRows=(liveStockRows||[]).filter(r=>!r.deleted_at&&(r.stock_type==="reinvestment"||(r.stock_type!=="carry_forward"&&String(r.notes||"").toLowerCase().includes("additional purchase quantity added while editing an existing stock item"))));
+  const heldReinvestmentCapital=reinvestmentRows.reduce((sum,r)=>sum+(String(r.id)===String(editingStockId||"")?0:Math.max(0,Number(r.remaining_value??(Number(r.remaining_quantity||0)*Number(r.cost_per_unit||0))))),0);
+  const displayedCapital=capital+heldReinvestmentCapital,cash=capital+revenue-purchase+heldReinvestmentCapital;
   const outstandingCredit=(creditRows||[]).reduce((sum,c)=>sum+Math.max(0,Number(c.amount_due||0)-Number(c.amount_paid||0)),0);
   $("calcTotal").textContent=total+" units";$("calcTotalValue").textContent=money(purchase);
   $("calcSold").textContent=sold+" units";$("calcRevenue").textContent=money(revenue)+" revenue";
   $("calcRemaining").textContent=remaining+" units";$("calcRemainingValue").textContent=money(remainingValue)+" stock value";
   $("calcUnitCost").textContent=money(unitCost);$("calcSoldCost").textContent=money(soldCost);
-  $("calcDamageValue").textContent=money(damageValue);$("calcCapital").textContent=money(capital);$("calcCreditCapital").textContent=money(outstandingCredit);$("calcTotalCapital").textContent=money(capital+outstandingCredit);$("calcCashInHand").textContent=money(cash);$("calcSalesRevenue").textContent=money(revenue);
+  $("calcDamageValue").textContent=money(damageValue);$("calcCapital").textContent=money(displayedCapital);$("calcCreditCapital").textContent=money(outstandingCredit);$("calcTotalCapital").textContent=money(displayedCapital+outstandingCredit);$("calcCashInHand").textContent=money(cash);$("calcSalesRevenue").textContent=money(revenue);
   $("calcProfit").textContent=money(profit);$("calcAccounted").textContent=accounted+" units";
   const card=$("profitCard");card.classList.toggle("profit",profit>0);card.classList.toggle("loss",profit<0);
   $("profitLabel").textContent=profit>0?"You are making a profit":profit<0?"You are currently making a loss":"Break-even";
@@ -1703,7 +1708,10 @@ $("saveStockBtn").onclick=async()=>{
   const sold=editingStockId&&!stockCorrectionMode?oldSold+enteredSold:enteredSold;
   const damage=editingStockId&&enteredDamage<oldDamage?oldDamage+enteredDamage:enteredDamage;
   const paidCredit=editingStockId?creditPaidForBatch(editingStockId):{qty:0,amount:0};
-  const revenue=Math.max(0,sold-paidCredit.qty)*price+paidCredit.amount,creditOutstanding=Number(old.credit_outstanding||0),unpaidCreditQty=editingStockId?unpaidCreditForBatch(editingStockId):0,cash=capital+revenue-purchase;
+  const revenue=Math.max(0,sold-paidCredit.qty)*price+paidCredit.amount,creditOutstanding=Number(old.credit_outstanding||0),unpaidCreditQty=editingStockId?unpaidCreditForBatch(editingStockId):0;
+  const reinvestmentRowsForCash=(liveStockRows||[]).filter(r=>!r.deleted_at&&(r.stock_type==="reinvestment"||(r.stock_type!=="carry_forward"&&String(r.notes||"").toLowerCase().includes("additional purchase quantity added while editing an existing stock item"))));
+  const heldReinvestmentCapitalForCash=reinvestmentRowsForCash.reduce((sum,r)=>sum+(String(r.id)===String(editingStockId||"")?0:Math.max(0,Number(r.remaining_value??(Number(r.remaining_quantity||0)*Number(r.cost_per_unit||0))))),0);
+  const cash=capital+revenue-purchase+heldReinvestmentCapitalForCash;
   if(!$('stockDate').value||!$('stockProduct').value.trim()||total<=0||capital<0||unitCost<0||price<0||cash<0||sold+damage+lossQuantity+unpaidCreditQty>total){msg("stockMsg","Please check the stock quantities and costs. Available cash (starting capital plus recorded sales) cannot be negative, and sold + damage + loss + unpaid on-credit crates cannot be greater than total stock.","error");return;}
   const soldCost=sold*unitCost,damageValue=damage*unitCost,remaining=total-sold-damage-lossQuantity-unpaidCreditQty,remainingValue=remaining*unitCost;
   // Keep already-earned profit and add only the profit/loss from quantities newly recorded.
@@ -2514,7 +2522,7 @@ window.addEventListener("load",()=>start(),{once:true});
  const $f=id=>document.getElementById(id), fmt=n=>'GH₵'+Number(n||0).toLocaleString('en-GH',{minimumFractionDigits:2,maximumFractionDigits:2});
  let financeWeeks=[],financeExpenses=[],financeCashRow=null,financeWeekId=null;
  const reinvestmentSpendRows=rows=>(rows||[]).filter(r=>r.stock_type==='reinvestment'||(r.stock_type!=='carry_forward'&&String(r.notes||'').toLowerCase().includes('additional purchase quantity added while editing an existing stock item')));
- function calculateReinvestmentCash(rows){const active=(rows||[]).filter(r=>!r.deleted_at);const recovered=active.reduce((n,r)=>n+Math.max(0,Number(r.sold_cost||0)),0);const spent=reinvestmentSpendRows(active).reduce((n,r)=>n+Math.max(0,Number(r.purchase_total??(Number(r.total_quantity||0)*Number(r.cost_per_unit||0)))),0);return {recovered,spent,balance:recovered-spent};}
+ function calculateReinvestmentCash(rows){const active=(rows||[]).filter(r=>!r.deleted_at);const recovered=active.reduce((n,r)=>n+Math.max(0,Number(r.sold_cost||0)),0);const spendRows=reinvestmentSpendRows(active);const spent=spendRows.reduce((n,r)=>n+Math.max(0,Number(r.purchase_total??(Number(r.total_quantity||0)*Number(r.cost_per_unit||0)))),0);const heldCapital=spendRows.reduce((n,r)=>n+Math.max(0,Number(r.remaining_value??(Number(r.remaining_quantity||0)*Number(r.cost_per_unit||0)))),0);return {recovered,spent,heldCapital,balance:recovered-spent+heldCapital};}
  // The main portal script also needs this calculation. Export it explicitly;
  // a function declared inside this IIFE is otherwise private to this script.
  window.calculateReinvestmentCash=calculateReinvestmentCash;
