@@ -343,7 +343,7 @@ th,td{padding:12px;border-bottom:1px solid #e6ebf1;text-align:left;font-size:14p
         <div><label>Stock Date (you can backdate stock)</label><input id="stockDate" type="date" required></div>
         <div><label>Product / Stock Item</label><input id="stockProduct" type="text" placeholder="e.g. Eggs - 30 crate" required></div>
         <div><label>Total Quantity Bought</label><input id="stockTotal" type="number" min="0" step="1" placeholder="100" required></div>
-        <div><label>Starting Capital (GHS)</label><input id="capitalAmount" type="number" min="0" step="0.01" placeholder="5000" required></div>
+        <div id="capitalAmountField"><label>Starting Capital (GHS)</label><input id="capitalAmount" type="number" min="0" step="0.01" placeholder="5000" required></div>
         <div><label>Purchase Cost per Unit (GHS)</label><input id="costPerUnit" type="number" min="0" step="0.01" placeholder="50" required></div>
         <div><label>Selling Price Per Unit (GHS)</label><input id="sellPrice" type="number" min="0" step="0.01" placeholder="50" required></div>
         <div><label>Sold Quantity</label><input id="stockSold" type="number" min="0" step="1" value="0"></div>
@@ -1042,7 +1042,7 @@ function creditPaymentQtyForRows(rows){const ids=new Set((rows||[]).map(r=>Strin
 function creditPaymentsForWeek(weekStart){return (creditPaymentRows||[]).filter(p=>mondayDateISO(p.payment_date||p.created_at||today())===String(weekStart||""));}
 
 function calculateStock(){
-  const total=num("stockTotal"),capital=num("capitalAmount"),unitCost=num("costPerUnit"),purchase=total*unitCost,price=num("sellPrice"),sold=num("stockSold"),damage=num("stockDamage"),loss=Number(editingStockOriginal?.loss_quantity||0);
+  const total=num("stockTotal"),capital=editingStockId?Number(editingStockOriginal?.capital_amount??editingStockOriginal?.purchase_total??0):num("capitalAmount"),unitCost=num("costPerUnit"),purchase=total*unitCost,price=num("sellPrice"),enteredSold=num("stockSold"),sold=editingStockId&&!stockCorrectionMode?Number(editingStockOriginal?.sold_quantity||0)+enteredSold:enteredSold,damage=num("stockDamage"),loss=Number(editingStockOriginal?.loss_quantity||0);
   const unpaidQty=editingStockId?unpaidCreditForBatch(editingStockId):0,paidCredit=editingStockId?creditPaidForBatch(editingStockId):{qty:0,amount:0};
   const remaining=Math.max(0,total-sold-damage-loss-unpaidQty),revenue=Math.max(0,sold-paidCredit.qty)*price+paidCredit.amount,soldCost=sold*unitCost,damageValue=damage*unitCost,remainingValue=remaining*unitCost,profit=revenue-soldCost-damageValue-loss*unitCost,accounted=sold+damage+loss+unpaidQty,cash=capital+revenue-purchase;
   const outstandingCredit=(creditRows||[]).reduce((sum,c)=>sum+Math.max(0,Number(c.amount_due||0)-Number(c.amount_paid||0)),0);
@@ -1603,7 +1603,10 @@ window.correctStockFromHistory=async function(id){
   }
   await window.editStock(id);
   if(editingStockId && String(editingStockId)===String(id)){stockCorrectionMode=true;
-    msg("stockMsg","Correction mode opened for the original stock batch. Correct the figures and save. The portal will recalculate remaining stock, cash and profit/loss, and record this correction in the edit history.","success");
+    $("stockSold").value=Number(editingStockOriginal?.sold_quantity||0);
+    const soldLabel=$("stockSold")?.previousElementSibling;if(soldLabel)soldLabel.textContent="Sold Quantity (correct total)";
+    calculateStock();
+    msg("stockMsg","Correction mode opened for the original stock batch. Enter the corrected cumulative sold quantity. The portal will recalculate remaining stock, cash and profit/loss, and record this correction in the edit history.","success");
   }
 };
 
@@ -1643,9 +1646,12 @@ function startStockEdit(r){
   editingStockId=r.id||""; editingStockOriginal={...r}; $("editingStockId").value=editingStockId; $("deleteStockBtn").style.display="inline-block";
   $("stockDate").value=dateOnly(r.stock_date)||today(); $("stockProduct").value=r.product_service||"";
   $("stockTotal").value=Number(r.total_quantity||0); $("capitalAmount").value=Number(r.capital_amount ?? r.purchase_total ?? 0); $("costPerUnit").value=Number(r.cost_per_unit ?? (Number(r.total_quantity||0)>0?Number(r.purchase_total||0)/Number(r.total_quantity||0):0));
-  $("sellPrice").value=Number(r.selling_price_per_unit||0); $("stockSold").value=Number(r.sold_quantity||0); $("stockDamage").value=Number(r.damage_quantity||0); $("stockNotes").value=r.notes||"";
+  $("sellPrice").value=Number(r.selling_price_per_unit||0); $("stockSold").value=stockCorrectionMode?Number(r.sold_quantity||0):0; $("stockDamage").value=Number(r.damage_quantity||0); $("stockNotes").value=r.notes||"";
+  $("capitalAmountField")?.classList.add("hidden");
+  const soldLabel=$("stockSold")?.previousElementSibling;
+  if(soldLabel)soldLabel.textContent=stockCorrectionMode?"Sold Quantity (correct total)":"Sold Quantity to Add";
   $("saveStockBtn").textContent="Update Stock Record"; $("cancelEditStockBtn").style.display="inline-block"; updateStockFormCreditSummary(r.id); calculateStock(); document.getElementById("stockForm").scrollIntoView({behavior:"smooth",block:"center"});
-  msg("stockMsg","Editing stock batch. Update quantity, purchase cost per unit, sold or damage quantity, then save. ","success");
+  msg("stockMsg",stockCorrectionMode?"Correction mode: enter the corrected cumulative sold quantity.":"Enter only the quantity sold in this new transaction. It will be added to the previously recorded sold total automatically. Starting Capital is preserved.","success");
 }
 window.editStock=async function(id){
   if(!currentUser||!profile){msg("stockMsg","Please sign in again before editing stock.","error");return;}
@@ -1664,7 +1670,7 @@ window.editStock=async function(id){
   setTimeout(()=>$("manageStockPanel")?.scrollIntoView({behavior:"smooth",block:"start"}),50);
 };
 function cancelStockEdit(){
-  editingStockId=""; editingStockOriginal=null; stockCorrectionMode=false; $("editingStockId").value=""; $("stockForm").reset(); $("stockDate").value=today(); $("stockSold").value=0; $("stockDamage").value=0; $("saveStockBtn").textContent="Save Stock Record"; $("cancelEditStockBtn").style.display="none"; $("deleteStockBtn").style.display="none"; updateStockFormCreditSummary(""); calculateStock(); msg("stockMsg","Edit cancelled","");
+  editingStockId=""; editingStockOriginal=null; stockCorrectionMode=false; $("editingStockId").value=""; $("stockForm").reset(); $("capitalAmountField")?.classList.remove("hidden"); const soldLabel=$("stockSold")?.previousElementSibling;if(soldLabel)soldLabel.textContent="Sold Quantity"; $("stockDate").value=today(); $("stockSold").value=0; $("stockDamage").value=0; $("saveStockBtn").textContent="Save Stock Record"; $("cancelEditStockBtn").style.display="none"; $("deleteStockBtn").style.display="none"; updateStockFormCreditSummary(""); calculateStock(); msg("stockMsg","Edit cancelled","");
 }
 $("cancelEditStockBtn").onclick=cancelStockEdit;
 $("deleteStockBtn").onclick=async()=>{
@@ -1695,7 +1701,7 @@ $("saveStockBtn").onclick=async()=>{
   const oldSold=Number(old.sold_quantity||0),oldDamage=Number(old.damage_quantity||0),lossQuantity=Number(old.loss_quantity||0);
   // On edit, a lower quantity is treated as the additional quantity sold/damaged today;
   // an equal or higher value is treated as the cumulative quantity for this stock batch.
-  const sold=editingStockId&&!stockCorrectionMode&&enteredSold<oldSold?oldSold+enteredSold:enteredSold;
+  const sold=editingStockId&&!stockCorrectionMode?oldSold+enteredSold:enteredSold;
   const damage=editingStockId&&enteredDamage<oldDamage?oldDamage+enteredDamage:enteredDamage;
   const paidCredit=editingStockId?creditPaidForBatch(editingStockId):{qty:0,amount:0};
   const revenue=Math.max(0,sold-paidCredit.qty)*price+paidCredit.amount,creditOutstanding=Number(old.credit_outstanding||0),unpaidCreditQty=editingStockId?unpaidCreditForBatch(editingStockId):0,cash=capital+revenue-purchase;
@@ -1726,7 +1732,7 @@ $("saveStockBtn").onclick=async()=>{
       const originalPatch={...record,total_quantity:baseTotal,capital_amount:Number(editingStockOriginal?.capital_amount||0),cost_per_unit:beforeUnit,purchase_total:Number(editingStockOriginal?.purchase_total??(baseTotal*beforeUnit)),sold_quantity:baseSold,damage_quantity:baseDamage,loss_quantity:baseLoss,sales_revenue:baseSoldRevenue,sold_cost:baseSold*beforeUnit,damage_value:baseDamage*beforeUnit,loss_value:baseLoss*beforeUnit,remaining_quantity:baseRemaining,remaining_value:baseRemaining*beforeUnit,profit_loss:baseProfit,week_id:editingStockOriginal.week_id,stock_date:editingStockOriginal.stock_date};
       const updBase=await db.from("worker_stock_batches").update(originalPatch).eq("id",editingStockId).eq("worker_id",currentUser.id).select("id");
       if(updBase.error||!updBase.data?.length){msg("stockMsg","Could not preserve the original purchase while adding the new quantity: "+(updBase.error?.message||"No row updated"),"error");return;}
-      const addBatch={worker_id:currentUser.id,week_id:purchaseWeek.id,stock_type:"reinvestment",stock_date:activeWeekCorrection?$("stockDate").value:today(),product_service:record.product_service,total_quantity:addedPurchaseQty,capital_amount:0,cash_in_hand:0,purchase_total:addedPurchaseQty*unitCost,cost_per_unit:unitCost,selling_price_per_unit:price,sold_quantity:0,damage_quantity:0,loss_quantity:0,sales_revenue:0,sold_cost:0,damage_value:0,loss_value:0,remaining_quantity:addedPurchaseQty,remaining_value:addedPurchaseQty*unitCost,profit_loss:0,credit_quantity:0,credit_outstanding:0,credit_sales_normalized:true,notes:"Additional purchase quantity added while editing an existing stock item. Original batch preserved."};
+      const addBatch={worker_id:currentUser.id,week_id:purchaseWeek.id,stock_type:"reinvestment",stock_date:activeWeekCorrection?$("stockDate").value:today(),product_service:record.product_service,total_quantity:addedPurchaseQty,capital_amount:addedPurchaseQty*unitCost,cash_in_hand:0,purchase_total:addedPurchaseQty*unitCost,cost_per_unit:unitCost,selling_price_per_unit:price,sold_quantity:0,damage_quantity:0,loss_quantity:0,sales_revenue:0,sold_cost:0,damage_value:0,loss_value:0,remaining_quantity:addedPurchaseQty,remaining_value:addedPurchaseQty*unitCost,profit_loss:0,credit_quantity:0,credit_outstanding:0,credit_sales_normalized:true,notes:"Additional purchase quantity added while editing an existing stock item. Original batch preserved."};
       const reinvestmentLedger=calculateReinvestmentCash(liveStockRows||[]),purchaseDebit=addedPurchaseQty*unitCost;
       if(reinvestmentLedger.balance<0||purchaseDebit>reinvestmentLedger.balance){msg("stockMsg","Additional purchase blocked. Reinvestment Cash in Hand is "+fmt(reinvestmentLedger.balance)+" and this addition costs "+fmt(purchaseDebit)+". "+(reinvestmentLedger.balance<0?"Current overspending: "+fmt(Math.abs(reinvestmentLedger.balance))+".":"Shortfall: "+fmt(purchaseDebit-reinvestmentLedger.balance)+"."),"error");return;}
       const inserted=await db.from("worker_stock_batches").insert(addBatch).select("*").single();
@@ -1735,7 +1741,7 @@ $("saveStockBtn").onclick=async()=>{
       const h2=await writeStockHistory(null,inserted.data,"Additional purchase created from stock edit");
       if(h1||h2)msg("stockMsg","Additional purchase saved. One of the audit entries needs administrator review.","error");
       else msg("stockMsg",addedPurchaseQty+" additional crates saved as a new purchase this week. Original purchase history preserved.","success");
-      const savedDate=today();editingStockId="";editingStockOriginal=null;stockCorrectionMode=false;$('editingStockId').value="";$('stockForm').reset();$('stockDate').value=savedDate;$('stockSold').value=0;$('stockDamage').value=0;$('saveStockBtn').textContent="Save Stock Record";$('cancelEditStockBtn').style.display="none";$('deleteStockBtn').style.display="none";updateStockFormCreditSummary("");calculateStock();await Promise.all([loadStock(),loadStockHistory(),loadStockWeeks()]);return;
+      const savedDate=today();editingStockId="";editingStockOriginal=null;stockCorrectionMode=false;$('editingStockId').value="";$('stockForm').reset();$('capitalAmountField')?.classList.remove('hidden');const soldLabel=$('stockSold')?.previousElementSibling;if(soldLabel)soldLabel.textContent="Sold Quantity";$('stockDate').value=savedDate;$('stockSold').value=0;$('stockDamage').value=0;$('saveStockBtn').textContent="Save Stock Record";$('cancelEditStockBtn').style.display="none";$('deleteStockBtn').style.display="none";updateStockFormCreditSummary("");calculateStock();await Promise.all([loadStock(),loadStockHistory(),loadStockWeeks()]);return;
     }
     const purchaseChanged=beforeTotal!==total||Math.abs(beforeUnit-unitCost)>0.0001;
     const historyAction=purchaseChanged?"Stock updated — purchase quantity/unit cost changed":"Stock updated";
@@ -1757,7 +1763,7 @@ $("saveStockBtn").onclick=async()=>{
   }
   const savedStockDate=record.stock_date;
   msg("stockMsg",wasEditing?"Stock updated and date/time history recorded.":"Stock record saved successfully and sent to Ezelex admin.","success");
-  editingStockId=""; editingStockOriginal=null; $("editingStockId").value=""; $("stockForm").reset(); $("stockDate").value=savedStockDate||today(); $("stockSold").value=0; $("stockDamage").value=0; $("saveStockBtn").textContent="Save Stock Record"; $("cancelEditStockBtn").style.display="none"; $("deleteStockBtn").style.display="none"; updateStockFormCreditSummary(""); calculateStock(); await Promise.all([loadStock(),loadStockHistory(),loadStockWeeks()]);
+  editingStockId=""; editingStockOriginal=null; $("editingStockId").value=""; $("stockForm").reset(); $("capitalAmountField")?.classList.remove("hidden"); const soldLabel=$("stockSold")?.previousElementSibling;if(soldLabel)soldLabel.textContent="Sold Quantity"; $("stockDate").value=savedStockDate||today(); $("stockSold").value=0; $("stockDamage").value=0; $("saveStockBtn").textContent="Save Stock Record"; $("cancelEditStockBtn").style.display="none"; $("deleteStockBtn").style.display="none"; updateStockFormCreditSummary(""); calculateStock(); await Promise.all([loadStock(),loadStockHistory(),loadStockWeeks()]);
   if(activeWeekCorrection)msg("weeklyStockMsg","Historical record saved. Continue correcting this week, then finish the one-time correction to reconcile and permanently lock it.","success");
   }catch(error){
     console.error("Stock save/update failed:",error);
@@ -2557,7 +2563,7 @@ window.addEventListener("load",()=>start(),{once:true});
  }
  rf?.addEventListener('submit',async ev=>{ev.preventDefault();let source=liveStockRows.find(r=>String(r.id)===$f('reinvestProduct').value);if(!source){finMsg('Select an existing stock item.',true);return;}let qty=Number($f('reinvestQty').value),unit=Number($f('reinvestUnitCost').value),sell=Number($f('reinvestSellPrice').value),total=qty*unit;
   if(!Number.isInteger(qty)||qty<1||unit<=0||!Number.isFinite(total)){finMsg('Enter a valid quantity and unit cost.',true);return;}const freshRows=await selectWorkerRows('worker_stock_batches','*');if(freshRows.error){finMsg('Purchase stopped: the latest stock and reinvestment ledger could not be verified. '+freshRows.error.message,true);return;}const freshLedger=calculateReinvestmentCash(freshRows.data||[]);let cash=freshLedger.balance;window.ezelexReinvestmentCashBalance=cash;window.ezelexCurrentCashBalance=cash;paintReinvestmentCash(freshLedger);if(cash<0){finMsg('Purchase blocked. Reinvestment is already OVERSPENT by '+fmt(Math.abs(cash))+'. Recover this amount from paid crate sales before purchasing again.',true);return;}if(total>cash){finMsg('Purchase blocked: insufficient Reinvestment Cash in Hand. Available: '+fmt(cash)+'. Purchase cost: '+fmt(total)+'. Shortfall: '+fmt(total-cash)+'. Profit is excluded and cannot cover this purchase.',true);return;}
-  const payload={worker_id:currentUser.id,week_id:financeWeekId,stock_type:'reinvestment',stock_date:$f('reinvestDate').value||today(),product_service:source.product_service,total_quantity:qty,capital_amount:0,cost_per_unit:unit,selling_price_per_unit:sell,sold_quantity:0,damage_quantity:0,loss_quantity:0,sales_revenue:0,sold_cost:0,damage_value:0,loss_value:0,remaining_quantity:qty,remaining_value:qty*unit,purchase_total:total,cash_in_hand:0,credit_quantity:0,credit_outstanding:0,profit_loss:0,notes:'Reinvestment from cash in hand. '+($f('reinvestSupplier').value?'Supplier: '+$f('reinvestSupplier').value+'. ':'')+$f('reinvestNotes').value};
+  const payload={worker_id:currentUser.id,week_id:financeWeekId,stock_type:'reinvestment',stock_date:$f('reinvestDate').value||today(),product_service:source.product_service,total_quantity:qty,capital_amount:total,cost_per_unit:unit,selling_price_per_unit:sell,sold_quantity:0,damage_quantity:0,loss_quantity:0,sales_revenue:0,sold_cost:0,damage_value:0,loss_value:0,remaining_quantity:qty,remaining_value:qty*unit,purchase_total:total,cash_in_hand:0,credit_quantity:0,credit_outstanding:0,profit_loss:0,notes:'Reinvestment from cash in hand. '+($f('reinvestSupplier').value?'Supplier: '+$f('reinvestSupplier').value+'. ':'')+$f('reinvestNotes').value};
   $f('reinvestSubmit').disabled=true;try{let ins=await db.from('worker_stock_batches').insert(payload).select('*').single();if(ins.error)throw ins.error;let audit=await db.from('worker_stock_financial_events').insert({worker_id:currentUser.id,week_id:financeWeekId,event_type:'reinvestment',amount:total,stock_batch_id:ins.data.id,description:'Reinvestment purchase: '+source.product_service});if(audit.error){await db.from('worker_stock_batches').delete().eq('id',ins.data.id).eq('worker_id',currentUser.id);throw audit.error;}rf.reset();$f('reinvestDate').value=today();await Promise.all([loadStock(),loadStockHistory(),loadCredits()]);await loadFinance();finMsg('Reinvestment saved. '+qty+' crates added to the existing '+source.product_service+' stock. My Stock Records now shows the combined product balance, while this week’s purchase total records only the '+qty+' newly purchased crates.');}catch(e){finMsg('Could not save reinvestment: '+(e.message||e),true);}finally{$f('reinvestSubmit').disabled=false;}
  });
  ef?.addEventListener('submit',async ev=>{ev.preventDefault();let amount=Number($f('expenseAmount').value);if(!(amount>0)){finMsg('Enter an expense greater than zero.',true);return;}let ins=await db.from('worker_stock_expenses').insert({worker_id:currentUser.id,week_id:financeWeekId,expense_date:$f('expenseDate').value||today(),category:$f('expenseCategory').value,amount,description:$f('expenseDescription').value.trim()});if(ins.error){finMsg('Could not save expense: '+ins.error.message,true);return;}ef.reset();$f('expenseDate').value=today();await loadFinance();finMsg('Expense saved and included in the net profit calculation.');});
