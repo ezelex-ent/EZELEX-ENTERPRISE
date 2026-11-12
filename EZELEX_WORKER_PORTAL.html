@@ -1129,9 +1129,12 @@ async function loadStock(){
   // Match Management Centre current-stock accounting: include every still-open credit batch for this worker, including credit originating in an earlier week.
   const openDashboardWeekCredits=openCreditRows;
   const unpaidCreditUnits=openDashboardWeekCredits.reduce((n,c)=>n+Math.max(0,Number(c.quantity||0)-Number(c.crates_paid||0)),0);
+  const previousWeekRemaining=dashboardWeekRows
+    .filter(r=>r.stock_type==="carry_forward")
+    .reduce((sum,r)=>sum+Number(r.total_quantity||0),0);
   const dashboardAllTimePurchaseNote=$("dashboardAllTimePurchaseNote");
-  if(dashboardAllTimePurchaseNote) dashboardAllTimePurchaseNote.textContent=
-    `All-time purchases: ${allTimeCratesPurchased.toLocaleString()} crates`;
+  if(dashboardAllTimePurchaseNote) dashboardAllTimePurchaseNote.innerHTML=
+    `<div>Previous Week Remaining: ${previousWeekRemaining.toLocaleString()} crates</div><div>All-time purchases: ${allTimeCratesPurchased.toLocaleString()} crates</div>`;
   // remaining_quantity is already reduced when credit stock is reserved. Do not add
   // unpaid credit crates back into physical remaining stock a second time.
   const availableRemaining=dashboardWeekRows.reduce((n,r)=>n+Number(r.remaining_quantity||0),0);
