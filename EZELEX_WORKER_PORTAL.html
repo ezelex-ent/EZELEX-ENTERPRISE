@@ -369,7 +369,7 @@ th,td{padding:12px;border-bottom:1px solid #e6ebf1;text-align:left;font-size:14p
         <div class="resultCard"><h3>Starting Capital</h3><strong id="calcCapital">GH₵0.00</strong></div>
         <div class="resultCard"><h3>Outstanding Credit</h3><strong id="calcCreditCapital">GH₵0.00</strong><div>Money customers still owe</div></div>
         <div class="resultCard"><h3>Total Business Capital</h3><strong id="calcTotalCapital">GH₵0.00</strong><div>Starting capital + outstanding credit</div></div>
-        <div class="resultCard"><h3>Cash In Hand</h3><strong id="calcCashInHand">GH₵0.00</strong><div>Starting capital + sales − purchase cost</div></div>
+        <div class="resultCard"><h3>Cash In Hand</h3><strong id="calcCashInHand">GH₵0.00</strong><div>Purchase cost recovered from sold crates − damage/loss cost; profit excluded</div></div>
         <div class="resultCard"><h3>Sales Revenue</h3><strong id="calcSalesRevenue">GH₵0.00</strong></div>
         <div class="resultCard" id="profitCard"><h3>Current Profit / Loss</h3><strong id="calcProfit">GH₵0.00</strong><div id="profitLabel" class="live">No sales/loss yet</div></div>
         <div class="resultCard"><h3>Total Stock Accounted For</h3><strong id="calcAccounted">0 units</strong><div id="calcAccountedNote" class="live">Sold + damage</div></div>
@@ -378,7 +378,7 @@ th,td{padding:12px;border-bottom:1px solid #e6ebf1;text-align:left;font-size:14p
     </div>
 
     <div class="panel stock-subsection" id="myStockRecordsPanel" data-stock-panel="records">
-      <h2> My Stock Records</h2><div class="stockNote">Enter your starting capital and purchase cost per unit. Total purchase cost is calculated automatically as quantity × unit cost. <strong>Cash In Hand = Starting Capital + Sales Revenue − Total Purchase Cost</strong>. Damage is tracked separately and is not treated as cash spent.</div>
+      <h2> My Stock Records</h2><div class="stockNote">Enter your starting capital and purchase cost per unit. Total purchase cost is calculated automatically as quantity × unit cost. <strong>Cash In Hand = Purchase Cost Recovered from Sold Crates − Damage/Loss Cost</strong>. Profit and starting capital are shown separately.</div>
       <div class="tablebox"><table><thead><tr><th>Date</th><th>Product</th><th>Total</th><th>Sold</th><th>Damage</th><th>Remaining</th><th>Capital</th><th>Purchase</th><th>Cash In Hand</th><th>Profit/Loss</th><th>Actions</th></tr></thead>
       <tbody id="stockBody"><tr><td colspan="11">Loading...</td></tr></tbody></table></div>
 
@@ -1036,6 +1036,13 @@ async function loadSales(){
 }
 
 function creditPaidForBatch(batchId){const paid=(creditRows||[]).filter(c=>String(c.stock_batch_id||"")===String(batchId||""));return {qty:paid.reduce((n,c)=>n+Number(c.crates_paid||0),0),amount:paid.reduce((n,c)=>n+Number(c.amount_paid||0),0)};}
+function calculateStockCashInHand(batch){
+  const unitCost=Math.max(0,Number(batch?.cost_per_unit||0));
+  const soldCost=Math.max(0,Number(batch?.sold_quantity||0))*unitCost;
+  const damageCost=Math.max(0,Number(batch?.damage_quantity||0))*unitCost;
+  const lossCost=Math.max(0,Number(batch?.loss_quantity||0))*unitCost;
+  return soldCost-damageCost-lossCost;
+}
 function unpaidCreditForBatch(batchId){return (creditRows||[]).filter(c=>String(c.stock_batch_id||"")===String(batchId||"")).reduce((n,c)=>n+Math.max(0,Number(c.quantity||0)-Number(c.crates_paid||0)),0);}
 function creditPaymentProfitForRows(rows){const ids=new Set((rows||[]).map(r=>String(r.id)));return (creditPaymentRows||[]).filter(p=>ids.has(String(p.stock_batch_id))).reduce((sum,p)=>sum+Number(p.profit_amount||0),0);}
 function creditPaymentQtyForRows(rows){const ids=new Set((rows||[]).map(r=>String(r.id)));return (creditPaymentRows||[]).filter(p=>ids.has(String(p.stock_batch_id))).reduce((sum,p)=>sum+Number(p.crates_paid||0),0);}
@@ -1044,7 +1051,7 @@ function creditPaymentsForWeek(weekStart){return (creditPaymentRows||[]).filter(
 function calculateStock(){
   const total=num("stockTotal"),unitCost=num("costPerUnit"),purchase=total*unitCost,price=num("sellPrice"),enteredSold=num("stockSold"),sold=editingStockId&&!stockCorrectionMode?Number(editingStockOriginal?.sold_quantity||0)+enteredSold:enteredSold,damage=num("stockDamage"),loss=Number(editingStockOriginal?.loss_quantity||0);
   const unpaidQty=editingStockId?unpaidCreditForBatch(editingStockId):0,paidCredit=editingStockId?creditPaidForBatch(editingStockId):{qty:0,amount:0};
-  const remaining=Math.max(0,total-sold-damage-loss-unpaidQty),revenue=Math.max(0,sold-paidCredit.qty)*price+paidCredit.amount,soldCost=sold*unitCost,damageValue=damage*unitCost,remainingValue=remaining*unitCost,capital=editingStockId?(editingStockOriginal?.stock_type==="reinvestment"?remainingValue:Number(editingStockOriginal?.capital_amount??editingStockOriginal?.purchase_total??0)):num("capitalAmount"),profit=revenue-soldCost-damageValue-loss*unitCost,accounted=sold+damage+loss+unpaidQty,cash=capital+revenue-purchase;
+  const remaining=Math.max(0,total-sold-damage-loss-unpaidQty),revenue=Math.max(0,sold-paidCredit.qty)*price+paidCredit.amount,soldCost=sold*unitCost,damageValue=damage*unitCost,remainingValue=remaining*unitCost,capital=editingStockId?(editingStockOriginal?.stock_type==="reinvestment"?remainingValue:Number(editingStockOriginal?.capital_amount??editingStockOriginal?.purchase_total??0)):num("capitalAmount"),profit=revenue-soldCost-damageValue-loss*unitCost,accounted=sold+damage+loss+unpaidQty,cash=soldCost-damageValue-loss*unitCost;
   const outstandingCredit=(creditRows||[]).reduce((sum,c)=>sum+Math.max(0,Number(c.amount_due||0)-Number(c.amount_paid||0)),0);
   $("calcTotal").textContent=total+" units";$("calcTotalValue").textContent=money(purchase);
   $("calcSold").textContent=sold+" units";$("calcRevenue").textContent=money(revenue)+" revenue";
@@ -1054,9 +1061,9 @@ function calculateStock(){
   $("calcProfit").textContent=money(profit);$("calcAccounted").textContent=accounted+" units";
   const card=$("profitCard");card.classList.toggle("profit",profit>0);card.classList.toggle("loss",profit<0);
   $("profitLabel").textContent=profit>0?"You are making a profit":profit<0?"You are currently making a loss":"Break-even";
-  const over=accounted>total || cash<0;
-  $("calcAccountedNote").textContent=accounted>total?"Too many units accounted for — check your numbers.":cash<0?"Purchase cost exceeds starting capital plus recorded sales — check your figures.":"Sold + damage";
-  $("saveStockBtn").disabled=total<=0||accounted>total||cash<0;
+  const over=accounted>total;
+  $("calcAccountedNote").textContent=accounted>total?"Too many units accounted for — check your numbers.":"Sold + damage";
+  $("saveStockBtn").disabled=total<=0||accounted>total;
 }
 
 async function loadStock(){
@@ -1203,7 +1210,7 @@ async function loadStock(){
     // stock_date to fall inside the week as well: week_id is the authoritative link.
     if(r.stock_type!=="carry_forward")purchased+=Number(r.total_quantity||0);
     const cap=Number(r.capital_amount??r.purchase_total??0),pur=Number(r.purchase_total||0);
-    cash+=Number(r.cash_in_hand??(cap+Number(r.sales_revenue||0)-pur));
+    cash+=calculateStockCashInHand(r);
   });
   soldWeek=authoritativeWeekRows.reduce((sum,r)=>sum+Number(r.sold_quantity||0),0);
   profit=authoritativeWeekRows.reduce((sum,r)=>sum+Number(r.profit_loss||0),0);
@@ -1238,7 +1245,7 @@ async function loadStock(){
       // Carry-forward is opening stock, never a new purchase. Only actual
       // original/reinvestment batches contribute to this week's purchase total.
       if(r.stock_type!=="carry_forward")g.purchase+=Number(r.purchase_total??(Number(r.total_quantity||0)*Number(r.cost_per_unit||0)));
-      g.cash+=Number(r.cash_in_hand??(Number(r.capital_amount||0)+Number(r.sales_revenue||0)-Number(r.purchase_total||0)));
+      g.cash+=calculateStockCashInHand(r);
       g.profit+=Number(r.profit_loss||0);
       const d=dateOnly(r.stock_date);
       if(d>g.latestDate)g.latestDate=d;
@@ -1710,8 +1717,8 @@ $("saveStockBtn").onclick=async()=>{
   const soldCost=sold*unitCost,damageValue=damage*unitCost,remaining=total-sold-damage-lossQuantity-unpaidCreditQty,remainingValue=remaining*unitCost;
   // For reinvestment batches, capital represents the cost still tied up in unsold stock.
   // This is separate from the Reinvestment Cash in Hand ledger, which remains untouched.
-  const capital=editingStockId?(old.stock_type==="reinvestment"?remainingValue:Number(old.capital_amount??old.purchase_total??0)):num("capitalAmount"),cash=capital+revenue-purchase;
-  if(!$('stockDate').value||!$('stockProduct').value.trim()||total<=0||capital<0||unitCost<0||price<0||cash<0||sold+damage+lossQuantity+unpaidCreditQty>total){msg("stockMsg","Please check the stock quantities and costs. Available cash (starting capital plus recorded sales) cannot be negative, and sold + damage + loss + unpaid on-credit crates cannot be greater than total stock.","error");return;}
+  const capital=editingStockId?(old.stock_type==="reinvestment"?remainingValue:Number(old.capital_amount??old.purchase_total??0)):num("capitalAmount"),cash=soldCost-damageValue-lossQuantity*unitCost;
+  if(!$('stockDate').value||!$('stockProduct').value.trim()||total<=0||capital<0||unitCost<0||price<0||sold+damage+lossQuantity+unpaidCreditQty>total){msg("stockMsg","Please check the stock quantities and costs. Sold + damage + loss + unpaid on-credit crates cannot be greater than total stock.","error");return;}
   // Keep already-earned profit and add only the profit/loss from quantities newly recorded.
   const addedSold=Math.max(0,sold-oldSold),addedDamage=Math.max(0,damage-oldDamage);
   const lossValue=lossQuantity*unitCost;
@@ -1902,7 +1909,7 @@ async function loadCredits(){
     const nextSoldCost=baseSoldCost+ledger.paidQty*unit;
     const nextRemaining=Math.max(0,Number(batch.total_quantity||0)-nextSold-ledger.unpaidQty-Number(batch.damage_quantity||0)-Number(batch.loss_quantity||0));
     const purchase=Number(batch.purchase_total||0),capital=Number(batch.capital_amount||0);
-    const patch={sold_quantity:nextSold,sales_revenue:nextRevenue,sold_cost:nextSoldCost,profit_loss:baseProfit+(ledger.paidAmount-ledger.paidQty*unit),remaining_quantity:nextRemaining,remaining_value:nextRemaining*unit,credit_quantity:ledger.qty,credit_outstanding:ledger.unpaidAmount,cash_in_hand:capital+nextRevenue-purchase,credit_sales_normalized:true};
+    const patch={sold_quantity:nextSold,sales_revenue:nextRevenue,sold_cost:nextSoldCost,profit_loss:baseProfit+(ledger.paidAmount-ledger.paidQty*unit),remaining_quantity:nextRemaining,remaining_value:nextRemaining*unit,credit_quantity:ledger.qty,credit_outstanding:ledger.unpaidAmount,cash_in_hand:nextSoldCost-Number(batch.damage_quantity||0)*unit-Number(batch.loss_quantity||0)*unit,credit_sales_normalized:true};
     const fixed=await db.from('worker_stock_batches').update(patch).eq('id',batchId).eq('worker_id',currentUser.id).is('deleted_at',null);
     if(!fixed.error)Object.assign(batch,patch);else console.warn('Credit normalization could not update stock batch',batchId,fixed.error.message);
   }
@@ -2039,7 +2046,7 @@ function buildLiveStockReportText(){
       " | Remaining: "+(s.remaining_quantity??0)+
       " | Capital: "+stockMoney(s.capital_amount ?? s.purchase_total)+
       " | Purchase: "+stockMoney(s.purchase_total)+
-      " | Cash In Hand: "+stockMoney(s.cash_in_hand ?? ((s.capital_amount ?? s.purchase_total)+Number(s.sales_revenue||0)-Number(s.purchase_total||0)))+
+      " | Cash In Hand: "+stockMoney(calculateStockCashInHand(s))+
       " | Remaining Value: "+stockMoney(s.remaining_value)+
       " | Profit/Loss: "+stockMoney(s.profit_loss)
     );
@@ -2122,7 +2129,7 @@ function downloadLiveStockPDF(){
     doc.text(String(s.remaining_quantity??0),x[4],y);
     doc.text(stockMoney(s.capital_amount ?? s.purchase_total),x[5],y);
     doc.text(stockMoney(s.purchase_total),x[6],y);
-    doc.text(stockMoney(s.cash_in_hand ?? ((s.capital_amount ?? s.purchase_total)+Number(s.sales_revenue||0)-Number(s.purchase_total||0))),x[7],y);
+    doc.text(stockMoney(calculateStockCashInHand(s)),x[7],y);
     doc.text(stockMoney(s.profit_loss),x[8],y);
     y+=5;
   });
