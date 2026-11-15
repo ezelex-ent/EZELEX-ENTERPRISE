@@ -168,6 +168,23 @@ th,td{padding:12px;border-bottom:1px solid #e6ebf1;text-align:left;font-size:14p
 .capital-reconciliation h3{margin:0 0 10px;color:#173b63}
 .capital-reconciliation-row{display:flex;justify-content:space-between;gap:12px;padding:10px 0;border-bottom:1px solid #e2e8f0;font-size:13px}
 .capital-reconciliation-row strong{white-space:nowrap;color:#173b63}
+.capital-reconciliation.capital-status-neutral{background:#fffae6;border-color:#eab308}
+.capital-reconciliation.capital-status-negative{background:#fff1f0;border-color:#dc2626}
+.capital-reconciliation.capital-status-positive{background:#ecfdf3;border-color:#16a34a}
+.capital-reconciliation.capital-status-neutral h3,.capital-reconciliation.capital-status-neutral strong{color:#854d0e}
+.capital-reconciliation.capital-status-negative h3,.capital-reconciliation.capital-status-negative strong{color:#b42318}
+.capital-reconciliation.capital-status-positive h3,.capital-reconciliation.capital-status-positive strong{color:#15803d}
+.capital-comparison-chart{margin-top:14px;padding:12px;border-radius:10px;background:rgba(255,255,255,.72);border:1px solid rgba(100,116,139,.2)}
+.capital-chart-title{font-size:12px;font-weight:800;margin-bottom:10px;color:#334155}
+.capital-chart-row{display:grid;grid-template-columns:125px minmax(0,1fr) 100px;align-items:center;gap:9px;margin:9px 0;font-size:11px}
+.capital-chart-track{height:13px;background:#e5e7eb;border-radius:20px;overflow:hidden}
+.capital-chart-bar{height:100%;border-radius:20px;min-width:0}
+.capital-chart-bar.original{background:#64748b}
+.capital-chart-bar.accounted{background:#2563eb}
+.capital-chart-value{text-align:right;font-weight:800;white-space:nowrap}
+.capital-status-caption{font-size:12px;font-weight:800;margin-top:9px}
+@media(max-width:520px){.capital-chart-row{grid-template-columns:95px minmax(0,1fr);}.capital-chart-value{grid-column:2;text-align:left}}
+
 @media(max-width:800px){.capital-overview-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:520px){.capital-overview-grid{grid-template-columns:1fr}.capital-overview-card{padding:12px}.capital-overview-card strong{font-size:19px}.capital-reconciliation-row{align-items:flex-start;flex-direction:column;gap:4px}}
 
@@ -581,7 +598,13 @@ th,td{padding:12px;border-bottom:1px solid #e6ebf1;text-align:left;font-size:14p
       <div class="capital-reconciliation">
         <h3>Capital Reconciliation</h3>
         <div class="capital-reconciliation-row"><span>Total Capital Accounted For</span><strong id="coAccounted">—</strong></div>
-        <div class="capital-reconciliation-row"><span>Capital Difference (shortage / excess)</span><strong id="coDifference">—</strong></div>
+        <div class="capital-reconciliation-row"><span id="coDifferenceLabel">Capital Difference (shortage / excess)</span><strong id="coDifference">—</strong></div>
+        <div class="capital-comparison-chart" role="img" aria-label="Comparison of original capital and total capital accounted for">
+          <div class="capital-chart-title">Capital comparison</div>
+          <div class="capital-chart-row"><span>Original capital</span><div class="capital-chart-track"><div id="coOriginalBar" class="capital-chart-bar original" style="width:0%"></div></div><span id="coOriginalChartValue" class="capital-chart-value">—</span></div>
+          <div class="capital-chart-row"><span>Accounted for</span><div class="capital-chart-track"><div id="coAccountedBar" class="capital-chart-bar accounted" style="width:0%"></div></div><span id="coAccountedChartValue" class="capital-chart-value">—</span></div>
+          <div id="coCapitalStatus" class="capital-status-caption" aria-live="polite">Waiting for capital figures…</div>
+        </div>
         <p class="stockNote">Total = Cash in Hand + Remaining Stock + On-Credit Stock + Damage / Loss. All values use purchase cost. Carry-forward is counted once. Profit is excluded.</p>
       </div>
     </div>
@@ -2675,7 +2698,9 @@ async function loadCapitalOverview(){
       set("coSold","Unavailable");
       set("coAccounted","Unavailable");
       set("coDifference","Unavailable");
-      if(message)message.textContent="Admin capital is not available to this worker account. Install the read-only worker capital view in Supabase so Admin updates can appear here. No zero value has been assumed.";
+      
+      
+    if(message)message.textContent="Admin capital is not available to this worker account. Install the read-only worker capital view in Supabase so Admin updates can appear here. No zero value has been assumed.";
       return;
     }
     if(!capitalRead.data){
@@ -2683,7 +2708,9 @@ async function loadCapitalOverview(){
       set("coSold","Unavailable");
       set("coAccounted","Unavailable");
       set("coDifference","Unavailable");
-      if(message)message.textContent="The Admin capital record (id 1) has not been created yet. Enter Original Business Capital in Admin Business Finance & Capital.";
+      
+      
+    if(message)message.textContent="The Admin capital record (id 1) has not been created yet. Enter Original Business Capital in Admin Business Finance & Capital.";
       return;
     }
     const original=Number(capitalRead.data.original_capital);
@@ -2692,7 +2719,9 @@ async function loadCapitalOverview(){
       set("coSold","Unavailable");
       set("coAccounted","Unavailable");
       set("coDifference","Unavailable");
-      if(message)message.textContent="The Admin original capital value is invalid. Please check the Admin Business Finance & Capital entry.";
+      
+      
+    if(message)message.textContent="The Admin original capital value is invalid. Please check the Admin Business Finance & Capital entry.";
       return;
     }
     const rows=(typeof getAuthoritativeWeekStockRows==="function"&&currentStockWeek)
@@ -2733,7 +2762,7 @@ async function loadCapitalOverview(){
     const reinvested=allRows.filter(r=>r.stock_type==="reinvestment"||(r.stock_type!=="carry_forward"&&String(r.notes||"").toLowerCase().includes("additional purchase quantity added while editing an existing stock item"))).reduce((n,r)=>n+Math.max(0,Number(r.purchase_total??(Number(r.total_quantity||0)*Number(r.cost_per_unit||0)))),0);
     const cashInHand=Math.max(0,grossRecovered-reinvested);
     const accounted=remainingValue+cashInHand+creditValue+damageLossValue;
-    const difference=original-accounted;
+    const difference=accounted-original;
     set("coOriginal",money(original));
     set("coRemaining",money(remainingValue));
     set("coSold",money(cashInHand));
@@ -2741,13 +2770,33 @@ async function loadCapitalOverview(){
     set("coDamage",money(damageLossValue));
     set("coAccounted",money(accounted));
     set("coDifference",(difference<0?"−":difference>0?"+":"")+money(Math.abs(difference)));
-    if(message)message.textContent="Capital refreshed. Cash in Hand excludes unpaid credit and is reduced by reinvestments. Carry-forward stock is already included in the current week's remaining stock.";
+    const reconciliation=document.querySelector(".capital-reconciliation");
+    const label=$("coDifferenceLabel"),status=$("coCapitalStatus");
+    const originalBar=$("coOriginalBar"),accountedBar=$("coAccountedBar");
+    const maxValue=Math.max(original,accounted,0.01);
+    if(originalBar)originalBar.style.width=(original/maxValue*100).toFixed(2)+"%";
+    if(accountedBar)accountedBar.style.width=(accounted/maxValue*100).toFixed(2)+"%";
+    set("coOriginalChartValue",money(original));
+    set("coAccountedChartValue",money(accounted));
+    if(reconciliation){
+      reconciliation.classList.remove("capital-status-neutral","capital-status-negative","capital-status-positive");
+      const neutral=Math.abs(difference)<0.005;
+      const state=neutral?"neutral":difference<0?"negative":"positive";
+      reconciliation.classList.add("capital-status-"+state);
+      if(label)label.textContent=neutral?"Capital Status — Balanced":difference<0?"Capital Shortage":"Capital Excess";
+      if(status){
+        status.textContent=neutral?"NEUTRAL — Capital is fully accounted for.":difference<0?"SHORTAGE — "+money(Math.abs(difference))+" of capital is unaccounted for.":"POSITIVE — Accounted capital exceeds the original investment by "+money(difference)+".";
+      }
+      if(accountedBar)accountedBar.style.background=neutral?"#eab308":difference<0?"#dc2626":"#16a34a";
+    }
+    if(message)message.textContent="Capital refreshed. Negative means a shortage; zero means balanced; positive means more capital is accounted for than the original investment. Carry-forward is counted once.";
   }catch(error){
     console.error("Capital Overview refresh failed:",error);
     set("coOriginal","Unavailable");
     set("coSold","Unavailable");
     set("coAccounted","Unavailable");
     set("coDifference","Unavailable");
+    
     if(message)message.textContent="Capital Overview could not be refreshed: "+String(error?.message||error);
   }
 }
