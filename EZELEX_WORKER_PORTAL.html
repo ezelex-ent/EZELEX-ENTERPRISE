@@ -225,7 +225,7 @@ th,td{padding:12px;border-bottom:1px solid #e6ebf1;text-align:left;font-size:14p
     </div>
     <nav id="workerMenu" class="menuPopup" aria-label="Worker portal menu">
       <button type="button" class="menuItem active" data-tab="dashboard">Dashboard</button>
-      <button type="button" class="menuItem" data-tab="capitalOverview">Capital Overview &amp; Investment Tracker</button>
+      <button type="button" class="menuItem" data-tab="capitalOverview">Capital Overview</button>
       <button type="button" id="stockMenuToggle" class="menuItem" aria-expanded="false" aria-controls="stockSubmenu"> Live Stock ▾</button>
       <div id="stockSubmenu" class="stockSubmenu" aria-label="Live Stock sections">
         <button type="button" class="stockSubItem" data-stock-view="weekly"> Weekly Stock Book (Monday–Sunday)</button>
@@ -567,26 +567,22 @@ th,td{padding:12px;border-bottom:1px solid #e6ebf1;text-align:left;font-size:14p
   <section id="capitalOverview" class="section">
     <div class="panel capital-overview-panel">
       <div class="capital-overview-head">
-        <div><h2>Capital Overview &amp; Investment Tracker</h2><p class="stockNote">A read-only view of the Admin's original business capital and the capital movements recorded in your worker stock book.</p></div>
+        <div><h2>Capital Overview</h2><p class="stockNote">Track the original capital given to this worker and verify where every cedi is accounted for.</p></div>
         <button type="button" class="secondary" id="refreshCapitalOverviewBtn">Refresh figures</button>
       </div>
       <div id="capitalOverviewMessage" aria-live="polite" class="stockNote">Loading capital records…</div>
       <div class="capital-overview-grid">
-        <div class="capital-overview-card capital-original"><small>Original Business Capital (Admin)</small><strong id="coOriginal">—</strong><span>Read from the central Ezelex business capital record</span></div>
-        <div class="capital-overview-card"><small>Opening / Carry-Forward Stock</small><strong id="coOpening">—</strong><span>Opening stock value in the current weekly book</span></div>
-        <div class="capital-overview-card"><small>Remaining Stock Value</small><strong id="coRemaining">—</strong><span>Purchase cost of stock physically remaining</span></div>
-        <div class="capital-overview-card"><small>Paid Sales — Capital Recovered</small><strong id="coSold">—</strong><span>Original purchase cost of paid crates sold</span></div>
-        <div class="capital-overview-card"><small>On-Credit Capital</small><strong id="coCredit">—</strong><span>Original purchase cost tied up in unpaid crates</span></div>
-        <div class="capital-overview-card capital-loss"><small>Damage &amp; Loss</small><strong id="coDamage">—</strong><span>Original purchase cost written off through damage or loss</span></div>
-        <div class="capital-overview-card"><small>New Purchases &amp; Reinvestments</small><strong id="coPurchases">—</strong><span>New stock purchases recorded this week</span></div>
-        <div class="capital-overview-card"><small>Cash in Hand</small><strong id="coCash">—</strong><span>Current reinvestment cash balance; not added twice to sold capital recovered</span></div>
-        <div class="capital-overview-card capital-profit"><small>Profit / Loss</small><strong id="coProfit">—</strong><span>Trading result shown separately from original capital</span></div>
+        <div class="capital-overview-card capital-original"><small>Original Capital Given</small><strong id="coOriginal">—</strong><span>Capital assigned by Admin to start the business</span></div>
+        <div class="capital-overview-card"><small>Remaining Stock</small><strong id="coRemaining">—</strong><span>Purchase cost of all crates still physically remaining, including carry-forward stock</span></div>
+        <div class="capital-overview-card"><small>Sold Stock — Paid in Cash</small><strong id="coSold">—</strong><span>Original purchase cost of crates sold and paid for</span></div>
+        <div class="capital-overview-card"><small>On-Credit Stock</small><strong id="coCredit">—</strong><span>Original purchase cost of crates sold but not yet paid for</span></div>
+        <div class="capital-overview-card capital-loss"><small>Damaged / Lost Stock</small><strong id="coDamage">—</strong><span>Original purchase cost of crates damaged or lost</span></div>
       </div>
       <div class="capital-reconciliation">
-        <h3>Stock Capital Reconciliation</h3>
-        <div class="capital-reconciliation-row"><span>Remaining stock + paid-sales cost recovered + unpaid-credit cost + damage/loss</span><strong id="coAccounted">—</strong></div>
-        <div class="capital-reconciliation-row"><span>Difference against Admin's original business capital</span><strong id="coDifference">—</strong></div>
-        <p class="stockNote">Important: Cash in Hand is a cash-position figure, not an extra category to add on top of Paid Sales — Capital Recovered. Paid sales move original stock cost into recovered capital; reinvestment moves cash back into stock. This prevents double-counting. The stock breakdown shown here is for this worker's current weekly book, while Original Business Capital is the company-wide Admin figure. If other workers or business assets hold part of the company capital, the difference includes those amounts and is not automatically a shortage.</p>
+        <h3>Capital Reconciliation</h3>
+        <div class="capital-reconciliation-row"><span>Total Capital Accounted For</span><strong id="coAccounted">—</strong></div>
+        <div class="capital-reconciliation-row"><span>Capital Difference (shortage / excess)</span><strong id="coDifference">—</strong></div>
+        <p class="stockNote">Calculation: Remaining Stock + Sold Stock Paid in Cash + On-Credit Stock + Damaged / Lost Stock. All four categories are valued at their original purchase cost. Carry-forward stock is already included in the current week's remaining or sold quantities and is never added separately. Profit, selling revenue, cash balance and new purchases are not added again to this reconciliation.</p>
       </div>
     </div>
   </section>
@@ -2662,22 +2658,21 @@ window.addEventListener("load",()=>start(),{once:true});
  setTimeout(update,1200);
 })();
 
-// Read-only capital overview. It does not write to or alter any existing stock,
- // sales, credit, weekly cash, or Admin capital records.
+// Read-only capital overview. This reconciles only the four locations of the worker's
+// original capital. Carry-forward stock is already included in the current week's rows.
 async function loadCapitalOverview(){
   const message=$("capitalOverviewMessage");
   const set=(id,value)=>{const el=$(id);if(el)el.textContent=value;};
   if(!currentUser){if(message)message.textContent="Sign in to view capital information.";return;}
-  if(message)message.textContent="Refreshing the Admin capital record and your latest stock, sales and credit figures…";
+  if(message)message.textContent="Refreshing the original capital and current weekly stock records…";
   try{
-    if(typeof window.ezelexLoadFinance==="function")await window.ezelexLoadFinance();
     const [capitalRead]=await Promise.all([
-      db.from("ezelex_business_capital").select("id,original_capital,current_cash").eq("id",1).maybeSingle(),
+      db.from("ezelex_business_capital").select("id,original_capital").eq("id",1).maybeSingle(),
       loadStock(),loadCredits()
     ]);
     if(capitalRead.error){
       set("coOriginal","Unavailable");
-      if(message)message.textContent="The Admin's original business capital could not be read from ezelex_business_capital. This may be due to the table's Row Level Security permissions. No capital value has been guessed. Ask the administrator to allow authenticated workers read-only access to this record.";
+      if(message)message.textContent="The original capital could not be read from the Admin capital record. This may be due to Row Level Security permissions. No value has been guessed.";
       return;
     }
     const original=Number(capitalRead.data?.original_capital||0);
@@ -2685,45 +2680,38 @@ async function loadCapitalOverview(){
       ?getAuthoritativeWeekStockRows(currentStockWeek.id,currentStockWeek.week_start,liveStockRows)
       :(liveStockRows||[]);
     const credits=(creditRows||[]).filter(c=>rows.some(r=>String(r.id)===String(c.stock_batch_id)));
-    const creditByBatch=new Map();
+    const unpaidByBatch=new Map();
     for(const c of credits){
       const id=String(c.stock_batch_id||"");
       const unpaidCrates=Math.max(0,Number(c.quantity||0)-Number(c.crates_paid||0));
-      if(unpaidCrates>0 && Math.max(0,Number(c.amount_due||0)-Number(c.amount_paid||0))>0.009)
-        creditByBatch.set(id,(creditByBatch.get(id)||0)+unpaidCrates);
+      const unpaidAmount=Math.max(0,Number(c.amount_due||0)-Number(c.amount_paid||0));
+      if(unpaidCrates>0 && unpaidAmount>0.009)
+        unpaidByBatch.set(id,(unpaidByBatch.get(id)||0)+unpaidCrates);
     }
-    let opening=0,remaining=0,soldCost=0,creditCost=0,damageLoss=0,purchases=0,profit=0;
+    let remainingValue=0,paidSoldValue=0,creditValue=0,damageLossValue=0;
     for(const r of rows){
       const unit=Math.max(0,Number(r.cost_per_unit||0));
       const total=Math.max(0,Number(r.total_quantity||0));
       const sold=Math.max(0,Number(r.sold_quantity||0));
       const damage=Math.max(0,Number(r.damage_quantity||0));
       const loss=Math.max(0,Number(r.loss_quantity||0));
-      const unpaid=creditByBatch.get(String(r.id))||0;
-      const physical=Math.max(0,Number(r.remaining_quantity??(total-sold-damage-loss-unpaid)));
-      if(r.stock_type==="carry_forward")opening+=total*unit;
-      else purchases+=Math.max(0,Number(r.purchase_total??total*unit));
-      remaining+=physical*unit;
-      soldCost+=sold*unit;
-      creditCost+=unpaid*unit;
-      damageLoss+=(damage+loss)*unit;
-      profit+=Number(r.profit_loss||0);
+      const unpaid=Math.min(sold,unpaidByBatch.get(String(r.id))||0);
+      const physical=Math.max(0,Number(r.remaining_quantity??(total-sold-damage-loss)));
+      remainingValue+=physical*unit;
+      paidSoldValue+=Math.max(0,sold-unpaid)*unit;
+      creditValue+=unpaid*unit;
+      damageLossValue+=(damage+loss)*unit;
     }
-    const accounted=remaining+soldCost+creditCost+damageLoss;
+    const accounted=remainingValue+paidSoldValue+creditValue+damageLossValue;
     const difference=original-accounted;
     set("coOriginal",money(original));
-    set("coOpening",money(opening));
-    set("coRemaining",money(remaining));
-    set("coSold",money(soldCost));
-    set("coCredit",money(creditCost));
-    set("coDamage",money(damageLoss));
-    set("coPurchases",money(purchases));
-    const cashEl=$("financeCashAvailable");
-    set("coCash",cashEl?cashEl.textContent:(capitalRead.data?.current_cash!=null?money(capitalRead.data.current_cash):"Not available"));
-    set("coProfit",money(profit));
+    set("coRemaining",money(remainingValue));
+    set("coSold",money(paidSoldValue));
+    set("coCredit",money(creditValue));
+    set("coDamage",money(damageLossValue));
     set("coAccounted",money(accounted));
     set("coDifference",money(difference));
-    if(message)message.textContent="Figures refreshed from the Admin capital record and this worker's current weekly stock and credit records. The company-wide capital figure and worker-only stock breakdown are deliberately identified separately.";
+    if(message)message.textContent="Reconciliation refreshed. Carry-forward stock is included in the current weekly stock figures and is not counted twice.";
   }catch(error){
     console.error("Capital Overview refresh failed:",error);
     if(message)message.textContent="Capital Overview could not be refreshed: "+String(error?.message||error);
