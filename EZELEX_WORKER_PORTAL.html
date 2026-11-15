@@ -188,6 +188,57 @@ th,td{padding:12px;border-bottom:1px solid #e6ebf1;text-align:left;font-size:14p
 @media(max-width:800px){.capital-overview-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:520px){.capital-overview-grid{grid-template-columns:1fr}.capital-overview-card{padding:12px}.capital-overview-card strong{font-size:19px}.capital-reconciliation-row{align-items:flex-start;flex-direction:column;gap:4px}}
 
+
+/* Mobile usability refinement — layout only; existing portal features and actions are unchanged. */
+html{width:100%;max-width:100%;overflow-x:hidden;scroll-padding-top:78px}
+body{width:100%;max-width:100%;overflow-x:hidden;-webkit-text-size-adjust:100%}
+button,a,input,select,textarea{touch-action:manipulation}
+.wrap,.panel,.section,.capital-overview-panel{min-width:0;max-width:100%}
+img,canvas,svg,video{max-width:100%}
+.tablebox{width:100%;max-width:100%;overflow-x:auto;overscroll-behavior-x:contain}
+@media(max-width:700px){
+  header{position:sticky;top:0;z-index:40}
+  .wrap{width:100%;box-sizing:border-box;margin:8px auto;padding:0 10px}
+  /* Keep navigation in normal document flow so it never overlays page content. */
+  .menuWrap{position:relative;top:auto;z-index:20;display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;background:transparent;padding:5px 0;margin:0 0 10px}
+  #backToDashboard.visible{display:inline-flex;flex:1 1 145px;justify-content:center;min-width:0}
+  .menuActions{display:flex;flex:1 1 100%;width:100%;min-width:0;gap:8px;align-items:stretch}
+  .workerBillboard{flex:1 1 0;min-width:0;max-width:none;justify-content:center;gap:6px;padding:9px 8px}
+  .workerBillboard .bbLabel{white-space:normal;overflow-wrap:anywhere;font-size:11px}
+  .workerBillboard strong{font-size:13px}
+  .menuToggle{flex:0 0 auto;min-width:92px}
+  .menuPopup{position:absolute;right:0;left:auto;top:calc(100% + 4px);z-index:60;max-width:calc(100vw - 20px)}
+  .panel{padding:13px;margin-bottom:12px;border-radius:12px}
+  .capital-overview-head{align-items:stretch}
+  .capital-overview-head>div{min-width:0;flex:1 1 100%}
+  #refreshCapitalOverviewBtn{width:100%;min-height:44px}
+  .capital-overview-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
+  .capital-overview-card{padding:12px;min-width:0}
+  .capital-overview-card strong{font-size:clamp(17px,4.6vw,21px);overflow-wrap:anywhere}
+  .capital-reconciliation{padding:13px}
+  .capital-reconciliation-row{flex-direction:column;align-items:flex-start;gap:4px}
+  .capital-chart-row{grid-template-columns:minmax(82px,105px) minmax(0,1fr);gap:7px}
+  .capital-chart-value{grid-column:2;text-align:left}
+  .capital-comparison-chart{padding:10px}
+  .capital-status-caption{line-height:1.45}
+  .stats,.stockGrid,.resultGrid{min-width:0}
+  .stat,.statAction,.stockCard,.resultCard{min-width:0;overflow-wrap:anywhere}
+  .grid,.cardrow{min-width:0}
+  .tablebox table{min-width:680px}
+  input,select,textarea{box-sizing:border-box;width:100%;max-width:100%;min-height:44px}
+  button{max-width:100%;white-space:normal;line-height:1.25}
+}
+@media(max-width:420px){
+  .capital-overview-grid{grid-template-columns:1fr}
+  .menuActions{gap:6px}
+  .workerBillboard{padding:8px 6px}
+  .workerBillboard .bbLabel{font-size:10px}
+  .workerBillboard strong{font-size:12px}
+  .menuToggle{min-width:82px;padding-left:10px;padding-right:10px}
+  .capital-chart-row{grid-template-columns:1fr;gap:4px}
+  .capital-chart-value{grid-column:1}
+}
+
 </style>
 </head>
 <body>
@@ -584,7 +635,7 @@ th,td{padding:12px;border-bottom:1px solid #e6ebf1;text-align:left;font-size:14p
   <section id="capitalOverview" class="section">
     <div class="panel capital-overview-panel">
       <div class="capital-overview-head">
-        <div><h2>Capital Overview</h2><p class="stockNote">Track the original capital given to this worker and verify where every cedi is accounted for.</p></div>
+        <div><h2>Capital Overview</h2></div>
         <button type="button" class="secondary" id="refreshCapitalOverviewBtn">Refresh figures</button>
       </div>
       <div id="capitalOverviewMessage" aria-live="polite" class="stockNote">Loading capital records…</div>
@@ -605,7 +656,7 @@ th,td{padding:12px;border-bottom:1px solid #e6ebf1;text-align:left;font-size:14p
           <div class="capital-chart-row"><span>Accounted for</span><div class="capital-chart-track"><div id="coAccountedBar" class="capital-chart-bar accounted" style="width:0%"></div></div><span id="coAccountedChartValue" class="capital-chart-value">—</span></div>
           <div id="coCapitalStatus" class="capital-status-caption" aria-live="polite">Waiting for capital figures…</div>
         </div>
-        <p class="stockNote">Total = Cash in Hand + Remaining Stock + On-Credit Stock + Damage / Loss. All values use purchase cost. Carry-forward is counted once. Profit is excluded.</p>
+        
       </div>
     </div>
   </section>
