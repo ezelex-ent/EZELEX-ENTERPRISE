@@ -153,6 +153,24 @@ th,td{padding:12px;border-bottom:1px solid #e6ebf1;text-align:left;font-size:14p
 .workerBillboard .bbLabel{opacity:.82;white-space:nowrap}.workerBillboard strong{font-size:14px;white-space:nowrap}.workerBillboard .bbDot{width:7px;height:7px;border-radius:50%;background:#55e39a;flex:0 0 auto;box-shadow:0 0 0 3px rgba(85,227,154,.15)}
 @media(max-width:700px){.menuActions{width:100%;justify-content:space-between}.workerBillboard{min-width:0;flex:1;max-width:none;padding:7px 8px}.workerBillboard strong{font-size:12px}.workerBillboard .bbLabel{font-size:10px}header{gap:8px}}
 
+
+.capital-overview-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap}
+.capital-overview-head h2{margin-bottom:6px}
+.capital-overview-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:16px 0}
+.capital-overview-card{background:#fff;border:1px solid #dce4ee;border-top:3px solid #2563a6;border-radius:12px;padding:15px;min-width:0;overflow-wrap:anywhere}
+.capital-overview-card small{display:block;color:#64748b;font-size:11px;font-weight:800;line-height:1.35}
+.capital-overview-card strong{display:block;color:#173b63;font-size:22px;margin:8px 0 4px}
+.capital-overview-card span{display:block;color:#64748b;font-size:11px;line-height:1.45}
+.capital-overview-card.capital-original{background:#edf5ff;border-top-color:#175cd3}
+.capital-overview-card.capital-loss{background:#fff1f0;border-top-color:#d92d20}
+.capital-overview-card.capital-profit{background:#ecfdf3;border-top-color:#16a34a}
+.capital-reconciliation{border:1px solid #dce4ee;background:#f8fafc;border-radius:12px;padding:16px;margin-top:14px}
+.capital-reconciliation h3{margin:0 0 10px;color:#173b63}
+.capital-reconciliation-row{display:flex;justify-content:space-between;gap:12px;padding:10px 0;border-bottom:1px solid #e2e8f0;font-size:13px}
+.capital-reconciliation-row strong{white-space:nowrap;color:#173b63}
+@media(max-width:800px){.capital-overview-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:520px){.capital-overview-grid{grid-template-columns:1fr}.capital-overview-card{padding:12px}.capital-overview-card strong{font-size:19px}.capital-reconciliation-row{align-items:flex-start;flex-direction:column;gap:4px}}
+
 </style>
 </head>
 <body>
@@ -207,6 +225,7 @@ th,td{padding:12px;border-bottom:1px solid #e6ebf1;text-align:left;font-size:14p
     </div>
     <nav id="workerMenu" class="menuPopup" aria-label="Worker portal menu">
       <button type="button" class="menuItem active" data-tab="dashboard">Dashboard</button>
+      <button type="button" class="menuItem" data-tab="capitalOverview">Capital Overview &amp; Investment Tracker</button>
       <button type="button" id="stockMenuToggle" class="menuItem" aria-expanded="false" aria-controls="stockSubmenu"> Live Stock ▾</button>
       <div id="stockSubmenu" class="stockSubmenu" aria-label="Live Stock sections">
         <button type="button" class="stockSubItem" data-stock-view="weekly"> Weekly Stock Book (Monday–Sunday)</button>
@@ -545,6 +564,32 @@ th,td{padding:12px;border-bottom:1px solid #e6ebf1;text-align:left;font-size:14p
  <div class="panel"><button type="button" class="secondary" onclick="activateMainSection('dashboard')">← Back to Dashboard</button></div>
 </section>
 
+  <section id="capitalOverview" class="section">
+    <div class="panel capital-overview-panel">
+      <div class="capital-overview-head">
+        <div><h2>Capital Overview &amp; Investment Tracker</h2><p class="stockNote">A read-only view of the Admin's original business capital and the capital movements recorded in your worker stock book.</p></div>
+        <button type="button" class="secondary" id="refreshCapitalOverviewBtn">Refresh figures</button>
+      </div>
+      <div id="capitalOverviewMessage" aria-live="polite" class="stockNote">Loading capital records…</div>
+      <div class="capital-overview-grid">
+        <div class="capital-overview-card capital-original"><small>Original Business Capital (Admin)</small><strong id="coOriginal">—</strong><span>Read from the central Ezelex business capital record</span></div>
+        <div class="capital-overview-card"><small>Opening / Carry-Forward Stock</small><strong id="coOpening">—</strong><span>Opening stock value in the current weekly book</span></div>
+        <div class="capital-overview-card"><small>Remaining Stock Value</small><strong id="coRemaining">—</strong><span>Purchase cost of stock physically remaining</span></div>
+        <div class="capital-overview-card"><small>Paid Sales — Capital Recovered</small><strong id="coSold">—</strong><span>Original purchase cost of paid crates sold</span></div>
+        <div class="capital-overview-card"><small>On-Credit Capital</small><strong id="coCredit">—</strong><span>Original purchase cost tied up in unpaid crates</span></div>
+        <div class="capital-overview-card capital-loss"><small>Damage &amp; Loss</small><strong id="coDamage">—</strong><span>Original purchase cost written off through damage or loss</span></div>
+        <div class="capital-overview-card"><small>New Purchases &amp; Reinvestments</small><strong id="coPurchases">—</strong><span>New stock purchases recorded this week</span></div>
+        <div class="capital-overview-card"><small>Cash in Hand</small><strong id="coCash">—</strong><span>Current reinvestment cash balance; not added twice to sold capital recovered</span></div>
+        <div class="capital-overview-card capital-profit"><small>Profit / Loss</small><strong id="coProfit">—</strong><span>Trading result shown separately from original capital</span></div>
+      </div>
+      <div class="capital-reconciliation">
+        <h3>Stock Capital Reconciliation</h3>
+        <div class="capital-reconciliation-row"><span>Remaining stock + paid-sales cost recovered + unpaid-credit cost + damage/loss</span><strong id="coAccounted">—</strong></div>
+        <div class="capital-reconciliation-row"><span>Difference against Admin's original business capital</span><strong id="coDifference">—</strong></div>
+        <p class="stockNote">Important: Cash in Hand is a cash-position figure, not an extra category to add on top of Paid Sales — Capital Recovered. Paid sales move original stock cost into recovered capital; reinvestment moves cash back into stock. This prevents double-counting. The stock breakdown shown here is for this worker's current weekly book, while Original Business Capital is the company-wide Admin figure. If other workers or business assets hold part of the company capital, the difference includes those amounts and is not automatically a shortage.</p>
+      </div>
+    </div>
+  </section>
 </main>
 
 <script>
@@ -2455,6 +2500,7 @@ function activateMainSection(tab){
   if(tab==="stock")loadStock();
   if(tab==="stockHistory")loadStockHistory();
   if(tab==="credit")loadCredits();
+  if(tab==="capitalOverview")loadCapitalOverview();
   if(tab==="communication")loadMessages();
 }
 $("backToDashboard")?.addEventListener("click",()=>{
@@ -2615,6 +2661,76 @@ window.addEventListener("load",()=>start(),{once:true});
  document.addEventListener('visibilitychange',()=>{if(!document.hidden)update();});
  setTimeout(update,1200);
 })();
+
+// Read-only capital overview. It does not write to or alter any existing stock,
+ // sales, credit, weekly cash, or Admin capital records.
+async function loadCapitalOverview(){
+  const message=$("capitalOverviewMessage");
+  const set=(id,value)=>{const el=$(id);if(el)el.textContent=value;};
+  if(!currentUser){if(message)message.textContent="Sign in to view capital information.";return;}
+  if(message)message.textContent="Refreshing the Admin capital record and your latest stock, sales and credit figures…";
+  try{
+    if(typeof window.ezelexLoadFinance==="function")await window.ezelexLoadFinance();
+    const [capitalRead]=await Promise.all([
+      db.from("ezelex_business_capital").select("id,original_capital,current_cash").eq("id",1).maybeSingle(),
+      loadStock(),loadCredits()
+    ]);
+    if(capitalRead.error){
+      set("coOriginal","Unavailable");
+      if(message)message.textContent="The Admin's original business capital could not be read from ezelex_business_capital. This may be due to the table's Row Level Security permissions. No capital value has been guessed. Ask the administrator to allow authenticated workers read-only access to this record.";
+      return;
+    }
+    const original=Number(capitalRead.data?.original_capital||0);
+    const rows=(typeof getAuthoritativeWeekStockRows==="function"&&currentStockWeek)
+      ?getAuthoritativeWeekStockRows(currentStockWeek.id,currentStockWeek.week_start,liveStockRows)
+      :(liveStockRows||[]);
+    const credits=(creditRows||[]).filter(c=>rows.some(r=>String(r.id)===String(c.stock_batch_id)));
+    const creditByBatch=new Map();
+    for(const c of credits){
+      const id=String(c.stock_batch_id||"");
+      const unpaidCrates=Math.max(0,Number(c.quantity||0)-Number(c.crates_paid||0));
+      if(unpaidCrates>0 && Math.max(0,Number(c.amount_due||0)-Number(c.amount_paid||0))>0.009)
+        creditByBatch.set(id,(creditByBatch.get(id)||0)+unpaidCrates);
+    }
+    let opening=0,remaining=0,soldCost=0,creditCost=0,damageLoss=0,purchases=0,profit=0;
+    for(const r of rows){
+      const unit=Math.max(0,Number(r.cost_per_unit||0));
+      const total=Math.max(0,Number(r.total_quantity||0));
+      const sold=Math.max(0,Number(r.sold_quantity||0));
+      const damage=Math.max(0,Number(r.damage_quantity||0));
+      const loss=Math.max(0,Number(r.loss_quantity||0));
+      const unpaid=creditByBatch.get(String(r.id))||0;
+      const physical=Math.max(0,Number(r.remaining_quantity??(total-sold-damage-loss-unpaid)));
+      if(r.stock_type==="carry_forward")opening+=total*unit;
+      else purchases+=Math.max(0,Number(r.purchase_total??total*unit));
+      remaining+=physical*unit;
+      soldCost+=sold*unit;
+      creditCost+=unpaid*unit;
+      damageLoss+=(damage+loss)*unit;
+      profit+=Number(r.profit_loss||0);
+    }
+    const accounted=remaining+soldCost+creditCost+damageLoss;
+    const difference=original-accounted;
+    set("coOriginal",money(original));
+    set("coOpening",money(opening));
+    set("coRemaining",money(remaining));
+    set("coSold",money(soldCost));
+    set("coCredit",money(creditCost));
+    set("coDamage",money(damageLoss));
+    set("coPurchases",money(purchases));
+    const cashEl=$("financeCashAvailable");
+    set("coCash",cashEl?cashEl.textContent:(capitalRead.data?.current_cash!=null?money(capitalRead.data.current_cash):"Not available"));
+    set("coProfit",money(profit));
+    set("coAccounted",money(accounted));
+    set("coDifference",money(difference));
+    if(message)message.textContent="Figures refreshed from the Admin capital record and this worker's current weekly stock and credit records. The company-wide capital figure and worker-only stock breakdown are deliberately identified separately.";
+  }catch(error){
+    console.error("Capital Overview refresh failed:",error);
+    if(message)message.textContent="Capital Overview could not be refreshed: "+String(error?.message||error);
+  }
+}
+$("refreshCapitalOverviewBtn")?.addEventListener("click",loadCapitalOverview);
+
 </script>
 
 
