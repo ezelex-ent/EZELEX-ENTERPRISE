@@ -775,7 +775,7 @@ async function ensureCurrentStockWeek(){
   else for(const oldWeek of (oldOpen.data||[])){
     const closedOld=await db.from("worker_stock_weeks").update({status:"closed",closed_at:new Date().toISOString()}).eq("id",oldWeek.id).eq("worker_id",currentUser.id).eq("status","open");
     if(closedOld.error) console.warn("Could not auto-close previous weekly book:",closedOld.error.message);
-    else { const notice=await db.functions.invoke("worker-weekly-stock-closed",{body:{week_id:oldWeek.id}}); if(notice.error)console.warn("Weekly admin email failed:",notice.error.message); }
+    else { const notice=await db.functions.invoke("worker-weekly-stock-closed",{body:{week_id:oldWeek.id}}); if(notice.error||notice.data?.email_sent!==true)console.error("Weekly admin email was not confirmed:",notice.error?.message||notice.data?.error||notice.data?.message||"No successful email confirmation returned."); }
   }
   // Read weekly books using both the auth UUID and the legacy worker code. Older portal
   // records may have been saved under either owner value. Do not create a duplicate
@@ -1028,9 +1028,9 @@ async function closeCurrentStockWeek(){
   if(r.error){msg("weeklyStockMsg","Could not close this week: "+esc(r.error.message),"error");return;}
   currentStockWeek.status="closed";renderStockWeekControls();msg("weeklyStockMsg","Weekly stock book closed and archived. Preparing the admin summary email…","success");
   const notice=await db.functions.invoke("worker-weekly-stock-closed",{body:{week_id:currentStockWeek.id}});
-  if(notice.error)msg("weeklyStockMsg","Week is closed, but the admin summary email could not be sent: "+esc(notice.error.message)+". Ask admin to check the Resend function settings.","error");
-  else if(notice.data?.email_sent===false)msg("weeklyStockMsg","Week is closed. Admin email is queued for configuration; check ADMIN_EMAIL, RESEND_API_KEY and RESEND_FROM_EMAIL secrets.","error");
-  else msg("weeklyStockMsg","Week closed successfully and the weekly management summary was sent to Ezelex admin.","success");
+  if(notice.error)msg("weeklyStockMsg","Week is closed, but the admin summary email could not be sent: "+esc(notice.error.message)+". Ask admin to check the Resend function logs.","error");
+  else if(notice.data?.email_sent!==true)msg("weeklyStockMsg","Week is closed, but email delivery was not confirmed: "+esc(notice.data?.error||notice.data?.message||"The email function did not confirm a successful send."),"error");
+  else msg("weeklyStockMsg","Week closed successfully. The weekly management summary was accepted by Resend for delivery to Ezelex admin.","success");
   await Promise.all([loadStock(),loadStockWeeks()]);
 }
 $("closeStockWeekBtn")?.addEventListener("click",closeCurrentStockWeek);
