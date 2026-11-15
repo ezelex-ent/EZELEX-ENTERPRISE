@@ -574,7 +574,7 @@ th,td{padding:12px;border-bottom:1px solid #e6ebf1;text-align:left;font-size:14p
       <div class="capital-overview-grid">
         <div class="capital-overview-card capital-original"><small>Original Capital Given</small><strong id="coOriginal">—</strong><span>Capital assigned by Admin to start the business</span></div>
         <div class="capital-overview-card"><small>Remaining Stock</small><strong id="coRemaining">—</strong><span>Purchase cost of all crates still physically remaining, including carry-forward stock</span></div>
-        <div class="capital-overview-card"><small>Sold Stock — Paid in Cash</small><strong id="coSold">—</strong><span>Original purchase cost of crates sold and paid for</span></div>
+        <div class="capital-overview-card"><small>Cash in Hand</small><strong id="coSold">—</strong><span>Paid-sale purchase cost recovered, less reinvestments</span></div>
         <div class="capital-overview-card"><small>On-Credit Stock</small><strong id="coCredit">—</strong><span>Original purchase cost of crates sold but not yet paid for</span></div>
         <div class="capital-overview-card capital-loss"><small>Damaged / Lost Stock</small><strong id="coDamage">—</strong><span>Original purchase cost of crates damaged or lost</span></div>
       </div>
@@ -582,7 +582,7 @@ th,td{padding:12px;border-bottom:1px solid #e6ebf1;text-align:left;font-size:14p
         <h3>Capital Reconciliation</h3>
         <div class="capital-reconciliation-row"><span>Total Capital Accounted For</span><strong id="coAccounted">—</strong></div>
         <div class="capital-reconciliation-row"><span>Capital Difference (shortage / excess)</span><strong id="coDifference">—</strong></div>
-        <p class="stockNote">Calculation: Remaining Stock + Sold Stock Paid in Cash + On-Credit Stock + Damaged / Lost Stock. All four categories are valued at their original purchase cost. Carry-forward stock is already included in the current week's remaining or sold quantities and is never added separately. Profit, selling revenue, cash balance and new purchases are not added again to this reconciliation.</p>
+        <p class="stockNote">Total = Cash in Hand + Remaining Stock + On-Credit Stock + Damage / Loss. All values use purchase cost. Carry-forward is counted once. Profit is excluded.</p>
       </div>
     </div>
   </section>
@@ -2664,56 +2664,90 @@ async function loadCapitalOverview(){
   const message=$("capitalOverviewMessage");
   const set=(id,value)=>{const el=$(id);if(el)el.textContent=value;};
   if(!currentUser){if(message)message.textContent="Sign in to view capital information.";return;}
-  if(message)message.textContent="Refreshing the original capital and current weekly stock records…";
+  if(message)message.textContent="Refreshing capital balances…";
   try{
     const [capitalRead]=await Promise.all([
-      db.from("ezelex_business_capital").select("id,original_capital").eq("id",1).maybeSingle(),
+      db.from("worker_business_capital_public").select("id,original_capital").eq("id",1).maybeSingle(),
       loadStock(),loadCredits()
     ]);
     if(capitalRead.error){
       set("coOriginal","Unavailable");
-      if(message)message.textContent="The original capital could not be read from the Admin capital record. This may be due to Row Level Security permissions. No value has been guessed.";
+      set("coSold","Unavailable");
+      set("coAccounted","Unavailable");
+      set("coDifference","Unavailable");
+      if(message)message.textContent="Admin capital is not available to this worker account. Install the read-only worker capital view in Supabase so Admin updates can appear here. No zero value has been assumed.";
       return;
     }
-    const original=Number(capitalRead.data?.original_capital||0);
+    if(!capitalRead.data){
+      set("coOriginal","Not set");
+      set("coSold","Unavailable");
+      set("coAccounted","Unavailable");
+      set("coDifference","Unavailable");
+      if(message)message.textContent="The Admin capital record (id 1) has not been created yet. Enter Original Business Capital in Admin Business Finance & Capital.";
+      return;
+    }
+    const original=Number(capitalRead.data.original_capital);
+    if(!Number.isFinite(original)||original<0){
+      set("coOriginal","Invalid");
+      set("coSold","Unavailable");
+      set("coAccounted","Unavailable");
+      set("coDifference","Unavailable");
+      if(message)message.textContent="The Admin original capital value is invalid. Please check the Admin Business Finance & Capital entry.";
+      return;
+    }
     const rows=(typeof getAuthoritativeWeekStockRows==="function"&&currentStockWeek)
       ?getAuthoritativeWeekStockRows(currentStockWeek.id,currentStockWeek.week_start,liveStockRows)
       :(liveStockRows||[]);
-    const credits=(creditRows||[]).filter(c=>rows.some(r=>String(r.id)===String(c.stock_batch_id)));
-    const unpaidByBatch=new Map();
+    const credits=(creditRows||[]);
+    const unpaidCostByBatch=new Map();
     for(const c of credits){
       const id=String(c.stock_batch_id||"");
+      const batch=(liveStockRows||[]).find(r=>String(r.id)===id);
       const unpaidCrates=Math.max(0,Number(c.quantity||0)-Number(c.crates_paid||0));
-      const unpaidAmount=Math.max(0,Number(c.amount_due||0)-Number(c.amount_paid||0));
-      if(unpaidCrates>0 && unpaidAmount>0.009)
-        unpaidByBatch.set(id,(unpaidByBatch.get(id)||0)+unpaidCrates);
+      if(unpaidCrates>0&&batch){
+        unpaidCostByBatch.set(id,(unpaidCostByBatch.get(id)||0)+unpaidCrates*Math.max(0,Number(batch.cost_per_unit||0)));
+      }
     }
-    let remainingValue=0,paidSoldValue=0,creditValue=0,damageLossValue=0;
+    let remainingValue=0,creditValue=0,damageLossValue=0;
     for(const r of rows){
       const unit=Math.max(0,Number(r.cost_per_unit||0));
       const total=Math.max(0,Number(r.total_quantity||0));
       const sold=Math.max(0,Number(r.sold_quantity||0));
       const damage=Math.max(0,Number(r.damage_quantity||0));
       const loss=Math.max(0,Number(r.loss_quantity||0));
-      const unpaid=Math.min(sold,unpaidByBatch.get(String(r.id))||0);
       const physical=Math.max(0,Number(r.remaining_quantity??(total-sold-damage-loss)));
       remainingValue+=physical*unit;
-      paidSoldValue+=Math.max(0,sold-unpaid)*unit;
-      creditValue+=unpaid*unit;
+      creditValue+=(unpaidCostByBatch.get(String(r.id))||0);
       damageLossValue+=(damage+loss)*unit;
     }
-    const accounted=remainingValue+paidSoldValue+creditValue+damageLossValue;
+    // Use the same all-time reinvestment ledger as the worker's Finance page.
+    // Credit crates are excluded from cash until they are actually paid.
+    const allRows=(liveStockRows||[]).filter(r=>!r.deleted_at);
+    const grossRecovered=allRows.reduce((n,r)=>{
+      const recordedPaidCost=Math.max(0,Number(r.sold_cost||0));
+      // The credit normalisation routine has already removed unpaid credit cost
+      // from sold_cost on migrated batches. Subtract it only for legacy batches.
+      const legacyUnpaidCost=r.credit_sales_normalized===true?0:(unpaidCostByBatch.get(String(r.id))||0);
+      return n+Math.max(0,recordedPaidCost-legacyUnpaidCost);
+    },0);
+    const reinvested=allRows.filter(r=>r.stock_type==="reinvestment"||(r.stock_type!=="carry_forward"&&String(r.notes||"").toLowerCase().includes("additional purchase quantity added while editing an existing stock item"))).reduce((n,r)=>n+Math.max(0,Number(r.purchase_total??(Number(r.total_quantity||0)*Number(r.cost_per_unit||0)))),0);
+    const cashInHand=Math.max(0,grossRecovered-reinvested);
+    const accounted=remainingValue+cashInHand+creditValue+damageLossValue;
     const difference=original-accounted;
     set("coOriginal",money(original));
     set("coRemaining",money(remainingValue));
-    set("coSold",money(paidSoldValue));
+    set("coSold",money(cashInHand));
     set("coCredit",money(creditValue));
     set("coDamage",money(damageLossValue));
     set("coAccounted",money(accounted));
-    set("coDifference",money(difference));
-    if(message)message.textContent="Reconciliation refreshed. Carry-forward stock is included in the current weekly stock figures and is not counted twice.";
+    set("coDifference",(difference<0?"−":difference>0?"+":"")+money(Math.abs(difference)));
+    if(message)message.textContent="Capital refreshed. Cash in Hand excludes unpaid credit and is reduced by reinvestments. Carry-forward stock is already included in the current week's remaining stock.";
   }catch(error){
     console.error("Capital Overview refresh failed:",error);
+    set("coOriginal","Unavailable");
+    set("coSold","Unavailable");
+    set("coAccounted","Unavailable");
+    set("coDifference","Unavailable");
     if(message)message.textContent="Capital Overview could not be refreshed: "+String(error?.message||error);
   }
 }
