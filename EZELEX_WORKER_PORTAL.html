@@ -1367,12 +1367,18 @@ async function loadStock(){
       if(r.stock_type==="carry_forward")g.hasOpening=true;
     });
     $("stockBody").innerHTML=[...productGroups.values()].map(g=>{
-      // Keep editing attached to a real purchase batch (never the generated
-      // carry-forward row). The underlying batch records remain individually auditable.
-      const editable=g.items.find(r=>r.stock_type!=="carry_forward")||null;
+      // Keep one consolidated product row and one Edit button. Edit the opening
+      // carry-forward balance first while it still has stock; after it is exhausted,
+      // continue with the next available batch. New purchases/reinvestments remain
+      // included in this same product summary and are not presented as extra rows.
+      const editable=
+        g.items.find(r=>r.stock_type==="carry_forward"&&Number(r.remaining_quantity||0)>0) ||
+        g.items.find(r=>Number(r.remaining_quantity||0)>0) ||
+        g.items.find(r=>r.stock_type==="carry_forward") ||
+        g.items[0] || null;
       const editButton=editable
         ? `<button type="button" class="primary" onclick="editStock('${esc(editable.id)}')">Edit</button>`
-        : '<span class="muted">Opening stock</span>';
+        : '<span class="muted">No stock record</span>';
       const productLabel=esc(g.label)+(g.hasOpening?' <span class="badge">Includes opening stock</span>':'');
       return `<tr><td>${esc(g.latestDate||"—")}</td><td>${productLabel}</td><td>${esc(g.total)}</td><td>${esc(g.sold)}</td><td>${esc(g.damage)}</td><td><strong>${esc(g.remaining)}</strong></td><td>${money(g.capital)}</td><td>${money(g.purchase)}</td><td>${money(g.cash)}</td><td>${money(g.profit)}</td><td>${editButton}</td></tr>`;
     }).join("");
