@@ -1970,8 +1970,12 @@ async function loadCredits(){
     creditPaymentRows=[];
     console.warn("Credit payment history could not be loaded:",paymentRead.error.message);
   }else creditPaymentRows=paymentRead.data||[];
-  const paymentsByCredit=new Map();
+  // Create an entry for every credit sale so a sale whose payments have all
+  // been reversed correctly becomes zero-paid instead of falling back to stale
+  // amount_paid / crates_paid values stored on the credit-sale row.
+  const paymentsByCredit=new Map(rawCreditRows.map(c=>[String(c.id),{amount:0,qty:0}]));
   for(const p of creditPaymentRows){
+    if(p.reversed_at)continue; // reversed events remain visible in audit history, but never count as paid
     const key=String(p.credit_sale_id);
     const item=paymentsByCredit.get(key)||{amount:0,qty:0};
     item.amount+=Number(p.amount_paid||0);item.qty+=Number(p.crates_paid||0);
@@ -1979,11 +1983,16 @@ async function loadCredits(){
   }
   const normalizedCreditRows=rawCreditRows.map(c=>{
     const events=paymentsByCredit.get(String(c.id));
+    // Legacy rows with no payment-ledger records retain their stored values.
+    const hasPaymentEvents=creditPaymentRows.some(p=>String(p.credit_sale_id)===String(c.id));
     // Legacy rows have no reliable per-crate payment allocation. Infer crates only
     // when the entire legacy credit amount is paid; never guess a partial crate count.
     const legacyQty=Number(c.amount_due||0)>0 && Number(c.amount_paid||0)>=Number(c.amount_due||0)
       ? Number(c.quantity||0) : 0;
-    return {...c,amount_paid:events?events.amount:Number(c.amount_paid||0),crates_paid:events?events.qty:Number(c.crates_paid??legacyQty)};
+    return {...c,
+      amount_paid:hasPaymentEvents?events.amount:Number(c.amount_paid||0),
+      crates_paid:hasPaymentEvents?events.qty:Number(c.crates_paid??legacyQty)
+    };
   });
   const stockSnapshot=await selectWorkerRows('worker_stock_batches','*',{column:'stock_date',ascending:false});
   if(!stockSnapshot.error){
