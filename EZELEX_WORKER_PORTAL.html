@@ -2047,22 +2047,48 @@ async function loadCredits(){
   if(typeof loadStock==="function")await loadStock();
 }
 function renderCredits(){
-  const open=creditRows.filter(c=>Number(c.amount_due||0)>Number(c.amount_paid||0)||Number(c.crates_paid||0)<Number(c.quantity||0));
-  $('creditOutstanding').textContent=money(open.reduce((n,c)=>n+Math.max(0,Number(c.amount_due||0)-Number(c.amount_paid||0)),0));
-  $('creditUnits').textContent=open.reduce((n,c)=>n+Math.max(0,Number(c.quantity||0)-Number(c.crates_paid||0)),0).toLocaleString();
-  $('creditBody').innerHTML=creditRows.length?creditRows.map(c=>{
+  const now=Date.now();
+  const DAY_MS=24*60*60*1000;
+  const getPaidAt=(c)=>{
+    const activePayments=(creditPaymentRows||[]).filter(p=>
+      String(p.credit_sale_id)===String(c.id)&&!p.reversed_at
+    );
+    if(activePayments.length){
+      const dates=activePayments.map(p=>new Date(p.payment_date||p.created_at||0).getTime()).filter(Number.isFinite);
+      if(dates.length)return Math.max(...dates);
+    }
+    // Legacy fully-paid records may not have a payment-ledger row.
+    const fallback=c.paid_at||c.updated_at||c.credit_date;
+    const stamp=new Date(fallback||0).getTime();
+    return Number.isFinite(stamp)?stamp:now;
+  };
+  const getAmounts=(c)=>{
     const bal=Math.max(0,Number(c.amount_due||0)-Number(c.amount_paid||0));
     const paidQty=Math.min(Number(c.quantity||0),Number(c.crates_paid||0));
     const unpaidQty=Math.max(0,Number(c.quantity||0)-paidQty);
-    const status=unpaidQty<=0&&bal<=0?'PAID':paidQty>0?'PART-PAID':'OUTSTANDING';
+    return {bal,paidQty,unpaidQty,fullyPaid:unpaidQty<=0&&bal<=0};
+  };
+  // Keep all credit rows loaded for stock/finance calculations. Only hide a
+  // fully-paid record from the visible On-Credit register after 24 hours.
+  const visibleRows=creditRows.filter(c=>{
+    const a=getAmounts(c);
+    return !a.fullyPaid || (now-getPaidAt(c))<DAY_MS;
+  });
+  const open=creditRows.filter(c=>!getAmounts(c).fullyPaid);
+  $('creditOutstanding').textContent=money(open.reduce((n,c)=>n+getAmounts(c).bal,0));
+  $('creditUnits').textContent=open.reduce((n,c)=>n+getAmounts(c).unpaidQty,0).toLocaleString();
+  $('creditBody').innerHTML=visibleRows.length?visibleRows.map(c=>{
+    const {bal,paidQty,unpaidQty,fullyPaid}=getAmounts(c);
+    const status=fullyPaid?'PAID':paidQty>0?'PART-PAID':'OUTSTANDING';
     const statusHtml=status==='PAID'?'<span class="badge approved">PAID</span>':status==='PART-PAID'?'<span class="badge" style="background:#fff3cd;color:#8a5b00">PART-PAID</span>':'<span class="badge pending">OUTSTANDING</span>';
     const relatedPayments=(creditPaymentRows||[]).filter(p=>String(p.credit_sale_id)===String(c.id));
     const paymentActions=relatedPayments.map(p=>p.reversed_at
       ? `<span class="badge" style="background:#fee4e2;color:#912018">REVERSED · ${esc(dateOnly(p.payment_date||p.created_at))}</span>`
       : `<button type="button" class="danger" onclick="reverseCreditPayment('${esc(p.id)}')">Reverse ${money(p.amount_paid)} · ${esc(dateOnly(p.payment_date||p.created_at))}</button>`).join('');
-    const actions=`<span style="display:inline-flex;gap:6px;flex-wrap:wrap"><button type="button" class="primary" onclick="editCreditRecord('${esc(c.id)}')">Edit</button>${unpaidQty>0?`<button type="button" onclick="recordCreditPayment('${esc(c.id)}')">Record Payment</button>`:''}${paymentActions}</span>`;
+    // Fully-paid credit records are read-only; no Edit action is offered.
+    const actions=`<span style="display:inline-flex;gap:6px;flex-wrap:wrap">${!fullyPaid?`<button type="button" class="primary" onclick="editCreditRecord('${esc(c.id)}')">Edit</button>${unpaidQty>0?`<button type="button" onclick="recordCreditPayment('${esc(c.id)}')">Record Payment</button>`:''}`:''}${paymentActions}</span>`;
     return `<tr><td>${esc(dateOnly(c.credit_date))}</td><td>${esc(c.customer_name||'')}</td><td>${esc(c.product_service||'Eggs')}</td><td>${Number(c.quantity||0)}</td><td>${paidQty}</td><td>${unpaidQty}</td><td>${money(c.amount_due)}</td><td>${money(c.amount_paid)}</td><td><b>${money(bal)}</b></td><td>${statusHtml}</td><td>${actions}</td></tr>`;
-  }).join(''):'<tr><td colspan="11">No credit sales recorded.</td></tr>';
+  }).join(''):'<tr><td colspan="11">No outstanding or recently paid credit sales.</td></tr>';
 }
 window.reverseCreditPayment=async paymentId=>{
   const payment=(creditPaymentRows||[]).find(p=>String(p.id)===String(paymentId));
