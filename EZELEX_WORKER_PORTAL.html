@@ -1159,9 +1159,9 @@ function calculateStockCashInHand(batch){
   return soldCost-damageCost-lossCost;
 }
 function unpaidCreditForBatch(batchId){return (creditRows||[]).filter(c=>String(c.stock_batch_id||"")===String(batchId||"")).reduce((n,c)=>n+Math.max(0,Number(c.quantity||0)-Number(c.crates_paid||0)),0);}
-function creditPaymentProfitForRows(rows){const ids=new Set((rows||[]).map(r=>String(r.id)));return (creditPaymentRows||[]).filter(p=>ids.has(String(p.stock_batch_id))).reduce((sum,p)=>sum+Number(p.profit_amount||0),0);}
-function creditPaymentQtyForRows(rows){const ids=new Set((rows||[]).map(r=>String(r.id)));return (creditPaymentRows||[]).filter(p=>ids.has(String(p.stock_batch_id))).reduce((sum,p)=>sum+Number(p.crates_paid||0),0);}
-function creditPaymentsForWeek(weekStart){return (creditPaymentRows||[]).filter(p=>mondayDateISO(p.payment_date||p.created_at||today())===String(weekStart||""));}
+function creditPaymentProfitForRows(rows){const ids=new Set((rows||[]).map(r=>String(r.id)));return (creditPaymentRows||[]).filter(p=>!p.reversed_at&&ids.has(String(p.stock_batch_id))).reduce((sum,p)=>sum+Number(p.profit_amount||0),0);}
+function creditPaymentQtyForRows(rows){const ids=new Set((rows||[]).map(r=>String(r.id)));return (creditPaymentRows||[]).filter(p=>!p.reversed_at&&ids.has(String(p.stock_batch_id))).reduce((sum,p)=>sum+Number(p.crates_paid||0),0);}
+function creditPaymentsForWeek(weekStart){return (creditPaymentRows||[]).filter(p=>!p.reversed_at&&mondayDateISO(p.payment_date||p.created_at||today())===String(weekStart||""));}
 
 function calculateStock(){
   const total=num("stockTotal"),unitCost=num("costPerUnit"),purchase=total*unitCost,price=num("sellPrice"),enteredSold=num("stockSold"),sold=editingStockId&&!stockCorrectionMode?Number(editingStockOriginal?.sold_quantity||0)+enteredSold:enteredSold,damage=num("stockDamage"),loss=Number(editingStockOriginal?.loss_quantity||0);
@@ -2047,10 +2047,32 @@ function renderCredits(){
     const unpaidQty=Math.max(0,Number(c.quantity||0)-paidQty);
     const status=unpaidQty<=0&&bal<=0?'PAID':paidQty>0?'PART-PAID':'OUTSTANDING';
     const statusHtml=status==='PAID'?'<span class="badge approved">PAID</span>':status==='PART-PAID'?'<span class="badge" style="background:#fff3cd;color:#8a5b00">PART-PAID</span>':'<span class="badge pending">OUTSTANDING</span>';
-    const actions=`<span style="display:inline-flex;gap:6px;flex-wrap:wrap"><button type="button" class="primary" onclick="editCreditRecord('${esc(c.id)}')">Edit</button>${unpaidQty>0?`<button type="button" onclick="recordCreditPayment('${esc(c.id)}')">Record Payment</button>`:''}</span>`;
+    const relatedPayments=(creditPaymentRows||[]).filter(p=>String(p.credit_sale_id)===String(c.id));
+    const paymentActions=relatedPayments.map(p=>p.reversed_at
+      ? `<span class="badge" style="background:#fee4e2;color:#912018">REVERSED · ${esc(dateOnly(p.payment_date||p.created_at))}</span>`
+      : `<button type="button" class="danger" onclick="reverseCreditPayment('${esc(p.id)}')">Reverse ${money(p.amount_paid)} · ${esc(dateOnly(p.payment_date||p.created_at))}</button>`).join('');
+    const actions=`<span style="display:inline-flex;gap:6px;flex-wrap:wrap"><button type="button" class="primary" onclick="editCreditRecord('${esc(c.id)}')">Edit</button>${unpaidQty>0?`<button type="button" onclick="recordCreditPayment('${esc(c.id)}')">Record Payment</button>`:''}${paymentActions}</span>`;
     return `<tr><td>${esc(dateOnly(c.credit_date))}</td><td>${esc(c.customer_name||'')}</td><td>${esc(c.product_service||'Eggs')}</td><td>${Number(c.quantity||0)}</td><td>${paidQty}</td><td>${unpaidQty}</td><td>${money(c.amount_due)}</td><td>${money(c.amount_paid)}</td><td><b>${money(bal)}</b></td><td>${statusHtml}</td><td>${actions}</td></tr>`;
   }).join(''):'<tr><td colspan="11">No credit sales recorded.</td></tr>';
 }
+window.reverseCreditPayment=async paymentId=>{
+  const payment=(creditPaymentRows||[]).find(p=>String(p.id)===String(paymentId));
+  if(!payment||payment.reversed_at){msg('creditMsg','This payment is already reversed or could not be found.','error');return;}
+  const reason=window.prompt(`Reverse this payment of ${money(payment.amount_paid)} for ${Number(payment.crates_paid||0)} crate(s)?\\n\\nEnter the reason for the audit record:`);
+  if(reason===null)return;
+  if(!reason.trim()){msg('creditMsg','Please enter a reason before reversing the payment.','error');return;}
+  if(!window.confirm('Confirm reversal? The payment will remain in the audit history as REVERSED. Its crates and amount will return to the customer’s outstanding credit.'))return;
+  try{
+    const result=await db.rpc('ezelex_reverse_credit_payment',{p_payment_id:paymentId,p_reason:reason.trim()});
+    if(result.error)throw result.error;
+    msg('creditMsg',`Payment reversed: ${money(result.data?.amount_reversed||payment.amount_paid)} and ${Number(result.data?.crates_reversed||payment.crates_paid||0)} crate(s) returned to outstanding credit. The original payment remains in the audit history.`,'success');
+    await Promise.all([loadCredits(),loadStock(),loadStockWeeks(),loadStockHistory()]);
+    if(typeof window.ezelexLoadFinance==='function')await window.ezelexLoadFinance();
+  }catch(error){
+    console.error('Credit payment reversal failed:',error);
+    msg('creditMsg','Payment reversal failed: '+esc(error?.message||String(error))+'. Check that the supplied Supabase reversal SQL has been run.','error');
+  }
+};
 const creditDialog=$('creditActionDialog');
 function closeCreditAction(){if(creditDialog?.open)creditDialog.close();$('creditActionMsg').textContent='';}
 $('creditActionClose')?.addEventListener('click',closeCreditAction);
