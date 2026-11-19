@@ -2016,16 +2016,38 @@ async function loadCredits(){
   for(const [batchId,ledger] of byBatch){
     const batch=liveStockRows.find(x=>String(x.id)===batchId);if(!batch)continue;
     const unit=Number(batch.cost_per_unit||0);
-    // Normalized rows already exclude unpaid credit from sold_quantity. Repair only
-    // their physical remaining balance if an earlier version marked them normalized
-    // without deducting the reserved credit crates.
+    // Repair previously-normalized batches when unpaid credit crates were
+    // accidentally counted both inside sold_quantity and again as credit stock.
+    // The over-allocation test makes this correction idempotent: after one repair,
+    // sold + unpaid credit + remaining + damage/loss equals the physical quantity.
     if(batch.credit_sales_normalized===true){
-      const expectedRemaining=Math.max(0,Number(batch.total_quantity||0)-Number(batch.sold_quantity||0)-ledger.unpaidQty-Number(batch.damage_quantity||0)-Number(batch.loss_quantity||0));
-      if(Math.abs(Number(batch.remaining_quantity||0)-expectedRemaining)>0.0001 ||
-         Math.abs(Number(batch.credit_quantity||0)-ledger.qty)>0.0001 ||
-         Math.abs(Number(batch.credit_outstanding||0)-ledger.unpaidAmount)>0.009){
-        const repaired=await db.from('worker_stock_batches').update({remaining_quantity:expectedRemaining,remaining_value:expectedRemaining*unit,credit_quantity:ledger.qty,credit_outstanding:ledger.unpaidAmount}).eq('id',batchId).eq('worker_id',currentUser.id).is('deleted_at',null);
-        if(!repaired.error){batch.remaining_quantity=expectedRemaining;batch.remaining_value=expectedRemaining*unit;batch.credit_quantity=ledger.qty;batch.credit_outstanding=ledger.unpaidAmount;}
+      const currentSold=Math.max(0,Number(batch.sold_quantity||0));
+      const currentRemaining=Math.max(0,Number(batch.remaining_quantity||0));
+      const damageQty=Math.max(0,Number(batch.damage_quantity||0));
+      const lossQty=Math.max(0,Number(batch.loss_quantity||0));
+      const totalQty=Math.max(0,Number(batch.total_quantity||0));
+      const overAllocated=Math.max(0,currentSold+ledger.unpaidQty+currentRemaining+damageQty+lossQty-totalQty);
+      const repairedSold=Math.max(0,currentSold-overAllocated);
+      const repairedSoldCost=Math.max(0,Number(batch.sold_cost||0)-overAllocated*unit);
+      const unpaidRevenueShare=ledger.unpaidQty>0?ledger.unpaidAmount*(overAllocated/ledger.unpaidQty):0;
+      const repairedRevenue=Math.max(0,Number(batch.sales_revenue||0)-unpaidRevenueShare);
+      const repairedProfit=Number(batch.profit_loss||0)-(unpaidRevenueShare-overAllocated*unit);
+      const expectedRemaining=Math.max(0,totalQty-repairedSold-ledger.unpaidQty-damageQty-lossQty);
+      const expectedCash=Math.max(0,repairedSoldCost-damageQty*unit-lossQty*unit);
+      const patch={
+        sold_quantity:repairedSold,sold_cost:repairedSoldCost,
+        sales_revenue:repairedRevenue,profit_loss:repairedProfit,
+        remaining_quantity:expectedRemaining,remaining_value:expectedRemaining*unit,
+        credit_quantity:ledger.qty,credit_outstanding:ledger.unpaidAmount,
+        cash_in_hand:expectedCash
+      };
+      const needsRepair=overAllocated>0.0001 ||
+        Math.abs(Number(batch.remaining_quantity||0)-expectedRemaining)>0.0001 ||
+        Math.abs(Number(batch.credit_quantity||0)-ledger.qty)>0.0001 ||
+        Math.abs(Number(batch.credit_outstanding||0)-ledger.unpaidAmount)>0.009;
+      if(needsRepair){
+        const repaired=await db.from('worker_stock_batches').update(patch).eq('id',batchId).eq('worker_id',currentUser.id).is('deleted_at',null);
+        if(!repaired.error)Object.assign(batch,patch);
         else console.warn('Credit stock balance repair could not update batch',batchId,repaired.error.message);
       }
       continue;
@@ -2843,15 +2865,20 @@ async function loadCapitalOverview(){
       :(liveStockRows||[]);
     const credits=(creditRows||[]);
     const unpaidCostByBatch=new Map();
+    let creditValue=0;
     for(const c of credits){
       const id=String(c.stock_batch_id||"");
       const batch=(liveStockRows||[]).find(r=>String(r.id)===id);
       const unpaidCrates=Math.max(0,Number(c.quantity||0)-Number(c.crates_paid||0));
       if(unpaidCrates>0&&batch){
-        unpaidCostByBatch.set(id,(unpaidCostByBatch.get(id)||0)+unpaidCrates*Math.max(0,Number(batch.cost_per_unit||0)));
+        const cost=unpaidCrates*Math.max(0,Number(batch.cost_per_unit||0));
+        unpaidCostByBatch.set(id,(unpaidCostByBatch.get(id)||0)+cost);
+        // Credit is a capital asset at original purchase cost, not the customer's
+        // selling price. This also works when its source batch is carried forward.
+        creditValue+=cost;
       }
     }
-    let remainingValue=0,creditValue=0,damageLossValue=0;
+    let remainingValue=0,damageLossValue=0;
     for(const r of rows){
       const unit=Math.max(0,Number(r.cost_per_unit||0));
       const total=Math.max(0,Number(r.total_quantity||0));
@@ -2860,19 +2887,13 @@ async function loadCapitalOverview(){
       const loss=Math.max(0,Number(r.loss_quantity||0));
       const physical=Math.max(0,Number(r.remaining_quantity??(total-sold-damage-loss)));
       remainingValue+=physical*unit;
-      creditValue+=(unpaidCostByBatch.get(String(r.id))||0);
       damageLossValue+=(damage+loss)*unit;
     }
-    // Use the same all-time reinvestment ledger as the worker's Finance page.
-    // Credit crates are excluded from cash until they are actually paid.
+    // Stock cost recorded as sold is recovered cash only when the credit ledger
+    // confirms payment. The loadCredits repair above removes any unpaid credit
+    // that had been double-counted in sold_cost. Reinvestments are then deducted.
     const allRows=(liveStockRows||[]).filter(r=>!r.deleted_at);
-    const grossRecovered=allRows.reduce((n,r)=>{
-      const recordedPaidCost=Math.max(0,Number(r.sold_cost||0));
-      // The credit normalisation routine has already removed unpaid credit cost
-      // from sold_cost on migrated batches. Subtract it only for legacy batches.
-      const legacyUnpaidCost=r.credit_sales_normalized===true?0:(unpaidCostByBatch.get(String(r.id))||0);
-      return n+Math.max(0,recordedPaidCost-legacyUnpaidCost);
-    },0);
+    const grossRecovered=allRows.reduce((n,r)=>n+Math.max(0,Number(r.sold_cost||0)),0);
     const reinvested=allRows.filter(r=>r.stock_type==="reinvestment"||(r.stock_type!=="carry_forward"&&String(r.notes||"").toLowerCase().includes("additional purchase quantity added while editing an existing stock item"))).reduce((n,r)=>n+Math.max(0,Number(r.purchase_total??(Number(r.total_quantity||0)*Number(r.cost_per_unit||0)))),0);
     const cashInHand=Math.max(0,grossRecovered-reinvested);
     const accounted=remainingValue+cashInHand+creditValue+damageLossValue;
