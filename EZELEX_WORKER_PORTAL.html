@@ -331,7 +331,7 @@ img,canvas,svg,video{max-width:100%}
       <div class="stat"><small>Crates Sold This Week</small><strong id="weekSales">0</strong></div>
       <div class="stat"><small>Cash In Hand</small><strong id="allSales">GH₵0.00</strong></div>
       <div class="stat profit" id="dashboardProfitCard" style="background:#dcfce7;border-color:#16a34a;color:#14532d"><small>Actual Profit + On-Credit</small><strong id="dashboardProfitValue">GH₵0.00</strong><div class="live" id="dashboardProfitNote">Realised profit plus unpaid-credit profit only.</div></div>
-      <div class="stat" id="dashboardRemainingCard"><small>Remaining Stock Position</small><strong id="dashboardRemaining">0</strong></div>
+      <div class="stat" id="dashboardRemainingCard"><small>Total Remaining Position</small><strong id="dashboardRemaining">0</strong><div id="dashboardRemainingBreakdown">0 available + 0 on-credit</div></div>
       <button type="button" class="stat statAction" id="dashboardCreditCard" aria-label="Open On-Credit records"><small>On-Credit Crates (unpaid) — Open records</small><strong id="dashboardCreditUnits">0</strong><div id="dashboardCreditBreakdown" class="live">View outstanding customer credit</div></button>
     </div>
   </div>
@@ -456,7 +456,7 @@ img,canvas,svg,video{max-width:100%}
         <div class="resultCard"><h3>Starting Capital</h3><strong id="calcCapital">GH₵0.00</strong></div>
         <div class="resultCard"><h3>Outstanding Credit</h3><strong id="calcCreditCapital">GH₵0.00</strong><div>Money customers still owe</div></div>
         <div class="resultCard"><h3>Total Business Capital</h3><strong id="calcTotalCapital">GH₵0.00</strong><div>Starting capital + outstanding credit</div></div>
-        <div class="resultCard"><h3>Cash In Hand</h3><strong id="calcCashInHand">GH₵0.00</strong><div>Purchase cost recovered from sold crates − damage/loss cost; profit excluded</div></div>
+        <div class="resultCard"><h3>Cash In Hand</h3><strong id="calcCashInHand">GH₵0.00</strong><div>Purchase cost recovered from paid crates only; unpaid credit excluded</div></div>
         <div class="resultCard"><h3>Sales Revenue</h3><strong id="calcSalesRevenue">GH₵0.00</strong></div>
         <div class="resultCard" id="profitCard"><h3>Current Profit / Loss</h3><strong id="calcProfit">GH₵0.00</strong><div id="profitLabel" class="live">No sales/loss yet</div></div>
         <div class="resultCard"><h3>Total Stock Accounted For</h3><strong id="calcAccounted">0 units</strong><div id="calcAccountedNote" class="live">Sold + damage</div></div>
@@ -465,7 +465,7 @@ img,canvas,svg,video{max-width:100%}
     </div>
 
     <div class="panel stock-subsection" id="myStockRecordsPanel" data-stock-panel="records">
-      <h2> My Stock Records</h2><div class="stockNote">Enter your starting capital and purchase cost per unit. Total purchase cost is calculated automatically as quantity × unit cost. <strong>Cash In Hand = Purchase Cost Recovered from Sold Crates − Damage/Loss Cost</strong>. Profit and starting capital are shown separately.</div>
+      <h2> My Stock Records</h2><div class="stockNote">Enter your starting capital and purchase cost per unit. Total purchase cost is calculated automatically as quantity × unit cost. <strong>Cash In Hand = Purchase Cost Recovered from Paid Crates</strong>. Profit and starting capital are shown separately.</div>
       <div class="tablebox"><table><thead><tr><th>Date</th><th>Product</th><th>Total</th><th>Sold</th><th>Damage</th><th>Remaining</th><th>Capital</th><th>Purchase</th><th>Cash In Hand</th><th>Profit/Loss</th><th>Actions</th></tr></thead>
       <tbody id="stockBody"><tr><td colspan="11">Loading...</td></tr></tbody></table></div>
 
@@ -483,7 +483,7 @@ img,canvas,svg,video{max-width:100%}
   <section id="credit" class="section">
     <div class="panel" id="creditPanel">
       <h2> On-Credit Egg Sales</h2>
-      <p class="stockNote">Link an already-sold crate to a customer who has not paid yet. On-credit crates are already included in Sold and are not added back to physical Remaining Stock. Workers can edit credit details and record part-payments by crate quantity. Payments recover the original purchase cost into Reinvestment Cash; unpaid credit and its projected profit remain separately visible until payment.</p>
+      <p class="stockNote">Record crates given to a customer who has not paid yet. Credit crates remain outstanding until the customer pays. Workers can edit credit details and record part-payments by crate quantity. Each paid crate is then counted as sold, its original cost is recovered into Reinvestment Cash, and its profit is recognised in the week the payment is received. Unpaid crates and their projected profit remain outstanding.</p>
       <div id="creditMsg"></div>
       <form id="creditForm" class="grid">
         <div><label>Stock Batch</label><select id="creditStockBatch" required><option value="">Choose stock batch</option></select></div>
@@ -604,7 +604,7 @@ img,canvas,svg,video{max-width:100%}
  <div class="panel"><h2>Stock Management</h2><p>Manage reinvestment, cash movements, operating expenses and net profit. All entries are saved against your worker account.</p><div id="financeMsg" aria-live="polite"></div></div>
  <div class="panel financePane" data-finance-pane="reinvest">
   <h2>Reinvest Cash in Hand</h2><p class="stockNote">Choose an existing stock item. The new purchase is saved as a separate batch linked to that product, so its purchase cost and history remain traceable while the product's total stock increases.</p>
-  <div class="stats"><div class="stat" id="reinvestCashCard"><small>Reinvestment Cash in Hand</small><strong id="financeCashAvailable">GH₵0.00</strong><div class="live">Only the original purchase cost recovered from paid crates sold. Profit is excluded. New reinvestment purchases reduce this balance.</div><div id="reinvestCashStatus" class="live" aria-live="polite"></div></div><div class="stat"><small>Current Week Purchases</small><strong id="financeWeekPurchases">GH₵0.00</strong></div></div>
+  <div class="stats"><div class="stat" id="reinvestCashCard"><small>Reinvestment Cash in Hand</small><strong id="financeCashAvailable">GH₵0.00</strong><div class="live">Purchase cost recovered from paid crates only. Unpaid credit is excluded until payment. Reinvestment purchases reduce the available balance.</div><div id="reinvestCashStatus" class="live" aria-live="polite"></div></div><div class="stat"><small>Current Week Purchases</small><strong id="financeWeekPurchases">GH₵0.00</strong></div></div>
   <form id="reinvestForm" class="grid">
    <div><label>Existing Stock Item</label><select id="reinvestProduct" required><option value="">Select an existing stock item</option></select></div>
    <div><label>Purchase Date</label><input id="reinvestDate" type="date" required></div>
@@ -618,9 +618,9 @@ img,canvas,svg,video{max-width:100%}
   </form>
  </div>
  <div class="panel financePane" data-finance-pane="cash" style="display:none">
-  <h2>Cash &amp; Capital Ledger</h2><p class="stockNote">Reinvestment cash is calculated from the first purchase onward: unspent Admin capital + paid-sale purchase cost recovered − reinvestments − other purchases. Operating expenses are deducted from profit, not capital. Carry-forward cash is not new capital.</p>
-  <div class="stats"><div class="stat"><small>Initial Cash + Manual Adjustments</small><strong id="cashOpeningDisplay">GH₵0.00</strong></div><div class="stat"><small>Original Cost Recovered from Paid Sales</small><strong id="cashSalesDisplay">GH₵0.00</strong></div><div class="stat"><small>Reinvestment Purchases</small><strong id="cashPurchasesDisplay">GH₵0.00</strong></div><div class="stat"><small>Operating Expenses</small><strong id="cashExpensesDisplay">GH₵0.00</strong></div><div class="stat profit"><small>Reinvestment Cash Available</small><strong id="cashClosingDisplay">GH₵0.00</strong></div></div>
-  <form id="openingCashForm" class="grid"><div><label>Set / Adjust Manual Cash Balance (GH₵)</label><input id="openingCashInput" type="number" min="0" step="0.01" required></div><div style="align-self:end"><button class="primary" type="submit">Save Opening Cash</button></div></form>
+  <h2>Cash &amp; Capital Ledger</h2><p class="stockNote">Cash is calculated once per week: opening cash + recorded sales receipts − stock purchases − operating expenses. Carry-forward cash is not new capital.</p>
+  <div class="stats"><div class="stat"><small>Opening Cash Adjustment (separate)</small><strong id="cashOpeningDisplay">GH₵0.00</strong></div><div class="stat"><small>Original Cost Recovered from Paid Sales</small><strong id="cashSalesDisplay">GH₵0.00</strong></div><div class="stat"><small>Reinvestment Purchases</small><strong id="cashPurchasesDisplay">GH₵0.00</strong></div><div class="stat"><small>Operating Expenses</small><strong id="cashExpensesDisplay">GH₵0.00</strong></div><div class="stat profit"><small>Reinvestment Cash Available</small><strong id="cashClosingDisplay">GH₵0.00</strong></div></div>
+  <form id="openingCashForm" class="grid"><div><label>Set / Adjust Opening Cash (GH₵)</label><input id="openingCashInput" type="number" min="0" step="0.01" required></div><div style="align-self:end"><button class="primary" type="submit">Save Opening Cash</button></div></form>
   <p class="live">Adjustments are audited. On weekly close, the calculated closing cash is carried into the next week's opening balance automatically.</p>
  </div>
  <div class="panel financePane" data-finance-pane="expenses" style="display:none">
@@ -640,20 +640,19 @@ img,canvas,svg,video{max-width:100%}
       </div>
       <div id="capitalOverviewMessage" aria-live="polite" class="stockNote">Loading capital records…</div>
       <div class="capital-overview-grid">
-        <div class="capital-overview-card capital-original"><small>Business Capital Assigned by Admin</small><strong id="coOriginal">—</strong><span>Live Admin-assigned business capital, including later approved additions</span></div>
-        <div class="capital-overview-card"><small>Remaining Stock</small><strong id="coRemaining">—</strong><span>Purchase cost of available stock after linked weekly carry-forwards are counted once</span></div>
+        <div class="capital-overview-card capital-original"><small>Business Capital Assigned by Admin</small><strong id="coOriginal">—</strong><span>Live Admin-assigned business capital; updates when Admin adds or adjusts capital</span></div>
+        <div class="capital-overview-card"><small>Remaining Stock</small><strong id="coRemaining">—</strong><span>Purchase cost of all crates still physically remaining, including carry-forward stock</span></div>
         <div class="capital-overview-card"><small>Cash in Hand</small><strong id="coSold">—</strong><span>Paid-sale purchase cost recovered, less reinvestments</span></div>
-        <div class="capital-overview-card"><small>On-Credit Stock</small><strong id="coCredit">—</strong><span>Purchase-cost value of unpaid crates; the dashboard shows the full amount receivable</span></div>
+        <div class="capital-overview-card"><small>On-Credit Stock</small><strong id="coCredit">—</strong><span>Original purchase cost of crates sold but not yet paid for</span></div>
         <div class="capital-overview-card capital-loss"><small>Damaged / Lost Stock</small><strong id="coDamage">—</strong><span>Original purchase cost of crates damaged or lost</span></div>
-        
       </div>
       <div class="capital-reconciliation">
         <h3>Capital Reconciliation</h3>
         <div class="capital-reconciliation-row"><span>Total Capital Accounted For</span><strong id="coAccounted">—</strong></div>
         <div class="capital-reconciliation-row"><span id="coDifferenceLabel">Capital Difference (shortage / excess)</span><strong id="coDifference">—</strong></div>
-        <div class="capital-comparison-chart" role="img" aria-label="Comparison of original capital and total capital accounted for">
+        <div class="capital-comparison-chart" role="img" aria-label="Comparison of Admin-assigned business capital and total capital accounted for">
           <div class="capital-chart-title">Capital comparison</div>
-          <div class="capital-chart-row"><span>Original capital</span><div class="capital-chart-track"><div id="coOriginalBar" class="capital-chart-bar original" style="width:0%"></div></div><span id="coOriginalChartValue" class="capital-chart-value">—</span></div>
+          <div class="capital-chart-row"><span>Admin capital</span><div class="capital-chart-track"><div id="coOriginalBar" class="capital-chart-bar original" style="width:0%"></div></div><span id="coOriginalChartValue" class="capital-chart-value">—</span></div>
           <div class="capital-chart-row"><span>Accounted for</span><div class="capital-chart-track"><div id="coAccountedBar" class="capital-chart-bar accounted" style="width:0%"></div></div><span id="coAccountedChartValue" class="capital-chart-value">—</span></div>
           <div id="coCapitalStatus" class="capital-status-caption" aria-live="polite">Waiting for capital figures…</div>
         </div>
@@ -668,6 +667,19 @@ const SUPABASE_URL="https://hweczhwoggmsrwhkktrx.supabase.co";
 const SUPABASE_PUBLISHABLE_KEY="sb_publishable_q52vf7tvpI4ho9FkGfZhvw_xdUv_bni";
 const {createClient}=supabase;
 const db=createClient(SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY);
+// Canonical finance read model. The SQL migration must be installed before this
+// portal version is deployed; no browser-side fallback is allowed for money.
+let ezelexCentralSnapshot=null;
+let ezelexCentralSnapshotError=null;
+async function loadEzelexCentralSnapshot(){
+  if(!currentUser)throw new Error("Worker is not signed in");
+  const {data,error}=await db.rpc("ezelex_worker_financial_snapshot");
+  if(error){ezelexCentralSnapshot=null;ezelexCentralSnapshotError=error;throw new Error("Central financial ledger is unavailable. Run EZELEX_WORKER_FINANCIAL_LEDGER_V2.sql in Supabase before using financial figures. "+error.message);}
+  if(!data||String(data.worker_id)!==String(currentUser.id)||data.calculation_version!=="2.0.0"){
+    ezelexCentralSnapshot=null;throw new Error("Central financial ledger returned an invalid worker snapshot. No financial figure was updated.");
+  }
+  ezelexCentralSnapshot=data;ezelexCentralSnapshotError=null;return data;
+}
 let profile=null;
 let currentUser=null;
 let reportSalesRows=[];
@@ -737,8 +749,8 @@ function getAuthoritativeWeekTotals(weekId,weekStart,source=liveStockRows){
   const rows=getAuthoritativeWeekStockRows(weekId,weekStart,source);
   return {
     rows,
-    sold:rows.reduce((n,r)=>n+Number(r._ezelexLedger?.soldQuantity??r.sold_quantity??0),0),
-    realisedProfit:rows.reduce((n,r)=>n+Number(r.profit_loss||0)-Number(r._ezelexLedger?.unpaidProfitIncluded||0),0)
+    sold:rows.reduce((n,r)=>n+Number(r.sold_quantity||0),0),
+    realisedProfit:rows.reduce((n,r)=>n+Number(r.profit_loss||0),0)
   };
 }
 function addDaysISO(value,days){const d=new Date(String(value).slice(0,10)+"T12:00:00");d.setDate(d.getDate()+days);return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");}
@@ -807,10 +819,10 @@ async function ensureCurrentStockWeek(){
         const receipts=priorRows.reduce((n,r)=>n+Number(r.sales_revenue||0),0); // includes paid sales from carry-forward batches
         const purchases=tradingRows.reduce((n,r)=>n+Number(r.purchase_total??(Number(r.total_quantity||0)*Number(r.cost_per_unit||0)),0),0);
         const expenses=(allPriorExpenses.data||[]).filter(r=>String(r.expense_date||r.created_at||"").slice(0,10)<start).reduce((n,r)=>n+Number(r.amount||0),0);
-        const closing=initialCapital+receipts-purchases;
-        const carry=await db.from("worker_weekly_cash_balances").insert({worker_id:currentUser.id,week_id:currentStockWeek.id,opening_cash:closing,adjustment_note:"Automatic opening cash reconciled from prior capital, paid-sale receipts and purchases. Operating expenses are charged against profit, not capital."});
+        const closing=initialCapital+receipts-purchases-expenses;
+        const carry=await db.from("worker_weekly_cash_balances").insert({worker_id:currentUser.id,week_id:currentStockWeek.id,opening_cash:closing,adjustment_note:"Automatic opening cash reconciled from all prior purchases, cash receipts and expenses."});
         if(carry.error)console.warn("Weekly cash carry-forward could not be saved:",carry.error.message);
-        else await db.from("worker_stock_financial_events").insert({worker_id:currentUser.id,week_id:currentStockWeek.id,event_type:"weekly_cash_carry_forward",amount:closing,description:"Opening cash reconciled from prior capital, paid-sale receipts and purchases; expenses are charged against profit, not capital."});
+        else await db.from("worker_stock_financial_events").insert({worker_id:currentUser.id,week_id:currentStockWeek.id,event_type:"weekly_cash_carry_forward",amount:closing,description:"Opening cash reconciled from prior business activity; not new capital."});
       }
     }
   }
@@ -954,7 +966,7 @@ async function finishHistoricalWeekCorrection(){
   activeWeekCorrection=null;
   renderStockWeekControls();
   msg("weeklyStockMsg","Historical week closed. Only the remaining physical crates have been transferred through the following weekly books into the current week. No duplicate purchase or profit was created. This historical week is now permanently locked.","success");
-  await loadCredits(); await loadStockHistory(); await loadStockWeeks();
+  await Promise.all([loadStock(),loadStockHistory(),loadStockWeeks()]);
 }
 async function reconcileHistoricalWeekCarry(week){
   if(!week)return {ok:true};
@@ -1032,7 +1044,7 @@ async function closeCurrentStockWeek(){
   if(notice.error)msg("weeklyStockMsg","Week is closed, but the admin summary email could not be sent: "+esc(notice.error.message)+". Ask admin to check the Resend function logs.","error");
   else if(notice.data?.email_sent!==true)msg("weeklyStockMsg","Week is closed, but email delivery was not confirmed: "+esc(notice.data?.error||notice.data?.message||"The email function did not confirm a successful send."),"error");
   else msg("weeklyStockMsg","Week closed successfully. The weekly management summary was accepted by Resend for delivery to Ezelex admin.","success");
-  await loadCredits(); await loadStockWeeks();
+  await Promise.all([loadStock(),loadStockWeeks()]);
 }
 $("closeStockWeekBtn")?.addEventListener("click",closeCurrentStockWeek);
 $("beginWeekCorrectionBtn")?.addEventListener("click",beginHistoricalWeekCorrection);
@@ -1094,7 +1106,7 @@ async function loadProfile(user){
   await loadStockWeeks();
   await loadActiveWeekCorrection();
   renderStockWeekControls();
-  await loadSales(); await loadCredits(); await loadStockHistory();
+  await Promise.all([loadSales(),loadStock(),loadStockHistory(),loadCredits()]);
   // Load the reconciled weekly cash ledger immediately after login so the dashboard
   // Cash in Hand card is current without requiring the worker to open Stock Management.
   if(typeof window.ezelexLoadFinance==='function')await window.ezelexLoadFinance();
@@ -1153,192 +1165,22 @@ async function loadSales(){
 
 function creditPaidForBatch(batchId){const paid=(creditRows||[]).filter(c=>String(c.stock_batch_id||"")===String(batchId||""));return {qty:paid.reduce((n,c)=>n+Number(c.crates_paid||0),0),amount:paid.reduce((n,c)=>n+Number(c.amount_paid||0),0)};}
 function calculateStockCashInHand(batch){
-  // Use the central ledger's paid-only quantity. Historical batches may store
-  // unpaid credit inside sold_quantity or separately, so the raw field alone
-  // is not a safe cash-recovery source.
+  // sold_quantity is the paid/sold quantity in this schema. Unpaid credit is
+  // reserved separately and reduces physical remaining stock; it is not added
+  // to sold_quantity until payment is posted by the credit-payment RPC.
   const unitCost=Math.max(0,Number(batch?.cost_per_unit||0));
-  const paidQty=batch?._ezelexLedger?.paidSoldQuantity;
-  return Math.max(0,Number(paidQty??batch?.sold_quantity??0))*unitCost;
+  const paidSoldQty=Math.max(0,Number(batch?.sold_quantity||0));
+  return paidSoldQty*unitCost;
 }
 function unpaidCreditForBatch(batchId){return (creditRows||[]).filter(c=>String(c.stock_batch_id||"")===String(batchId||"")).reduce((n,c)=>n+Math.max(0,Number(c.quantity||0)-Number(c.crates_paid||0)),0);}
 function creditPaymentProfitForRows(rows){const ids=new Set((rows||[]).map(r=>String(r.id)));return (creditPaymentRows||[]).filter(p=>!p.reversed_at&&ids.has(String(p.stock_batch_id))).reduce((sum,p)=>sum+Number(p.profit_amount||0),0);}
 function creditPaymentQtyForRows(rows){const ids=new Set((rows||[]).map(r=>String(r.id)));return (creditPaymentRows||[]).filter(p=>!p.reversed_at&&ids.has(String(p.stock_batch_id))).reduce((sum,p)=>sum+Number(p.crates_paid||0),0);}
 function creditPaymentsForWeek(weekStart){return (creditPaymentRows||[]).filter(p=>!p.reversed_at&&mondayDateISO(p.payment_date||p.created_at||today())===String(weekStart||""));}
 
-// CENTRAL WORKER LEDGER — one derived snapshot feeds Dashboard, Stock, Finance,
-// Capital Overview and the live billboard. Batch snapshots are not independent balances.
-let ezelexOperatingExpenseRows=[];
-let ezelexFinancialEventRows=[];
-let ezelexAdminAssignedCapital=null;
-let ezelexCentralLedgerSnapshot=null;
-
-function buildEzelexCentralLedgerSnapshot(rows=liveStockRows, credits=creditRows, expenses=ezelexOperatingExpenseRows, adminCapital=ezelexAdminAssignedCapital){
-  const active=(rows||[]).filter(r=>!r.deleted_at);
-  const creditByBatch=new Map();
-  for(const c of (credits||[])){
-    const id=String(c.stock_batch_id||""); if(!id)continue;
-    const a=creditByBatch.get(id)||{unpaidQty:0,unpaidAmount:0,unpaidCost:0,unpaidProfit:0,allQty:0};
-    const qty=Math.max(0,Number(c.quantity||0)-Number(c.crates_paid||0));
-    const amount=Math.max(0,Number(c.amount_due||0)-Number(c.amount_paid||0));
-    const batch=active.find(x=>String(x.id)===id);
-    const unit=Math.max(0,Number(batch?.cost_per_unit||0));
-    if(amount>0.009&&qty>0){
-      a.unpaidQty+=qty;a.unpaidAmount+=amount;a.unpaidCost+=qty*unit;a.unpaidProfit+=amount-qty*unit;
-    }
-    a.allQty+=Math.max(0,Number(c.quantity||0));
-    creditByBatch.set(id,a);
-  }
-  const byId=new Map(active.map(r=>[String(r.id),r]));
-  const calcCache=new Map(),visiting=new Set(),ambiguousSources=new Set();
-  const childGroups=new Map();
-  for(const r of active){
-    if(r.stock_type==="carry_forward"&&r.source_batch_id){
-      const key=String(r.source_batch_id);
-      if(!childGroups.has(key))childGroups.set(key,[]);
-      childGroups.get(key).push(r);
-    }
-  }
-  for(const [id,children] of childGroups)if(children.length!==1)ambiguousSources.add(id);
-  function calc(row){
-    const id=String(row.id||"");
-    if(calcCache.has(id))return calcCache.get(id);
-    if(visiting.has(id))return {total:Number(row.total_quantity||0),remaining:Number(row.remaining_quantity||0),unpaidIncluded:false,unpaidQty:0,unpaidCostIncluded:0,unpaidProfitIncluded:0};
-    visiting.add(id);
-    const c=creditByBatch.get(id)||{unpaidQty:0,unpaidAmount:0,unpaidCost:0,unpaidProfit:0,allQty:0};
-    // Freeze the original database quantities exactly once. Later refreshes must
-    // never replace these source values with our own calculated quantities.
-    if(row._ezelexRawTotal===undefined || row._ezelexRawTotal===null) row._ezelexRawTotal=Number(row.total_quantity||0);
-    if(row._ezelexRawRemaining===undefined || row._ezelexRawRemaining===null) row._ezelexRawRemaining=Number(row.remaining_quantity||0);
-    const rawTotal=Math.max(0,Number(row._ezelexRawTotal??row.total_quantity??0));
-    const sold=Math.max(0,Number(row.sold_quantity||0));
-    const damage=Math.max(0,Number(row.damage_quantity||0));
-    const loss=Math.max(0,Number(row.loss_quantity||0));
-    const rawRemaining=Math.max(0,Number(row._ezelexRawRemaining??row.remaining_quantity??0));
-    const residual=rawTotal-sold-damage-loss-rawRemaining;
-    // Historic rows were written by two different credit-normalisation versions.
-    // If the residual equals the unpaid crates, unpaid credit was stored separately;
-    // if the residual is zero, those unpaid crates are already included in sold_quantity.
-    let unpaidExcludedFromSold=false;
-    if(c.unpaidQty>0){
-      if(Math.abs(residual-c.unpaidQty)<0.001)unpaidExcludedFromSold=true;
-      else if(Math.abs(residual)<0.001)unpaidExcludedFromSold=false;
-      else unpaidExcludedFromSold=String(row.credit_sales_normalized)!=="true";
-    }
-    let effectiveTotal=rawTotal;
-    const parent=row.stock_type==="carry_forward"&&row.source_batch_id?byId.get(String(row.source_batch_id)):null;
-    if(parent&&!ambiguousSources.has(String(parent.id))){
-      const parentCalc=calc(parent);
-      const transferDifference=rawTotal-parentCalc.remaining;
-      const exactCarryForward= Math.abs(transferDifference)<0.001;
-      const duplicatedUnpaidCredit=parentCalc.unpaidExcludedFromSold&&parentCalc.unpaidQty>0&&Math.abs(transferDifference-parentCalc.unpaidQty)<0.001;
-      // Correct the known historical pattern where unpaid credit crates were
-      // added back into the next week's opening stock even though they had left
-      // physical stock. Do not overwrite unrelated/manual opening adjustments.
-      if(exactCarryForward||duplicatedUnpaidCredit)effectiveTotal=parentCalc.remaining;
-    }
-    // Reconcile the two historical storage formats using the stored remaining
-    // balance before changing it. residual == unpaidQty means sold_quantity
-    // excludes unpaid credit; residual == 0 means sold_quantity already includes
-    // those credit crates. This distinction prevents both double deduction from
-    // stock and false cash recovery from unpaid sales.
-    const unpaidIncludedInSold=c.unpaidQty>0&&!unpaidExcludedFromSold;
-    const paidSoldQuantity=Math.max(0,sold-(unpaidIncludedInSold?c.unpaidQty:0));
-    const soldQuantity=sold+(unpaidExcludedFromSold?c.unpaidQty:0);
-    const remaining=Math.max(0,effectiveTotal-sold-damage-loss-(unpaidExcludedFromSold?c.unpaidQty:0));
-    const result={
-      total:effectiveTotal,soldQuantity,paidSoldQuantity,remaining,unpaidQty:c.unpaidQty,unpaidAmount:c.unpaidAmount,
-      unpaidCost:c.unpaidCost,unpaidProfit:c.unpaidProfit,
-      unpaidExcludedFromSold,unpaidIncludedInSold,
-      unpaidCostIncluded:0,
-      unpaidProfitIncluded:0,
-      remainingValue:remaining*Math.max(0,Number(row.cost_per_unit||0))
-    };
-    visiting.delete(id);calcCache.set(id,result);
-    return result;
-  }
-  for(const r of active){
-    const x=calc(r);
-    // Use the corrected opening quantity for linked carry-forward rows in every
-    // section of this page. This fixes legacy transfers without inventing purchases.
-    r.total_quantity=x.total;
-    r.remaining_quantity=x.remaining;
-    r.remaining_value=x.remainingValue;
-    r._ezelexLedger=x;
-  }
-  const carryForwardCorrections=[];
-  for(const r of active){
-    if(r.stock_type!=="carry_forward"||!r.source_batch_id||ambiguousSources.has(String(r.source_batch_id)))continue;
-    const parent=byId.get(String(r.source_batch_id));
-    if(!parent)continue;
-    const rawOpening=Number(r._ezelexRawTotal??r.total_quantity??0);
-    const expectedOpening=Number(r.total_quantity||0);
-    if(Math.abs(rawOpening-expectedOpening)>0.0001){
-      carryForwardCorrections.push({id:r.id,sourceBatchId:String(parent.id),weekId:r.week_id,oldTotal:rawOpening,total:expectedOpening,remaining:Number(r.remaining_quantity||0),remainingValue:Number(r.remaining_value||0)});
-    }
-  }
-  const transferredSources=new Set([...childGroups.keys()].filter(id=>!ambiguousSources.has(id)));
-  const inventoryRows=active.filter(r=>!transferredSources.has(String(r.id)));
-  const inventoryValue=inventoryRows.reduce((n,r)=>n+Number(r.remaining_value||0),0);
-  const remainingProfitProjection=inventoryRows.reduce((n,r)=>n+
-    Math.max(0,Number(r.remaining_quantity||0))*
-    Math.max(0,Number(r.selling_price_per_unit||0)-Number(r.cost_per_unit||0)),0);
-  const unpaidCreditUnits=[...creditByBatch.values()].reduce((n,x)=>n+x.unpaidQty,0);
-  const unpaidCreditFace=[...creditByBatch.values()].reduce((n,x)=>n+x.unpaidAmount,0);
-  const unpaidCreditCost=[...creditByBatch.values()].reduce((n,x)=>n+x.unpaidCost,0);
-  const unpaidCreditProfit=[...creditByBatch.values()].reduce((n,x)=>n+x.unpaidProfit,0);
-  const unpaidProfitAlreadyInProfit=active.reduce((n,r)=>n+Number(r._ezelexLedger?.unpaidProfitIncluded||0),0);
-  // Cash recovery is the purchase cost of PAID crates only. Derive it from the
-  // reconciled sold quantity and the credit ledger, not stale cash_in_hand or
-  // sold_cost snapshots that may include unpaid credit or prior-week transfers.
-  const paidCostRecovered=active.reduce((sum,r)=>{
-    const unit=Math.max(0,Number(r.cost_per_unit||0));
-    // loadCredits normalises sold_quantity to paid sales (including paid credit
-    // repayments). Never deduct unpaid credit from this amount a second time.
-    return sum+Math.max(0,Number(r._ezelexLedger?.paidSoldQuantity ?? r.sold_quantity ?? 0))*unit;
-  },0);
-  const reinvestmentRows=active.filter(r=>r.stock_type==="reinvestment"||(r.stock_type!=="carry_forward"&&String(r.notes||"").toLowerCase().includes("additional purchase quantity added while editing an existing stock item")));
-  const reinvestmentSpend=reinvestmentRows.reduce((n,r)=>n+Math.max(0,Number(r.purchase_total??(Number(r.total_quantity||0)*Number(r.cost_per_unit||0))),0),0);
-  const originalPurchaseRows=active.filter(r=>r.stock_type==="purchase");
-  const firstPurchaseDate=originalPurchaseRows.map(r=>String(r.stock_date||r.created_at||"").slice(0,10)).filter(Boolean).sort()[0]||"";
-  const initialPurchaseRows=originalPurchaseRows.filter(r=>String(r.stock_date||r.created_at||"").slice(0,10)===firstPurchaseDate);
-  const initialPurchaseCost=initialPurchaseRows.reduce((n,r)=>n+Math.max(0,Number(r.purchase_total??(Number(r.total_quantity||0)*Number(r.cost_per_unit||0))),0),0);
-  const otherDirectPurchaseSpend=originalPurchaseRows.filter(r=>!initialPurchaseRows.includes(r)).reduce((n,r)=>n+Math.max(0,Number(r.purchase_total??(Number(r.total_quantity||0)*Number(r.cost_per_unit||0))),0),0);
-  const totalExpenses=(expenses||[]).filter(r=>!r.deleted_at).reduce((n,r)=>n+Math.max(0,Number(r.amount||0)),0);
-  const manualCashAdjustments=(ezelexFinancialEventRows||[]).filter(r=>["manual_cash_adjustment","opening_cash_adjustment","cash_adjustment"].includes(String(r.event_type||"").toLowerCase())).reduce((n,r)=>n+Number(r.amount||0),0);
-  const assigned=adminCapital!==null&&adminCapital!==undefined&&Number.isFinite(Number(adminCapital))?Number(adminCapital):initialPurchaseCost;
-  const openingCash=assigned-initialPurchaseCost;
-  const cashInHand=paidCostRecovered;
-  const reinvestmentCashBalance=openingCash+manualCashAdjustments+paidCostRecovered-reinvestmentSpend-otherDirectPurchaseSpend;
-  const damageLossValue=active.reduce((n,r)=>n+(Math.max(0,Number(r.damage_quantity||0))+Math.max(0,Number(r.loss_quantity||0)))*Math.max(0,Number(r.cost_per_unit||0)),0);
-  const realisedProfit=active.reduce((n,r)=>n+Number(r.profit_loss||0),0)-unpaidProfitAlreadyInProfit;
-  const currentWeekId=String(currentStockWeek?.id||"");
-  const currentWeekRows=active.filter(r=>(currentWeekId&&String(r.week_id||"")===currentWeekId)||(!r.week_id&&mondayDateISO(r.stock_date||r.created_at||today())===mondayDateISO(today())));
-  const currentWeekSold=currentWeekRows.reduce((n,r)=>n+Number(r._ezelexLedger?.soldQuantity??r.sold_quantity??0),0);
-  const currentWeekProfit=currentWeekRows.reduce((n,r)=>n+Number(r.profit_loss||0)-Number(r._ezelexLedger?.unpaidProfitIncluded||0),0);
-  const currentWeekPurchases=currentWeekRows.filter(r=>r.stock_type!=="carry_forward").reduce((n,r)=>n+Number(r.total_quantity||0),0);
-  const currentWeekAvailable=currentWeekRows.reduce((n,r)=>n+Number(r.remaining_quantity||0),0);
-  const currentWeekRemainingPosition=currentWeekAvailable+unpaidCreditUnits;
-  // Capital reconciliation uses cash still held after purchases, because
-  // reinvested money is already represented in remaining inventory.
-  const capitalAccounted=inventoryValue+reinvestmentCashBalance+unpaidCreditCost+damageLossValue;
-  const snapshot={
-    rows:active,inventoryRows,inventoryValue,remainingProfitProjection,currentWeekRemainingPosition,unpaidCreditUnits,unpaidCreditFace,unpaidCreditCost,unpaidCreditProfit,
-    paidCostRecovered,reinvestmentSpend,otherDirectPurchaseSpend,initialPurchaseCost,firstPurchaseDate,
-    openingCash,manualCashAdjustments,totalExpenses,cashInHand,reinvestmentCashBalance,damageLossValue,realisedProfit,
-    currentWeekRows,currentWeekSold,currentWeekProfit,currentWeekPurchases,currentWeekAvailable,
-    capitalAssigned:assigned,capitalAccounted,capitalDifference:capitalAccounted-assigned,
-    carryForwardCorrections,ambiguousCarryForwardSources:[...ambiguousSources],
-    carryForwardWarnings:active.filter(r=>r.stock_type==="carry_forward"&&r.source_batch_id&&!ambiguousSources.has(String(r.source_batch_id))&&byId.has(String(r.source_batch_id))&&Math.abs(Number(r._ezelexRawTotal??r.total_quantity??0)-Number(calc(byId.get(String(r.source_batch_id))).remaining||0))>0.001&&!carryForwardCorrections.some(x=>String(x.id)===String(r.id))).map(r=>({id:r.id,sourceBatchId:r.source_batch_id,opening:Number(r._ezelexRawTotal??r.total_quantity??0),sourceRemaining:Number(calc(byId.get(String(r.source_batch_id))).remaining||0)}))
-  };
-  ezelexCentralLedgerSnapshot=snapshot;
-  window.ezelexCentralLedgerSnapshot=snapshot;
-  return snapshot;
-}
-
 function calculateStock(){
   const total=num("stockTotal"),unitCost=num("costPerUnit"),purchase=total*unitCost,price=num("sellPrice"),enteredSold=num("stockSold"),sold=editingStockId&&!stockCorrectionMode?Number(editingStockOriginal?.sold_quantity||0)+enteredSold:enteredSold,damage=num("stockDamage"),loss=Number(editingStockOriginal?.loss_quantity||0);
   const unpaidQty=editingStockId?unpaidCreditForBatch(editingStockId):0,paidCredit=editingStockId?creditPaidForBatch(editingStockId):{qty:0,amount:0};
-  const soldForBalance=sold+(editingStockOriginal?._ezelexLedger?.unpaidExcludedFromSold?unpaidQty:0),remaining=Math.max(0,total-soldForBalance-damage-loss),revenue=Math.max(0,sold-paidCredit.qty)*price+paidCredit.amount,soldCost=sold*unitCost,damageValue=damage*unitCost,remainingValue=remaining*unitCost,capital=editingStockId?(editingStockOriginal?.stock_type==="reinvestment"?remainingValue:Number(editingStockOriginal?.capital_amount??editingStockOriginal?.purchase_total??0)):num("capitalAmount"),profit=revenue-soldCost-damageValue-loss*unitCost,accounted=soldForBalance+damage+loss,cash=soldCost-damageValue-loss*unitCost;
+  const remaining=Math.max(0,total-sold-damage-loss-unpaidQty),revenue=Math.max(0,sold-paidCredit.qty)*price+paidCredit.amount,soldCost=sold*unitCost,damageValue=damage*unitCost,remainingValue=remaining*unitCost,capital=editingStockId?(editingStockOriginal?.stock_type==="reinvestment"?remainingValue:Number(editingStockOriginal?.capital_amount??editingStockOriginal?.purchase_total??0)):num("capitalAmount"),profit=revenue-soldCost-damageValue-loss*unitCost,accounted=sold+damage+loss+unpaidQty,cash=editingStockId?calculateStockCashInHand({...editingStockOriginal,sold_quantity:sold,cost_per_unit:unitCost}):sold*unitCost;
   const outstandingCredit=(creditRows||[]).reduce((sum,c)=>sum+Math.max(0,Number(c.amount_due||0)-Number(c.amount_paid||0)),0);
   $("calcTotal").textContent=total+" units";$("calcTotalValue").textContent=money(purchase);
   $("calcSold").textContent=sold+" units";$("calcRevenue").textContent=money(revenue)+" revenue";
@@ -1357,17 +1199,7 @@ async function loadStock(){
   const {data,error}=await selectWorkerRows("worker_stock_batches","*",{column:"stock_date",ascending:false});
   if(error){$("stockBody").innerHTML='<tr><td colspan="11">Stock records could not be loaded.</td></tr>';msg("stockLiveMsg","Could not load live stock: "+error.message,"error");return;}
   const allRows=data||[]; liveStockRows=allRows;
-  // Refresh the two supporting ledgers used by the single business-wide snapshot.
-  const [expenseSnapshot,eventSnapshot,adminCapitalSnapshot]=await Promise.all([
-    selectWorkerRows("worker_stock_expenses","*"),
-    selectWorkerRows("worker_stock_financial_events","*"),
-    db.from("worker_business_capital_public").select("id,original_capital").eq("id",1).maybeSingle()
-  ]);
-  if(!expenseSnapshot.error)ezelexOperatingExpenseRows=expenseSnapshot.data||[];
-  else {ezelexOperatingExpenseRows=[];console.warn("Operating expenses unavailable for central ledger:",expenseSnapshot.error.message);}
-  if(!eventSnapshot.error)ezelexFinancialEventRows=eventSnapshot.data||[];
-  else {ezelexFinancialEventRows=[];console.warn("Financial audit events unavailable for central ledger:",eventSnapshot.error.message);}
-  if(!adminCapitalSnapshot.error&&adminCapitalSnapshot.data&&Number.isFinite(Number(adminCapitalSnapshot.data.original_capital)))ezelexAdminAssignedCapital=Number(adminCapitalSnapshot.data.original_capital);
+  let centralSnapshot=null;try{centralSnapshot=await loadEzelexCentralSnapshot();}catch(finErr){msg("stockLiveMsg",esc(finErr.message),"error");}
   // Read the complete purchase history separately from active stock. The active
   // stock query intentionally excludes archived rows, but all-time purchases must
   // continue to include them so archiving a record never erases purchase history.
@@ -1385,24 +1217,29 @@ async function loadStock(){
   const allTimeCratesPurchased=allTimePurchaseRows
     .filter(r=>!r.deleted_at&&r.stock_type!=="carry_forward")
     .reduce((sum,r)=>sum+Number(r.total_quantity||0),0);
-  // Rebuild all balances from the credit ledger and the linked carry-forward chain.
-  // This handles both historical credit storage formats and prevents a transferred
-  // batch from being counted again as current physical stock.
+  // remaining_quantity is a derived balance, not an independent source of truth.
+  // Rebuild it from the original batch quantity, sold/damaged/lost units and unpaid
+  // credit reservations. This keeps physical stock correct after edits and payments.
   if(creditRowsLoaded){
-    const central=buildEzelexCentralLedgerSnapshot(allRows,creditRows,ezelexOperatingExpenseRows,ezelexAdminAssignedCapital);
-    for(const fix of central.carryForwardCorrections||[]){
-      const child=allRows.find(r=>String(r.id)===String(fix.id));
-      if(!child)continue;
-      const used=Number(child._ezelexLedger?.soldQuantity??child.sold_quantity??0)+Number(child.damage_quantity||0)+Number(child.loss_quantity||0);
-      if(fix.total<used){console.warn("Carry-forward correction stopped: opening balance is below quantities already used",fix);continue;}
-      const saved=await db.from("worker_stock_batches").update({
-        total_quantity:fix.total,remaining_quantity:fix.remaining,remaining_value:fix.remainingValue
-      }).eq("id",fix.id).eq("worker_id",currentUser.id).eq("source_batch_id",fix.sourceBatchId).eq("total_quantity",fix.oldTotal).is("deleted_at",null);
-      if(saved.error)console.warn("Carry-forward correction could not be saved:",saved.error.message);
-      else await db.from("worker_stock_financial_events").insert({
-        worker_id:currentUser.id,week_id:fix.weekId,event_type:"carry_forward_balance_reconciliation",amount:0,stock_batch_id:fix.id,
-        description:"Opening quantity corrected to the source batch's verified available balance. No new purchase, cash receipt or profit recorded."
-      });
+    const unpaidByBatch=new Map();
+    for(const c of (creditRows||[])){
+      const unpaidAmount=Math.max(0,Number(c.amount_due||0)-Number(c.amount_paid||0));
+      const unpaidCrates=Math.max(0,Number(c.quantity||0)-Number(c.crates_paid||0));
+      if(unpaidAmount>0.009 && unpaidCrates>0){
+        const key=String(c.stock_batch_id||"");
+        unpaidByBatch.set(key,(unpaidByBatch.get(key)||0)+unpaidCrates);
+      }
+    }
+    for(const row of allRows){
+      const total=Number(row.total_quantity||0);
+      if(!Number.isFinite(total)||(total<=0&&Number(row.remaining_quantity||0)>0))continue;
+      const calculatedPhysical=Math.max(0,total-Number(row.sold_quantity||0)-Number(row.damage_quantity||0)-Number(row.loss_quantity||0)-(unpaidByBatch.get(String(row.id))||0));
+      const expected=Math.min(Math.max(0,Number(row.remaining_quantity??calculatedPhysical)),calculatedPhysical);
+      if(Math.abs(expected-Number(row.remaining_quantity||0))>0.0001){
+        row.remaining_quantity=expected;row.remaining_value=expected*Number(row.cost_per_unit||0);
+        const repair=await db.from("worker_stock_batches").update({remaining_quantity:expected,remaining_value:row.remaining_value}).eq("id",row.id).eq("worker_id",row.worker_id||currentUser.id).is("deleted_at",null);
+        if(repair.error)console.warn("Derived remaining stock could not be persisted for batch",row.id,repair.error.message);
+      }
     }
   }
   // All-time purchases exclude carry-forward rows (they are not new purchases).
@@ -1421,48 +1258,63 @@ async function loadStock(){
   // Match the live billboard exactly: use the same live stock-batch cache,
   // current-week filter, and profit_loss field. Do not add unpaid-credit profit
   // or re-add credit-payment ledger profit on top of this figure.
-  const centralLedger=ezelexCentralLedgerSnapshot||buildEzelexCentralLedgerSnapshot(allRows,creditRows,ezelexOperatingExpenseRows,ezelexAdminAssignedCapital);
-  const dashSold=centralLedger.currentWeekSold;
-  const actualSoldProfit=centralLedger.currentWeekProfit;
+  const currentWeekTotals=getAuthoritativeWeekTotals(currentStockWeek?.id,liveWeekStart);
+  const dashSold=currentWeekTotals.sold;
+  const actualSoldProfit=currentWeekTotals.realisedProfit;
   const dashboardBatchIds=new Set(dashboardWeekRows.map(r=>String(r.id)));
   const openCreditRows=(creditRows||[]).filter(c=>Math.max(0,Number(c.amount_due||0)-Number(c.amount_paid||0))>0.009);
   // Match Management Centre current-stock accounting: include every still-open credit batch for this worker, including credit originating in an earlier week.
   const openDashboardWeekCredits=openCreditRows;
-  const unpaidCreditUnits=centralLedger.unpaidCreditUnits;
+  const unpaidCreditUnits=openDashboardWeekCredits.reduce((n,c)=>n+Math.max(0,Number(c.quantity||0)-Number(c.crates_paid||0)),0);
   const previousWeekRemaining=dashboardWeekRows
     .filter(r=>r.stock_type==="carry_forward")
     .reduce((sum,r)=>sum+Number(r.total_quantity||0),0);
   const dashboardAllTimePurchaseNote=$("dashboardAllTimePurchaseNote");
   if(dashboardAllTimePurchaseNote) dashboardAllTimePurchaseNote.innerHTML=
     `<div>Previous Week Remaining: ${previousWeekRemaining.toLocaleString()} crates</div><div>All-time purchases: ${allTimeCratesPurchased.toLocaleString()} crates</div>`;
-  // On-credit records classify sales already included in sold_quantity. They do
-  // not remain in physical stock and must never be added back to the stock count.
-  const physicalRemaining=centralLedger.currentWeekAvailable;
+  // remaining_quantity is already reduced when credit stock is reserved. Do not add
+  // unpaid credit crates back into physical remaining stock a second time.
+  const availableRemaining=dashboardWeekRows.reduce((n,r)=>n+Number(r.remaining_quantity||0),0);
+  // Keep physical stock and customer-credit stock separate.
+  // Unpaid credit is NOT counted as sold. It remains part of projected stock
+  // until payment is made; only the unpaid crate balance is added here.
+  const physicalRemaining=availableRemaining;
   const unpaidCreditRemaining=unpaidCreditUnits;
-  // Dashboard "Remaining Stock" is the complete stock position: physical
-  // crates still available PLUS crates already sold on credit. Credit crates
-  // remain separately classified and are never counted as physical inventory.
   const dashboardRemaining=physicalRemaining+unpaidCreditRemaining;
-  // Reinvestment cash is recovered purchase cost from paid sales less purchases.
-  // Operating expenses are charged only against profit, never against capital.
+  // Cash is a business-wide running balance: initial capital + cash actually received
+  // from paid sales - every purchase/reinvestment - operating expenses. Unpaid credit
+  // is excluded until payment is confirmed. Batch cash_in_hand values are snapshots,
+  // so summing or selecting one of them is not a valid ledger calculation.
   const expenseResult=await selectWorkerRows("worker_stock_expenses","*");
   const firstCapital=[...purchaseRows].filter(r=>Number(r.capital_amount||0)!==0).sort((a,b)=>String(a.stock_date||a.created_at||"").localeCompare(String(b.stock_date||b.created_at||"")))[0];
   const openingBusinessCapital=Number(firstCapital?.capital_amount||0);
-  const reinvestmentLedger={recovered:centralLedger.paidCostRecovered,spent:centralLedger.reinvestmentSpend+centralLedger.otherDirectPurchaseSpend,expenses:centralLedger.totalExpenses,opening:centralLedger.openingCash+centralLedger.manualCashAdjustments,balance:centralLedger.reinvestmentCashBalance};
-  // Reinvestment cash is strictly the original cost basis recovered from paid sales,
-  // less purchases made from this reinvestment pool. Sales profit is never included.
-  window.ezelexReinvestmentCashBalance=reinvestmentLedger.balance;
-  window.ezelexCurrentCashBalance=reinvestmentLedger.balance;
+  const reinvestmentLedger=centralSnapshot?{
+    recovered:Number(centralSnapshot.cash_recovered||0),
+    spent:Number(centralSnapshot.reinvestment_spent||0),
+    balance:Number(centralSnapshot.cash_available||0)
+  }:null;
+  if(reinvestmentLedger){window.ezelexReinvestmentCashBalance=reinvestmentLedger.balance;window.ezelexCurrentCashBalance=reinvestmentLedger.balance;}
   if(expenseResult.error)console.warn("Operating expense ledger could not be read:",expenseResult.error.message);
   // Project the profit on every unpaid credit record without recognising it as earned profit.
   // It is shown separately and added to actual sold profit only for the dashboard projection.
-  const unpaidCreditProfit=centralLedger.unpaidCreditProfit;
+  const batchById=new Map(allRows.map(r=>[String(r.id),r]));
+  const unpaidCreditProfit=openDashboardWeekCredits.reduce((sum,c)=>{
+    const batch=batchById.get(String(c.stock_batch_id));
+    if(!batch)return sum;
+    const qty=Math.max(0,Number(c.quantity||0));
+    const due=Math.max(0,Number(c.amount_due||0));
+    const unitCost=Math.max(0,Number(batch.cost_per_unit||0));
+    const paidQty=Math.max(0,Number(c.crates_paid||0));const unpaidQty=Math.max(0,qty-paidQty);const unpaidAmount=Math.max(0,due-Number(c.amount_paid||0));return sum+(unpaidAmount-unpaidQty*unitCost);
+  },0);
   // Dashboard profit is intentionally not displayed here; projected values belong in P&L.
   $("todaySales").textContent=dashBought.toLocaleString(); $("weekSales").textContent=dashSold.toLocaleString();
-  const dashCash=centralLedger.cashInHand;
-  $("allSales").textContent=money(dashCash);
-  if($("dashboardRemaining"))$("dashboardRemaining").textContent=dashboardRemaining.toLocaleString();
-  if($("dashboardRemainingBreakdown"))$("dashboardRemainingBreakdown").textContent=`${physicalRemaining.toLocaleString()} available + ${unpaidCreditRemaining.toLocaleString()} on credit`;
+  const dashCash=reinvestmentLedger?reinvestmentLedger.balance:null;
+  $("allSales").textContent=dashCash===null?"Unavailable":money(dashCash);
+  const centralPhysical=centralSnapshot?Number(centralSnapshot.physical_remaining||0):null;
+  const centralCredit=centralSnapshot?Number(centralSnapshot.unpaid_credit_units||0):null;
+  const centralPosition=centralSnapshot?Number(centralSnapshot.remaining_position||0):null;
+  if($("dashboardRemaining"))$("dashboardRemaining").textContent=centralPosition===null?"Unavailable":centralPosition.toLocaleString();
+  if($("dashboardRemainingBreakdown"))$("dashboardRemainingBreakdown").textContent=centralSnapshot?`${centralPhysical.toLocaleString()} physical + ${centralCredit.toLocaleString()} on-credit`:"Central stock reconciliation unavailable";
   if($("dashboardCreditUnits"))$("dashboardCreditUnits").textContent=openDashboardWeekCredits.reduce((n,c)=>n+Math.max(0,Number(c.quantity||0)-Number(c.crates_paid||0)),0).toLocaleString();
   if($("dashboardCreditBreakdown"))$("dashboardCreditBreakdown").textContent=`${money(openDashboardWeekCredits.reduce((n,c)=>n+Math.max(0,Number(c.amount_due||0)-Number(c.amount_paid||0)),0))} outstanding · Tap to open On-Credit`;
   // Dashboard projection: realised sold profit PLUS the projected profit
@@ -1494,10 +1346,15 @@ async function loadStock(){
     const cap=Number(r.capital_amount??r.purchase_total??0),pur=Number(r.purchase_total||0);
     cash+=calculateStockCashInHand(r);
   });
-  soldWeek=authoritativeWeekRows.reduce((sum,r)=>sum+Number(r._ezelexLedger?.soldQuantity??r.sold_quantity??0),0);
-  profit=authoritativeWeekRows.reduce((sum,r)=>sum+Number(r.profit_loss||0)-Number(r._ezelexLedger?.unpaidProfitIncluded||0),0);
-  // Unpaid credit remains part of sold quantity; its unpaid profit is shown separately from realised profit.
-  const displayedUnits=units;
+  soldWeek=authoritativeWeekRows.reduce((sum,r)=>sum+Number(r.sold_quantity||0),0);
+  profit=authoritativeWeekRows.reduce((sum,r)=>sum+Number(r.profit_loss||0),0);
+  // Unpaid credit stays visible in the stock projection, but is not counted as
+  // another sale or added to realised weekly profit.
+  const selectedWeekUnpaidCredit=(creditRows||[]).filter(c=>
+    (rows||[]).some(r=>String(r.id)===String(c.stock_batch_id)) &&
+    Math.max(0,Number(c.amount_due||0)-Number(c.amount_paid||0))>0.009
+  ).reduce((n,c)=>n+Math.max(0,Number(c.quantity||0)-Number(c.crates_paid||0)),0);
+  const displayedUnits=units+selectedWeekUnpaidCredit;
   $("liveUnits").textContent=displayedUnits.toLocaleString();$("liveValue").textContent=money(value);$("liveRevenue").textContent=money(revenue);$("liveProfit").textContent=money(profit);$("liveProfitLabel").textContent=profit>=0?"selected week profit":"selected week loss";
   $("weekPurchased").textContent=purchased.toLocaleString();$("weekSold").textContent=soldWeek.toLocaleString();$("weekRemaining").textContent=displayedUnits.toLocaleString();
   const weekProfitCard=$("weekProfitCard"); $("weekProfit").textContent=money(profit);weekProfitCard.classList.toggle("profit",profit>0);weekProfitCard.classList.toggle("loss",profit<0);$("weekProfitLabel").textContent=profit>0?"You're gaining this week":profit<0?"You're losing money this week":"Break-even so far";
@@ -1515,7 +1372,7 @@ async function loadStock(){
       const g=productGroups.get(key);
       g.items.push(r);
       g.total+=Number(r.total_quantity||0);
-      g.sold+=Number(r._ezelexLedger?.soldQuantity??r.sold_quantity??0);
+      g.sold+=Number(r.sold_quantity||0);
       g.damage+=Number(r.damage_quantity||0);
       g.remaining+=Number(r.remaining_quantity||0);
       g.capital+=Number(r.capital_amount??(r.stock_type==="carry_forward"?0:r.purchase_total??0));
@@ -1523,7 +1380,7 @@ async function loadStock(){
       // original/reinvestment batches contribute to this week's purchase total.
       if(r.stock_type!=="carry_forward")g.purchase+=Number(r.purchase_total??(Number(r.total_quantity||0)*Number(r.cost_per_unit||0)));
       g.cash+=calculateStockCashInHand(r);
-      g.profit+=Number(r.profit_loss||0)-Number(r._ezelexLedger?.unpaidProfitIncluded||0);
+      g.profit+=Number(r.profit_loss||0);
       const d=dateOnly(r.stock_date);
       if(d>g.latestDate)g.latestDate=d;
       if(r.stock_type==="carry_forward")g.hasOpening=true;
@@ -1640,12 +1497,12 @@ window.restoreStock=async function(id){
       .eq("id",item.id).eq("worker_id",currentUser.id).not("deleted_at","is",null).select("id");
     if(result.error||!result.data?.length){
       msg("deletedStockMsg","Restore stopped at "+esc(item.product_service||"a linked stock batch")+": "+esc(result.error?.message||"No archived row was restored")+". Ask admin to review the recovery chain.","error");
-      await loadCredits(); await loadStockHistory(); await loadStockWeeks();
+      await Promise.all([loadStock(),loadStockHistory(),loadCredits(),loadStockWeeks()]);
       return;
     }
   }
   msg("deletedStockMsg","Original stock and its linked opening-stock transfers have been restored. Original credit and edit history remain linked and active figures have been recalculated.","success");
-  await loadCredits(); await loadStockHistory(); await loadStockWeeks();
+  await Promise.all([loadStock(),loadStockHistory(),loadCredits(),loadStockWeeks()]);
   if(typeof window.ezelexLoadFinance==="function")await window.ezelexLoadFinance();
 };
 function selectedWeekIsClosed(){const id=selectedStockWeekId||currentStockWeek?.id;const w=stockWeekRows.find(x=>String(x.id)===String(id));return !!w&&w.status==="closed";}
@@ -1855,12 +1712,12 @@ window.archiveOriginalStock=async function(id){
       .eq("id",item.id).eq("worker_id",currentUser.id).is("deleted_at",null).select("id");
     if(archived.error||!archived.data?.length){
       msg("stockMsg","The archive operation stopped at "+esc(item.product_service||"a linked stock batch")+": "+esc(archived.error?.message||"The record was not updated")+". No credit or edit-history rows were physically deleted. Ask admin to inspect the archive state before retrying.","error");
-      await loadCredits(); await loadStockHistory(); await loadStockWeeks();
+      await Promise.all([loadStock(),loadStockHistory(),loadStockWeeks(),loadCredits()]);
       return;
     }
   }
   if(String(editingStockId)===String(id))cancelStockEdit();
-  await loadCredits(); await loadStockHistory(); await loadStockWeeks();
+  await Promise.all([loadStock(),loadStockHistory(),loadStockWeeks(),loadCredits()]);
   if(typeof window.ezelexLoadFinance==="function")await window.ezelexLoadFinance();
   msg("stockMsg","Original stock and its linked opening-stock transfers are now in Deleted Original Stock — Recovery. Linked credit transactions and edit history were preserved. Active stock, purchases, credit, cash, profit and weekly figures have been recalculated.","success");
 };
@@ -1879,12 +1736,12 @@ window.deleteStockHistoryEntry=async function(historyId){
   const sold=Math.max(0,Number(h.sold_before||0)),damage=Math.max(0,Number(h.damage_before||0)),loss=Math.max(0,Number(batch.loss_quantity||0)),total=Math.max(0,Number(batch.total_quantity||0)),unit=Math.max(0,Number(batch.cost_per_unit||0)),price=Math.max(0,Number(batch.selling_price_per_unit||0));
   const unpaid=(creditRows||[]).filter(c=>String(c.stock_batch_id)===String(batchId)&&Number(c.amount_paid||0)<Number(c.amount_due||0)).reduce((n,c)=>n+Number(c.quantity||0),0);
   const paid=(creditRows||[]).filter(c=>String(c.stock_batch_id)===String(batchId)&&Number(c.amount_paid||0)>=Number(c.amount_due||0)).reduce((o,c)=>({qty:o.qty+Number(c.quantity||0),amount:o.amount+Number(c.amount_paid||0)}),{qty:0,amount:0});
-  const remaining=Math.max(0,total-sold-damage-loss-(batch._ezelexLedger?.unpaidExcludedFromSold?unpaid:0)),revenue=Math.max(0,sold-paid.qty)*price+paid.amount,soldCost=sold*unit,damageValue=damage*unit,lossValue=loss*unit,profit=revenue-soldCost-damageValue-lossValue;
+  const remaining=Math.max(0,total-sold-damage-loss-unpaid),revenue=Math.max(0,sold-paid.qty)*price+paid.amount,soldCost=sold*unit,damageValue=damage*unit,lossValue=loss*unit,profit=revenue-soldCost-damageValue-lossValue;
   const upd=await db.from('worker_stock_batches').update({sold_quantity:sold,damage_quantity:damage,remaining_quantity:remaining,remaining_value:remaining*unit,sales_revenue:revenue,sold_cost:soldCost,damage_value:damageValue,loss_value:lossValue,profit_loss:profit}).eq('id',batchId).eq('worker_id',currentUser.id).select('id');
   if(upd.error||!upd.data?.length){msg('stockHistoryMsg','Could not restore the original stock figures: '+(upd.error?.message||'No matching stock record updated')+'. History was not deleted.','error');return;}
   const del=await db.from('worker_stock_edit_history').delete().eq('id',historyId).eq('worker_id',currentUser.id);
   if(del.error){msg('stockHistoryMsg','Stock figures were restored, but the history row could not be deleted: '+del.error.message+'. Refresh before continuing.','error');return;}
-  await loadCredits(); await loadStockHistory(); await loadStockWeeks();
+  await Promise.all([loadStock(),loadStockHistory(),loadStockWeeks(),loadCredits()]);
   if(typeof window.ezelexLoadFinance==='function')await window.ezelexLoadFinance();
   msg('stockHistoryMsg','Edit reversed and deleted. Stock, remaining quantities, sales revenue, profit and Cash in Hand have been refreshed.','success');
 };
@@ -1997,11 +1854,11 @@ $("saveStockBtn").onclick=async()=>{
   const damage=editingStockId&&enteredDamage<oldDamage?oldDamage+enteredDamage:enteredDamage;
   const paidCredit=editingStockId?creditPaidForBatch(editingStockId):{qty:0,amount:0};
   const revenue=Math.max(0,sold-paidCredit.qty)*price+paidCredit.amount,creditOutstanding=Number(old.credit_outstanding||0),unpaidCreditQty=editingStockId?unpaidCreditForBatch(editingStockId):0;
-  const soldForBalance=sold+(old._ezelexLedger?.unpaidExcludedFromSold?unpaidCreditQty:0),soldCost=sold*unitCost,damageValue=damage*unitCost,remaining=Math.max(0,total-soldForBalance-damage-lossQuantity),remainingValue=remaining*unitCost;
+  const soldCost=sold*unitCost,damageValue=damage*unitCost,remaining=total-sold-damage-lossQuantity-unpaidCreditQty,remainingValue=remaining*unitCost;
   // For reinvestment batches, capital represents the cost still tied up in unsold stock.
   // This is separate from the Reinvestment Cash in Hand ledger, which remains untouched.
   const capital=editingStockId?(old.stock_type==="reinvestment"?remainingValue:Number(old.capital_amount??old.purchase_total??0)):num("capitalAmount"),cash=soldCost-damageValue-lossQuantity*unitCost;
-  if(!$('stockDate').value||!$('stockProduct').value.trim()||total<=0||capital<0||unitCost<0||price<0||soldForBalance+damage+lossQuantity>total){msg("stockMsg","Please check the stock quantities and costs. Sold + damage + loss + any credit crates not yet included in Sold cannot be greater than total stock.","error");return;}
+  if(!$('stockDate').value||!$('stockProduct').value.trim()||total<=0||capital<0||unitCost<0||price<0||sold+damage+lossQuantity+unpaidCreditQty>total){msg("stockMsg","Please check the stock quantities and costs. Sold + damage + loss + unpaid on-credit crates cannot be greater than total stock.","error");return;}
   // Keep already-earned profit and add only the profit/loss from quantities newly recorded.
   const addedSold=Math.max(0,sold-oldSold),addedDamage=Math.max(0,damage-oldDamage);
   const lossValue=lossQuantity*unitCost;
@@ -2019,7 +1876,7 @@ $("saveStockBtn").onclick=async()=>{
       const purchaseWeek=(activeWeekCorrection&&String(activeWeekCorrection.week_id)===String(editingStockOriginal?.week_id))?stockWeekRows.find(w=>String(w.id)===String(activeWeekCorrection.week_id)):currentStockWeek;
       if(!purchaseWeek||(!activeWeekCorrection&&purchaseWeek.status!=="open")){msg("stockMsg","Open the correct weekly stock book before adding a new purchase quantity.","error");return;}
       const baseTotal=beforeTotal,baseSold=sold,baseDamage=damage,baseLoss=lossQuantity,baseUnpaid=unpaidCreditQty;
-      const baseRemaining=Math.max(0,baseTotal-baseSold-baseDamage-baseLoss-(editingStockOriginal?._ezelexLedger?.unpaidExcludedFromSold?baseUnpaid:0));
+      const baseRemaining=Math.max(0,baseTotal-baseSold-baseDamage-baseLoss-baseUnpaid);
       const baseRevenue=Math.max(0,baseSold-paidCredit.qty)*beforeUnit /* recalculated below using original selling price */;
       const basePrice=Number(editingStockOriginal?.selling_price_per_unit||0);
       const baseSoldRevenue=Math.max(0,baseSold-paidCredit.qty)*basePrice+paidCredit.amount;
@@ -2028,15 +1885,17 @@ $("saveStockBtn").onclick=async()=>{
       const updBase=await db.from("worker_stock_batches").update(originalPatch).eq("id",editingStockId).eq("worker_id",currentUser.id).select("id");
       if(updBase.error||!updBase.data?.length){msg("stockMsg","Could not preserve the original purchase while adding the new quantity: "+(updBase.error?.message||"No row updated"),"error");return;}
       const addBatch={worker_id:currentUser.id,week_id:purchaseWeek.id,stock_type:"reinvestment",stock_date:activeWeekCorrection?$("stockDate").value:today(),product_service:record.product_service,total_quantity:addedPurchaseQty,capital_amount:addedPurchaseQty*unitCost,cash_in_hand:0,purchase_total:addedPurchaseQty*unitCost,cost_per_unit:unitCost,selling_price_per_unit:price,sold_quantity:0,damage_quantity:0,loss_quantity:0,sales_revenue:0,sold_cost:0,damage_value:0,loss_value:0,remaining_quantity:addedPurchaseQty,remaining_value:addedPurchaseQty*unitCost,profit_loss:0,credit_quantity:0,credit_outstanding:0,credit_sales_normalized:true,notes:"Additional purchase quantity added while editing an existing stock item. Original batch preserved."};
-      const reinvestmentLedger=calculateReinvestmentCash(liveStockRows||[]),purchaseDebit=addedPurchaseQty*unitCost;
-      if(reinvestmentLedger.balance<0||purchaseDebit>reinvestmentLedger.balance){msg("stockMsg","Additional purchase blocked. Reinvestment Cash in Hand is "+fmt(reinvestmentLedger.balance)+" and this addition costs "+fmt(purchaseDebit)+". "+(reinvestmentLedger.balance<0?"Current overspending: "+fmt(Math.abs(reinvestmentLedger.balance))+".":"Shortfall: "+fmt(purchaseDebit-reinvestmentLedger.balance)+"."),"error");return;}
-      const inserted=await db.from("worker_stock_batches").insert(addBatch).select("*").single();
-      if(inserted.error){msg("stockMsg","Original stock was preserved, but the additional purchase could not be saved: "+inserted.error.message+". Please retry after checking the stock records.","error");return;}
+      const purchaseDebit=addedPurchaseQty*unitCost;
+      const posted=await db.rpc('ezelex_create_reinvestment',{p_week_id:purchaseWeek.id,p_stock_date:activeWeekCorrection?$('stockDate').value:today(),p_product_service:record.product_service,p_quantity:addedPurchaseQty,p_unit_cost:unitCost,p_selling_price:price,p_notes:"Additional purchase quantity added while editing an existing stock item. Original batch preserved."});
+      if(posted.error){msg("stockMsg","Original stock was preserved, but the additional purchase was blocked or could not be committed: "+posted.error.message,"error");return;}
+      const insertedRead=await db.from("worker_stock_batches").select("*").eq("id",posted.data?.batch_id).eq("worker_id",currentUser.id).single();
+      if(insertedRead.error||!insertedRead.data){msg("stockMsg","The additional purchase was committed, but its audit record could not be reloaded. Ask an administrator to inspect batch "+String(posted.data?.batch_id||"unknown")+".","error");return;}
+      const inserted={data:insertedRead.data};
       const h1=await writeStockHistory(editingStockOriginal,originalPatch,"Original purchase preserved while recording additional purchase");
       const h2=await writeStockHistory(null,inserted.data,"Additional purchase created from stock edit");
       if(h1||h2)msg("stockMsg","Additional purchase saved. One of the audit entries needs administrator review.","error");
       else msg("stockMsg",addedPurchaseQty+" additional crates saved as a new purchase this week. Original purchase history preserved.","success");
-      const savedDate=today();editingStockId="";editingStockOriginal=null;stockCorrectionMode=false;$('editingStockId').value="";$('stockForm').reset();$('capitalAmountEditField')?.classList.remove('hidden');const soldLabel=$('stockSold')?.previousElementSibling;if(soldLabel)soldLabel.textContent="Sold Quantity";$('stockDate').value=savedDate;$('stockSold').value=0;$('stockDamage').value=0;$('saveStockBtn').textContent="Save Stock Record";$('cancelEditStockBtn').style.display="none";$('deleteStockBtn').style.display="none";updateStockFormCreditSummary("");calculateStock();await loadCredits(); await loadStockHistory(); await loadStockWeeks();return;
+      const savedDate=today();editingStockId="";editingStockOriginal=null;stockCorrectionMode=false;$('editingStockId').value="";$('stockForm').reset();$('capitalAmountEditField')?.classList.remove('hidden');const soldLabel=$('stockSold')?.previousElementSibling;if(soldLabel)soldLabel.textContent="Sold Quantity";$('stockDate').value=savedDate;$('stockSold').value=0;$('stockDamage').value=0;$('saveStockBtn').textContent="Save Stock Record";$('cancelEditStockBtn').style.display="none";$('deleteStockBtn').style.display="none";updateStockFormCreditSummary("");calculateStock();await Promise.all([loadStock(),loadStockHistory(),loadStockWeeks()]);return;
     }
     const purchaseChanged=beforeTotal!==total||Math.abs(beforeUnit-unitCost)>0.0001;
     const historyAction=purchaseChanged?"Stock updated — purchase quantity/unit cost changed":"Stock updated";
@@ -2058,10 +1917,7 @@ $("saveStockBtn").onclick=async()=>{
   }
   const savedStockDate=record.stock_date;
   msg("stockMsg",wasEditing?"Stock updated and date/time history recorded.":"Stock record saved successfully and sent to Ezelex admin.","success");
-  editingStockId=""; editingStockOriginal=null; $("editingStockId").value=""; $("stockForm").reset(); $("capitalAmountEditField")?.classList.remove("hidden"); const soldLabel=$("stockSold")?.previousElementSibling;if(soldLabel)soldLabel.textContent="Sold Quantity"; $("stockDate").value=savedStockDate||today(); $("stockSold").value=0; $("stockDamage").value=0; $("saveStockBtn").textContent="Save Stock Record"; $("cancelEditStockBtn").style.display="none"; $("deleteStockBtn").style.display="none"; updateStockFormCreditSummary(""); calculateStock(); await loadCredits(); await loadStockHistory(); await loadStockWeeks();
-  if(typeof window.ezelexLoadFinance==="function")await window.ezelexLoadFinance();
-  if(typeof window.ezelexLoadCapitalOverview==="function")await window.ezelexLoadCapitalOverview();
-  if(typeof window.updateEzelexBillboard==="function")window.updateEzelexBillboard();
+  editingStockId=""; editingStockOriginal=null; $("editingStockId").value=""; $("stockForm").reset(); $("capitalAmountEditField")?.classList.remove("hidden"); const soldLabel=$("stockSold")?.previousElementSibling;if(soldLabel)soldLabel.textContent="Sold Quantity"; $("stockDate").value=savedStockDate||today(); $("stockSold").value=0; $("stockDamage").value=0; $("saveStockBtn").textContent="Save Stock Record"; $("cancelEditStockBtn").style.display="none"; $("deleteStockBtn").style.display="none"; updateStockFormCreditSummary(""); calculateStock(); await Promise.all([loadStock(),loadStockHistory(),loadStockWeeks()]);
   if(activeWeekCorrection)msg("weeklyStockMsg","Historical record saved. Continue correcting this week, then finish the one-time correction to reconcile and permanently lock it.","success");
   }catch(error){
     console.error("Stock save/update failed:",error);
@@ -2089,11 +1945,9 @@ $('saveCreditBtn')?.addEventListener('click',async()=>{
  }
  const batch=(liveStockRows||[]).find(r=>String(r.id)===String(batchId)&&!r.deleted_at);
  if(!batch){msg('creditMsg','The selected stock batch could not be found. Refresh your stock records and try again.','error');return;}
- const batchSold=Math.max(0,Number((batch._ezelexLedger?.soldQuantity ?? batch.sold_quantity) || 0));
- const alreadyCredited=(creditRows||[]).filter(c=>String(c.stock_batch_id)===String(batch.id)).reduce((n,c)=>n+Math.max(0,Number(c.quantity||0)),0);
- const creditable=Math.max(0,batchSold-alreadyCredited);
- if(quantity>creditable){
-  msg('creditMsg',`Only ${creditable.toLocaleString()} already-sold crate(s) in this batch are not yet linked to a credit customer. Credit must be recorded against sold crates; it does not consume physical remaining stock again.`,'error');return;
+ const available=Math.max(0,Number(batch.remaining_quantity||0));
+ if(quantity>available){
+  msg('creditMsg',`Only ${available.toLocaleString()} physical crate(s) are available in this stock batch. The on-credit quantity was not saved.`,'error');return;
  }
  button.disabled=true;
  const oldText=button.textContent;
@@ -2117,10 +1971,7 @@ $('saveCreditBtn')?.addEventListener('click',async()=>{
   form?.reset();
   $('creditDate').value=today();
   msg('creditMsg',`On-credit sale saved for ${esc(customer)}: ${quantity} crate(s), ${money(amount)} outstanding. Stock and billboard figures are being refreshed.`,'success');
-  await loadCredits(); await loadStockHistory();
-  if(typeof window.ezelexLoadFinance==="function")await window.ezelexLoadFinance();
-  if(typeof window.ezelexLoadCapitalOverview==="function")await window.ezelexLoadCapitalOverview();
-  if(typeof window.updateEzelexBillboard==="function")window.updateEzelexBillboard();
+  await Promise.all([loadCredits(),loadStockHistory()]);
  }catch(error){
   console.error('On-credit sale save failed:',error);
   msg('creditMsg','On-credit sale could not be saved: '+esc(error?.message||String(error)),'error');
@@ -2171,58 +2022,66 @@ async function loadCredits(){
     creditRows=normalizedCreditRows.filter(c=>activeBatchIds.has(String(c.stock_batch_id)));
   }else creditRows=normalizedCreditRows;
   creditRowsLoaded=true;
-  // One-time migration of legacy batches: remove all credit transactions from the old
-  // sold/revenue/profit totals, then add back only credit transactions marked fully paid.
-  // The SQL migration adds credit_sales_normalized so this conversion cannot repeat.
+  // Rebuild every credit-linked batch from its non-credit baseline and the active
+  // payment ledger on EVERY refresh. Reversed payment rows stay in the audit table
+  // but contribute zero sold, revenue, recovered cost and profit.
   const byBatch=new Map();
   for(const c of creditRows){
     const id=String(c.stock_batch_id||"");if(!id)continue;
     const a=byBatch.get(id)||{qty:0,amount:0,paidQty:0,paidAmount:0,unpaidQty:0,unpaidAmount:0};
     const q=Math.max(0,Number(c.quantity||0)),due=Math.max(0,Number(c.amount_due||0));
-    a.qty+=q;a.amount+=due;
-    const paidQty=Math.min(q,Math.max(0,Number(c.crates_paid||0)));const paidAmount=Math.min(due,Math.max(0,Number(c.amount_paid||0)));a.paidQty+=paidQty;a.paidAmount+=paidAmount;a.unpaidQty+=Math.max(0,q-paidQty);a.unpaidAmount+=Math.max(0,due-paidAmount);
+    const paidQty=Math.min(q,Math.max(0,Number(c.crates_paid||0)));
+    const paidAmount=Math.min(due,Math.max(0,Number(c.amount_paid||0)));
+    a.qty+=q;a.amount+=due;a.paidQty+=paidQty;a.paidAmount+=paidAmount;
+    a.unpaidQty+=Math.max(0,q-paidQty);a.unpaidAmount+=Math.max(0,due-paidAmount);
     byBatch.set(id,a);
+  }
+  const paymentHistoryByBatch=new Map();
+  for(const p of (creditPaymentRows||[])){
+    const id=String(p.stock_batch_id||"");if(!id)continue;
+    const a=paymentHistoryByBatch.get(id)||{qty:0,amount:0,profit:0};
+    // Include reversed entries only when removing their historic contribution
+    // from a batch snapshot. Active amounts are added back below from creditRows.
+    a.qty+=Math.max(0,Number(p.crates_paid||0));
+    a.amount+=Math.max(0,Number(p.amount_paid||0));
+    a.profit+=Number(p.profit_amount||0);
+    paymentHistoryByBatch.set(id,a);
   }
   for(const [batchId,ledger] of byBatch){
     const batch=liveStockRows.find(x=>String(x.id)===batchId);if(!batch)continue;
-    const unit=Number(batch.cost_per_unit||0);
-    // Normalized rows already exclude unpaid credit from sold_quantity. Repair only
-    // their physical remaining balance if an earlier version marked them normalized
-    // without deducting the reserved credit crates.
-    if(batch.credit_sales_normalized===true){
-      const total=Number(batch.total_quantity||0),sold=Number(batch.sold_quantity||0),damage=Number(batch.damage_quantity||0),loss=Number(batch.loss_quantity||0);
-      const residual=total-sold-damage-loss-Number(batch.remaining_quantity||0);
-      const unpaidExcludedFromSold=ledger.unpaidQty>0&&Math.abs(residual-ledger.unpaidQty)<0.001;
-      const unpaidAlreadyInSold=ledger.unpaidQty>0&&Math.abs(residual)<0.001;
-      const expectedRemaining=Math.max(0,total-sold-damage-loss-(unpaidExcludedFromSold?ledger.unpaidQty:0));
-      if(Math.abs(Number(batch.remaining_quantity||0)-expectedRemaining)>0.0001 ||
-         Math.abs(Number(batch.credit_quantity||0)-ledger.qty)>0.0001 ||
-         Math.abs(Number(batch.credit_outstanding||0)-ledger.unpaidAmount)>0.009){
-        const repaired=await db.from('worker_stock_batches').update({remaining_quantity:expectedRemaining,remaining_value:expectedRemaining*unit,credit_quantity:ledger.qty,credit_outstanding:ledger.unpaidAmount}).eq('id',batchId).eq('worker_id',currentUser.id).is('deleted_at',null);
-        if(!repaired.error){batch.remaining_quantity=expectedRemaining;batch.remaining_value=expectedRemaining*unit;batch.credit_quantity=ledger.qty;batch.credit_outstanding=ledger.unpaidAmount;}
-        else console.warn('Credit stock balance repair could not update batch',batchId,repaired.error.message);
-      }
-      continue;
-    }
-    const total=Number(batch.total_quantity||0),sold=Number(batch.sold_quantity||0),damage=Number(batch.damage_quantity||0),loss=Number(batch.loss_quantity||0);
-    const residual=total-sold-damage-loss-Number(batch.remaining_quantity||0);
-    const unpaidExcludedFromSold=ledger.unpaidQty>0&&Math.abs(residual-ledger.unpaidQty)<0.001;
-    // Some legacy rows already exclude unpaid credit from sold_quantity, while older
-    // rows include every credit sale. Only migrate the latter; never subtract the
-    // same unpaid crates twice.
-    const baseSold=unpaidExcludedFromSold?sold:Math.max(0,sold-ledger.qty);
-    const baseRevenue=unpaidExcludedFromSold?Number(batch.sales_revenue||0):Math.max(0,Number(batch.sales_revenue||0)-ledger.amount);
-    const baseSoldCost=unpaidExcludedFromSold?Number(batch.sold_cost||0):Math.max(0,Number(batch.sold_cost||0)-ledger.qty*unit);
-    const baseProfit=unpaidExcludedFromSold?Number(batch.profit_loss||0):Number(batch.profit_loss||0)-(ledger.amount-ledger.qty*unit);
+    const unit=Math.max(0,Number(batch.cost_per_unit||0));
+    const normalized=batch.credit_sales_normalized===true;
+    const historical=paymentHistoryByBatch.get(batchId)||{qty:0,amount:0,profit:0};
+    // Legacy, unnormalized totals included every credit sale. Normalized totals
+    // included the payment events active when that batch was last reconciled.
+    const reflectedQty=normalized?historical.qty:ledger.qty;
+    const reflectedAmount=normalized?historical.amount:ledger.amount;
+    const reflectedCost=reflectedQty*unit;
+    const reflectedProfit=normalized?historical.profit:(ledger.amount-ledger.qty*unit);
+    const baseSold=Math.max(0,Number(batch.sold_quantity||0)-reflectedQty);
+    const baseRevenue=Math.max(0,Number(batch.sales_revenue||0)-reflectedAmount);
+    const baseSoldCost=Math.max(0,Number(batch.sold_cost||0)-reflectedCost);
+    const baseProfit=Number(batch.profit_loss||0)-reflectedProfit;
     const nextSold=baseSold+ledger.paidQty;
     const nextRevenue=baseRevenue+ledger.paidAmount;
     const nextSoldCost=baseSoldCost+ledger.paidQty*unit;
-    const nextRemaining=Math.max(0,total-nextSold-damage-loss-ledger.unpaidQty);
-    const purchase=Number(batch.purchase_total||0),capital=Number(batch.capital_amount||0);
-    const patch={sold_quantity:nextSold,sales_revenue:nextRevenue,sold_cost:nextSoldCost,profit_loss:baseProfit+(ledger.paidAmount-ledger.paidQty*unit),remaining_quantity:nextRemaining,remaining_value:nextRemaining*unit,credit_quantity:ledger.qty,credit_outstanding:ledger.unpaidAmount,cash_in_hand:nextSoldCost-damage*unit-loss*unit,credit_sales_normalized:true};
-    const fixed=await db.from('worker_stock_batches').update(patch).eq('id',batchId).eq('worker_id',currentUser.id).is('deleted_at',null);
-    if(!fixed.error)Object.assign(batch,patch);else console.warn('Credit normalization could not update stock batch',batchId,fixed.error.message);
+    const nextProfit=baseProfit+(ledger.paidAmount-ledger.paidQty*unit);
+    const nextRemaining=Math.max(0,Number(batch.total_quantity||0)-nextSold-ledger.unpaidQty-Number(batch.damage_quantity||0)-Number(batch.loss_quantity||0));
+    const patch={
+      sold_quantity:nextSold,sales_revenue:nextRevenue,sold_cost:nextSoldCost,
+      profit_loss:nextProfit,remaining_quantity:nextRemaining,remaining_value:nextRemaining*unit,
+      credit_quantity:ledger.qty,credit_outstanding:ledger.unpaidAmount,
+      cash_in_hand:nextSoldCost-Number(batch.damage_quantity||0)*unit-Number(batch.loss_quantity||0)*unit,
+      credit_sales_normalized:true
+    };
+    const differs=Object.entries(patch).some(([key,value])=>Math.abs(Number(batch[key]||0)-Number(value||0))>0.009);
+    if(differs){
+      const fixed=await db.from('worker_stock_batches').update(patch).eq('id',batchId).eq('worker_id',currentUser.id).is('deleted_at',null);
+      if(!fixed.error)Object.assign(batch,patch);
+      else console.warn('Credit stock reconciliation could not update batch',batchId,fixed.error.message);
+    }
   }
+
   renderCredits();if(typeof calculateStock==="function")calculateStock();updateStockFormCreditSummary(editingStockId);
   if(typeof loadStock==="function")await loadStock();
 }
@@ -2281,10 +2140,10 @@ window.reverseCreditPayment=async paymentId=>{
     const result=await db.rpc('ezelex_reverse_credit_payment',{p_payment_id:paymentId,p_reason:reason.trim()});
     if(result.error)throw result.error;
     msg('creditMsg',`Payment reversed: ${money(result.data?.amount_reversed||payment.amount_paid)} and ${Number(result.data?.crates_reversed||payment.crates_paid||0)} crate(s) returned to outstanding credit. The original payment remains in the audit history.`,'success');
-    await loadCredits(); await loadStockWeeks(); await loadStockHistory();
+    await loadCredits(); // refreshes the credit ledger and rebuilds its linked stock batch
+    await Promise.all([loadStockWeeks(),loadStockHistory()]);
     if(typeof window.ezelexLoadFinance==='function')await window.ezelexLoadFinance();
-    if(typeof window.ezelexLoadCapitalOverview==='function')await window.ezelexLoadCapitalOverview();
-    if(typeof window.updateEzelexBillboard==='function')window.updateEzelexBillboard();
+    if(typeof loadCapitalOverview==='function')await loadCapitalOverview();
   }catch(error){
     console.error('Credit payment reversal failed:',error);
     msg('creditMsg','Payment reversal failed: '+esc(error?.message||String(error))+'. Check that the supplied Supabase reversal SQL has been run.','error');
@@ -2356,10 +2215,8 @@ $('creditActionSave')?.addEventListener('click',async()=>{
       const amount=Number(result.data?.amount_paid||0),profit=Number(result.data?.profit_amount||0);
       msg('creditMsg',`${crates} crate(s) payment recorded. ${money(amount)} received; ${money(profit)} profit recognised in the payment week. Remaining credit: ${Number(result.data?.crates_outstanding||0)} crate(s).`,'success');
     }
-    await loadCredits(); await loadStockWeeks(); await loadStockHistory();
+    await Promise.all([loadCredits(),loadStock(),loadStockWeeks(),loadStockHistory()]);
     if(typeof window.ezelexLoadFinance==='function')await window.ezelexLoadFinance();
-    if(typeof window.ezelexLoadCapitalOverview==='function')await window.ezelexLoadCapitalOverview();
-    if(typeof window.updateEzelexBillboard==='function')window.updateEzelexBillboard();
   }finally{button.disabled=false;}
 });
 
@@ -2373,7 +2230,6 @@ function stockMoney(v){
   return "GHS "+Number(v||0).toFixed(2);
 }
 function currentPhysicalStockRows(rows=liveStockRows||[]){
-  if(ezelexCentralLedgerSnapshot&&rows===liveStockRows)return ezelexCentralLedgerSnapshot.inventoryRows;
   const carriedSourceIds=new Set(rows.filter(r=>r.stock_type==="carry_forward"&&r.source_batch_id).map(r=>String(r.source_batch_id)));
   return rows.filter(r=>!carriedSourceIds.has(String(r.id)));
 }
@@ -2891,16 +2747,11 @@ window.addEventListener("load",()=>start(),{once:true});
  const $f=id=>document.getElementById(id), fmt=n=>'GH₵'+Number(n||0).toLocaleString('en-GH',{minimumFractionDigits:2,maximumFractionDigits:2});
  let financeWeeks=[],financeExpenses=[],financeCashRow=null,financeWeekId=null;
  const reinvestmentSpendRows=rows=>(rows||[]).filter(r=>r.stock_type==='reinvestment'||(r.stock_type!=='carry_forward'&&String(r.notes||'').toLowerCase().includes('additional purchase quantity added while editing an existing stock item')));
- function calculateReinvestmentCash(rows){
-   const s=buildEzelexCentralLedgerSnapshot(rows||liveStockRows,creditRows,ezelexOperatingExpenseRows,ezelexAdminAssignedCapital);
-   // Purchase authorization must use the live remaining reinvestment balance,
-   // not lifetime recovered cash (which ignores purchases already made).
-   return {recovered:s.paidCostRecovered,spent:s.reinvestmentSpend+s.otherDirectPurchaseSpend,expenses:s.totalExpenses,opening:s.openingCash+s.manualCashAdjustments,balance:s.reinvestmentCashBalance};
-  }
+ function calculateReinvestmentCash(rows){const active=(rows||[]).filter(r=>!r.deleted_at);const recovered=active.reduce((n,r)=>n+Math.max(0,Number(calculateStockCashInHand(r)||0)),0);const spent=active.filter(r=>r.stock_type==='reinvestment').reduce((n,r)=>n+Math.max(0,Number(r.purchase_total??(Number(r.total_quantity||0)*Number(r.cost_per_unit||0)))),0);return {recovered,spent,balance:recovered-spent};}
  // The main portal script also needs this calculation. Export it explicitly;
  // a function declared inside this IIFE is otherwise private to this script.
  window.calculateReinvestmentCash=calculateReinvestmentCash;
- function paintReinvestmentCash(result){const amount=$f('financeCashAvailable'),status=$f('reinvestCashStatus'),card=$f('reinvestCashCard');if(amount){amount.textContent=fmt(result.balance);amount.style.color=result.balance<0?'#b42318':'#14532d';}if(card)card.classList.toggle('loss',result.balance<0);if(status){status.textContent=result.balance<0?'OVERSPENT: '+fmt(Math.abs(result.balance))+' must be recovered before another purchase.':'Opening cash: '+fmt(result.opening||0)+' · Paid-sale cost recovered: '+fmt(result.recovered)+' · Purchases: '+fmt(result.spent)+' · Expenses are deducted from profit, not capital';status.style.color=result.balance<0?'#b42318':'#52647a';}}
+ function paintReinvestmentCash(result){const amount=$f('financeCashAvailable'),status=$f('reinvestCashStatus'),card=$f('reinvestCashCard');if(amount){amount.textContent=fmt(result.balance);amount.style.color=result.balance<0?'#b42318':'#14532d';}if(card)card.classList.toggle('loss',result.balance<0);if(status){status.textContent=result.balance<0?'OVERSPENT: '+fmt(Math.abs(result.balance))+' must be recovered before another purchase.':'Recovered purchase cost: '+fmt(result.recovered)+' · Reinvested: '+fmt(result.spent);status.style.color=result.balance<0?'#b42318':'#52647a';}}
  const finMsg=(t,err=false)=>{const el=$f('financeMsg');if(el)el.innerHTML=t?`<div class="msg ${err?'error':'success'}">${String(t).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]))}</div>`:''};
  const weekStart=d=>{let x=new Date(String(d||new Date().toISOString().slice(0,10)).slice(0,10)+'T12:00:00');x.setDate(x.getDate()-(x.getDay()+6)%7);return x.toISOString().slice(0,10)};
  const getWeek=()=>currentStockWeek?.id||null;
@@ -2912,27 +2763,28 @@ window.addEventListener("load",()=>start(),{once:true});
  ['reinvestQty','reinvestUnitCost'].forEach(id=>$f(id)?.addEventListener('input',recalcReinvest));
  $f('reinvestProduct')?.addEventListener('change',()=>{let r=liveStockRows.find(x=>String(x.id)===$f('reinvestProduct').value);if(r){$f('reinvestUnitCost').value=Number(r.cost_per_unit||0);$f('reinvestSellPrice').value=Number(r.selling_price_per_unit||0);recalcReinvest();}});
  async function loadFinance(){if(!currentUser||!getWeek())return;financeWeekId=getWeek();
-  const [w,e,allE,allEvents]=await Promise.all([db.from('worker_weekly_cash_balances').select('*').eq('worker_id',currentUser.id).eq('week_id',financeWeekId).maybeSingle(),selectWorkerRows('worker_stock_expenses','*'),selectWorkerRows('worker_stock_expenses','*'),selectWorkerRows('worker_stock_financial_events','*')]);
-  if(w.error||e.error||allE.error||allEvents.error){finMsg('Financial Management database setup is required. Run EZELEX_WORKER_STOCK_MANAGEMENT.sql in Supabase SQL Editor. '+(w.error?.message||e.error?.message||allE.error?.message||allEvents.error?.message),true);return;}
+  const [w,e,allE]=await Promise.all([db.from('worker_weekly_cash_balances').select('*').eq('worker_id',currentUser.id).eq('week_id',financeWeekId).maybeSingle(),selectWorkerRows('worker_stock_expenses','*'),selectWorkerRows('worker_stock_expenses','*')]);
+  if(w.error||e.error||allE.error){finMsg('Financial Management database setup is required. Run EZELEX_WORKER_STOCK_MANAGEMENT.sql in Supabase SQL Editor. '+(w.error?.message||e.error?.message||allE.error?.message),true);return;}
   financeCashRow=w.data;financeExpenses=(e.data||[]).filter(r=>String(r.week_id||'')===String(financeWeekId)).sort((a,b)=>String(b.expense_date||'').localeCompare(String(a.expense_date||'')));
-  ezelexOperatingExpenseRows=allE.data||[];
-  if(!allEvents.error)ezelexFinancialEventRows=allEvents.data||[];
-  const centralLedger=buildEzelexCentralLedgerSnapshot(liveStockRows,creditRows,ezelexOperatingExpenseRows,ezelexAdminAssignedCapital);
   let stock=(liveStockRows||[]).filter(r=>r.week_id?String(r.week_id)===String(financeWeekId):weekStart(r.stock_date||r.created_at)===weekStart(currentStockWeek?.week_start||today()));
-  let purchases=stock.filter(r=>r.stock_type!=='carry_forward').reduce((n,r)=>n+Number(r.purchase_total??(Number(r.total_quantity||0)*Number(r.cost_per_unit||0))),0);
-  let trading=centralLedger.realisedProfit;
+  let sales=stock.reduce((n,r)=>n+Number(r.sales_revenue||0),0),purchases=stock.filter(r=>r.stock_type!=='carry_forward').reduce((n,r)=>n+Number(r.purchase_total??(Number(r.total_quantity||0)*Number(r.cost_per_unit||0)),0),0),trading=(liveStockRows||[]).reduce((n,r)=>n+Number(r.profit_loss||0),0);
   let expenses=financeExpenses.reduce((n,r)=>n+Number(r.amount||0),0),opening=Number(financeCashRow?.opening_cash||0);
-  const reinvestmentLedger={recovered:centralLedger.paidCostRecovered,spent:centralLedger.reinvestmentSpend+centralLedger.otherDirectPurchaseSpend,expenses:centralLedger.totalExpenses,balance:centralLedger.reinvestmentCashBalance};
+  const allBatches=(liveStockRows||[]);
+  const purchaseBatches=allBatches.filter(r=>r.stock_type!=='carry_forward');
+  const firstCapitalBatch=[...purchaseBatches].filter(r=>Number(r.capital_amount||0)!==0).sort((a,b)=>String(a.stock_date||a.created_at||'').localeCompare(String(b.stock_date||b.created_at||'')))[0];
+  const openingBusinessCapital=Number(firstCapitalBatch?.capital_amount||0);
+  let central;try{central=await loadEzelexCentralSnapshot();}catch(err){finMsg(err.message,true);return;}
+  const reinvestmentLedger={recovered:Number(central.cash_recovered||0),spent:Number(central.reinvestment_spent||0),balance:Number(central.cash_available||0)};
   const cash=reinvestmentLedger.balance;
   window.ezelexReinvestmentCashBalance=cash;window.ezelexCurrentCashBalance=cash;
-  if($f('allSales'))$f('allSales').textContent=fmt(centralLedger.cashInHand);
-  paintReinvestmentCash(reinvestmentLedger);$f('financeWeekPurchases').textContent=fmt(purchases);$f('cashOpeningDisplay').textContent=fmt(centralLedger.openingCash+centralLedger.manualCashAdjustments);$f('cashSalesDisplay').textContent=fmt(reinvestmentLedger.recovered);$f('cashPurchasesDisplay').textContent=fmt(reinvestmentLedger.spent);$f('cashExpensesDisplay').textContent=fmt(reinvestmentLedger.expenses);$f('cashClosingDisplay').textContent=fmt(cash);$f('openingCashInput').value=opening.toFixed(2);
-  const lifetimeOperatingExpenses=centralLedger.totalExpenses;
+  if($f('allSales'))$f('allSales').textContent=fmt(cash);
+  paintReinvestmentCash(reinvestmentLedger);$f('financeWeekPurchases').textContent=fmt(purchases);$f('cashOpeningDisplay').textContent=fmt(opening);$f('cashSalesDisplay').textContent=fmt(reinvestmentLedger.recovered);$f('cashPurchasesDisplay').textContent=fmt(reinvestmentLedger.spent);$f('cashExpensesDisplay').textContent=fmt(expenses);$f('cashClosingDisplay').textContent=fmt(cash);$f('openingCashInput').value=opening.toFixed(2);
+  const lifetimeOperatingExpenses=(allE.data||[]).reduce((n,r)=>n+Number(r.amount||0),0);
   const netProfit=trading-lifetimeOperatingExpenses;
   const openCredits=(creditRows||[]).filter(c=>Number(c.amount_paid||0)<Number(c.amount_due||0)||Number(c.crates_paid||0)<Number(c.quantity||0));
   const creditUnitsByBatch=new Map();openCredits.forEach(c=>creditUnitsByBatch.set(String(c.stock_batch_id),(creditUnitsByBatch.get(String(c.stock_batch_id))||0)+Math.max(0,Number(c.quantity||0)-Number(c.crates_paid||0))));
-  const remainingProjection=centralLedger.remainingProfitProjection;
-  const creditProjection=centralLedger.unpaidCreditProfit;
+  const remainingProjection=currentPhysicalStockRows((liveStockRows||[]).filter(r=>!r.deleted_at)).reduce((n,r)=>n+Math.max(0,Number(r.remaining_quantity||0))*Math.max(0,Number(r.selling_price_per_unit||0)-Number(r.cost_per_unit||0)),0);
+  const creditProjection=openCredits.reduce((n,c)=>{const b=(liveStockRows||[]).find(r=>String(r.id)===String(c.stock_batch_id));if(!b)return n;const qty=Math.max(0,Number(c.quantity||0)-Number(c.crates_paid||0)),due=Math.max(0,Number(c.amount_due||0)-Number(c.amount_paid||0));return n+Math.max(0,due-qty*Number(b.cost_per_unit||0));},0);
   const potentialProfit=netProfit+remainingProjection+creditProjection;
   $f('pnlTrading').textContent=fmt(trading);$f('pnlExpenses').textContent=fmt(lifetimeOperatingExpenses);$f('pnlNet').textContent=fmt(netProfit);$f('pnlNetCard').classList.toggle('loss',netProfit<0);$f('pnlNetCard').classList.toggle('profit',netProfit>=0);
   $f('pnlRemainingProjection').textContent=fmt(remainingProjection);$f('pnlCreditProjection').textContent=fmt(creditProjection);$f('pnlPotential').textContent=fmt(potentialProfit);
@@ -2943,12 +2795,16 @@ window.addEventListener("load",()=>start(),{once:true});
   $f('reinvestProduct').innerHTML='<option value="">Select an existing stock item</option>'+[...products.entries()].map(([name,r])=>`<option value="${r.id}">${name}</option>`).join('');
  }
  rf?.addEventListener('submit',async ev=>{ev.preventDefault();let source=liveStockRows.find(r=>String(r.id)===$f('reinvestProduct').value);if(!source){finMsg('Select an existing stock item.',true);return;}let qty=Number($f('reinvestQty').value),unit=Number($f('reinvestUnitCost').value),sell=Number($f('reinvestSellPrice').value),total=qty*unit;
-  if(!Number.isInteger(qty)||qty<1||unit<=0||!Number.isFinite(total)){finMsg('Enter a valid quantity and unit cost.',true);return;}const freshRows=await selectWorkerRows('worker_stock_batches','*');if(freshRows.error){finMsg('Purchase stopped: the latest stock and reinvestment ledger could not be verified. '+freshRows.error.message,true);return;}const freshLedger=calculateReinvestmentCash(freshRows.data||[]);let cash=freshLedger.balance;window.ezelexReinvestmentCashBalance=cash;window.ezelexCurrentCashBalance=cash;paintReinvestmentCash(freshLedger);if(cash<0){finMsg('Purchase blocked. Reinvestment is already OVERSPENT by '+fmt(Math.abs(cash))+'. Recover this amount from paid crate sales before purchasing again.',true);return;}if(total>cash){finMsg('Purchase blocked: insufficient Reinvestment Cash in Hand. Available: '+fmt(cash)+'. Purchase cost: '+fmt(total)+'. Shortfall: '+fmt(total-cash)+'. Profit is excluded and cannot cover this purchase.',true);return;}
-  const payload={worker_id:currentUser.id,week_id:financeWeekId,stock_type:'reinvestment',stock_date:$f('reinvestDate').value||today(),product_service:source.product_service,total_quantity:qty,capital_amount:total,cost_per_unit:unit,selling_price_per_unit:sell,sold_quantity:0,damage_quantity:0,loss_quantity:0,sales_revenue:0,sold_cost:0,damage_value:0,loss_value:0,remaining_quantity:qty,remaining_value:qty*unit,purchase_total:total,cash_in_hand:0,credit_quantity:0,credit_outstanding:0,profit_loss:0,notes:'Reinvestment from cash in hand. '+($f('reinvestSupplier').value?'Supplier: '+$f('reinvestSupplier').value+'. ':'')+$f('reinvestNotes').value};
-  $f('reinvestSubmit').disabled=true;try{let ins=await db.from('worker_stock_batches').insert(payload).select('*').single();if(ins.error)throw ins.error;let audit=await db.from('worker_stock_financial_events').insert({worker_id:currentUser.id,week_id:financeWeekId,event_type:'reinvestment',amount:total,stock_batch_id:ins.data.id,description:'Reinvestment purchase: '+source.product_service});if(audit.error){await db.from('worker_stock_batches').delete().eq('id',ins.data.id).eq('worker_id',currentUser.id);throw audit.error;}rf.reset();$f('reinvestDate').value=today();await loadCredits(); await loadStockHistory();await loadFinance();finMsg('Reinvestment saved. '+qty+' crates added to the existing '+source.product_service+' stock. My Stock Records now shows the combined product balance, while this week’s purchase total records only the '+qty+' newly purchased crates.');}catch(e){finMsg('Could not save reinvestment: '+(e.message||e),true);}finally{$f('reinvestSubmit').disabled=false;}
+  if(!Number.isInteger(qty)||qty<1||unit<=0||!Number.isFinite(total)){finMsg('Enter a valid quantity and unit cost.',true);return;}$f('reinvestSubmit').disabled=true;try{
+   const notes='Reinvestment from recovered cash. '+($f('reinvestSupplier').value?'Supplier: '+$f('reinvestSupplier').value+'. ':'')+$f('reinvestNotes').value;
+   const posted=await db.rpc('ezelex_create_reinvestment',{p_week_id:financeWeekId,p_stock_date:$f('reinvestDate').value||today(),p_product_service:source.product_service,p_quantity:qty,p_unit_cost:unit,p_selling_price:sell,p_notes:notes});
+   if(posted.error)throw posted.error;
+   rf.reset();$f('reinvestDate').value=today();await Promise.all([loadStock(),loadStockHistory(),loadCredits()]);await loadFinance();
+   finMsg('Reinvestment saved securely. '+qty+' crates added to '+source.product_service+'. The balance check and purchase were committed together.');
+  }catch(e){finMsg('Could not save reinvestment: '+(e.message||e),true);}finally{$f('reinvestSubmit').disabled=false;}
  });
  ef?.addEventListener('submit',async ev=>{ev.preventDefault();let amount=Number($f('expenseAmount').value);if(!(amount>0)){finMsg('Enter an expense greater than zero.',true);return;}let ins=await db.from('worker_stock_expenses').insert({worker_id:currentUser.id,week_id:financeWeekId,expense_date:$f('expenseDate').value||today(),category:$f('expenseCategory').value,amount,description:$f('expenseDescription').value.trim()});if(ins.error){finMsg('Could not save expense: '+ins.error.message,true);return;}ef.reset();$f('expenseDate').value=today();await loadFinance();finMsg('Expense saved and included in the net profit calculation.');});
- of?.addEventListener('submit',async ev=>{ev.preventDefault();let amount=Number($f('openingCashInput').value);if(amount<0||!Number.isFinite(amount)){finMsg('Enter a valid manual cash balance.',true);return;}let old=Number(financeCashRow?.opening_cash||0),delta=amount-old;let r=await db.from('worker_weekly_cash_balances').upsert({worker_id:currentUser.id,week_id:financeWeekId,opening_cash:amount,adjustment_note:Math.abs(delta)>0.005?'Worker manual cash adjustment':'Worker cash balance confirmed'},{onConflict:'worker_id,week_id'});if(r.error){finMsg('Could not save manual cash balance: '+r.error.message,true);return;}if(Math.abs(delta)>0.005){let audit=await db.from('worker_stock_financial_events').insert({worker_id:currentUser.id,week_id:financeWeekId,event_type:'manual_cash_adjustment',amount:delta,description:'Manual cash balance adjustment. Included in the central business cash ledger.'});if(audit.error){await db.from('worker_weekly_cash_balances').upsert({worker_id:currentUser.id,week_id:financeWeekId,opening_cash:old,adjustment_note:'Restored after failed cash adjustment audit'},{onConflict:'worker_id,week_id'});finMsg('Cash adjustment was not applied because its audit record could not be saved: '+audit.error.message,true);return;}}await loadFinance();finMsg('Manual cash adjustment saved and included in the central ledger.');});
+ of?.addEventListener('submit',async ev=>{ev.preventDefault();let amount=Number($f('openingCashInput').value);if(amount<0||!Number.isFinite(amount)){finMsg('Enter a valid opening cash amount.',true);return;}let old=Number(financeCashRow?.opening_cash||0);let r=await db.from('worker_weekly_cash_balances').upsert({worker_id:currentUser.id,week_id:financeWeekId,opening_cash:amount,adjustment_note:amount!==old?'Worker opening cash adjustment':''},{onConflict:'worker_id,week_id'});if(r.error){finMsg('Could not save opening cash: '+r.error.message,true);return;}await loadFinance();finMsg('Opening cash saved. This is a balance adjustment, not new capital.');});
  // Initialise date controls; the actual weekly opening carry-forward is handled by the close-week hook below.
  document.addEventListener('DOMContentLoaded',()=>{['reinvestDate','expenseDate'].forEach(id=>{if($f(id))$f(id).value=today();});});
  const oldClose=window.closeCurrentStockWeek; if(typeof oldClose==='function'){window.closeCurrentStockWeek=async function(){await oldClose();};}
@@ -2957,19 +2813,24 @@ window.addEventListener("load",()=>start(),{once:true});
 
 // Five-second live performance billboard beside the Menu.
 (function(){
- const labels=['Actual Profit + On-Credit','All-Time Realised Profit','Sold Today','Sold This Week','Remaining Stock Position','On-Credit Crates'];let idx=0;
+ const labels=['Profit Made This Week','All-Time Realised Profit','Sold Today','Sold This Week','Remaining Stock','On-Credit Crates'];let idx=0;
  function update(){
   if(!currentUser)return;
-  const s=ezelexCentralLedgerSnapshot||buildEzelexCentralLedgerSnapshot(liveStockRows,creditRows,ezelexOperatingExpenseRows,ezelexAdminAssignedCapital);
+  // Use the stock-batch cache only. It is intentionally separate from Recent Sales.
   const rows=(liveStockRows||[]).filter(r=>!r.deleted_at);
   const weekId=String(currentStockWeek?.id||'');
   const start=mondayDateISO(today());
+  const thisWeek=getAuthoritativeWeekStockRows(weekId,start,rows);
   const soldToday=(stockHistoryRows||[]).filter(h=>dateOnly(h.changed_at)===today()).reduce((n,h)=>n+Math.max(0,Number(h.sold_delta||0)),0);
-  const soldWeek=s.currentWeekSold;
-  const onCredit=s.unpaidCreditUnits;
-  const remaining=s.currentWeekRemainingPosition;
-  const allProfit=s.realisedProfit;
-  const weekProfit=s.currentWeekProfit+s.unpaidCreditProfit;
+  const soldWeek=thisWeek.reduce((n,r)=>n+Number(r.sold_quantity||0),0);
+  const remaining=thisWeek.reduce((n,r)=>n+Number(r.remaining_quantity||0),0);
+  const onCredit=(creditRows||[]).reduce((n,c)=>{
+    const unpaidAmount=Math.max(0,Number(c.amount_due||0)-Number(c.amount_paid||0));
+    const unpaidCrates=Math.max(0,Number(c.quantity||0)-Number(c.crates_paid||0));
+    return n+(unpaidAmount>0.009&&unpaidCrates>0?unpaidCrates:0);
+   },0);
+  const allProfit=rows.reduce((n,r)=>n+Number(r.profit_loss||0),0);
+  const weekProfit=thisWeek.reduce((n,r)=>n+Number(r.profit_loss||0),0);
   const vals=[money(weekProfit),money(allProfit),soldToday.toLocaleString()+' crates',soldWeek.toLocaleString()+' crates',remaining.toLocaleString()+' crates',onCredit.toLocaleString()+' crates'];
   const l=document.getElementById('billboardLabel'),v=document.getElementById('billboardValue');
   if(l&&v){l.textContent=labels[idx];v.textContent=vals[idx];idx=(idx+1)%labels.length;}
@@ -2986,28 +2847,95 @@ async function loadCapitalOverview(){
   const message=$("capitalOverviewMessage");
   const set=(id,value)=>{const el=$(id);if(el)el.textContent=value;};
   if(!currentUser){if(message)message.textContent="Sign in to view capital information.";return;}
-  if(message)message.textContent="Rebuilding the complete capital ledger from the first purchase…";
+  if(message)message.textContent="Refreshing capital balances…";
   try{
-    // Load in sequence so the stock, credit and payment ledgers cannot race each other.
-    await loadCredits();
-    const capitalRead=await db.from("worker_business_capital_public").select("id,original_capital").eq("id",1).maybeSingle();
-    if(capitalRead.error||!capitalRead.data){
-      ["coOriginal","coRemaining","coSold","coCredit","coDamage","coAccounted","coDifference"].forEach(id=>set(id,"Unavailable"));
-      if(message)message.textContent="Admin-assigned capital could not be read. No capital balance has been guessed. "+(capitalRead.error?.message||"The Admin capital record is missing.");
+    const [capitalRead]=await Promise.all([
+      db.from("worker_business_capital_public").select("id,original_capital").eq("id",1).maybeSingle(),
+      loadStock(),loadCredits()
+    ]);
+    if(capitalRead.error){
+      set("coOriginal","Unavailable");
+      set("coSold","Unavailable");
+      set("coAccounted","Unavailable");
+      set("coDifference","Unavailable");
+      
+      
+    if(message)message.textContent="Admin capital is not available to this worker account. Install the read-only worker capital view in Supabase so Admin updates can appear here. No zero value has been assumed.";
       return;
     }
-    ezelexAdminAssignedCapital=Number(capitalRead.data.original_capital);
-    if(!Number.isFinite(ezelexAdminAssignedCapital)||ezelexAdminAssignedCapital<0)throw new Error("Admin-assigned capital is invalid.");
-    const expenseRead=await selectWorkerRows("worker_stock_expenses","*");
-    if(expenseRead.error)throw new Error("Operating expenses could not be read: "+expenseRead.error.message);
-    ezelexOperatingExpenseRows=expenseRead.data||[];
-    const s=buildEzelexCentralLedgerSnapshot(liveStockRows,creditRows,ezelexOperatingExpenseRows,ezelexAdminAssignedCapital);
-    const original=s.capitalAssigned,accounted=s.capitalAccounted,difference=accounted-original;
+    if(!capitalRead.data){
+      set("coOriginal","Not set");
+      set("coSold","Unavailable");
+      set("coAccounted","Unavailable");
+      set("coDifference","Unavailable");
+      
+      
+    if(message)message.textContent="The Admin capital record (id 1) has not been created yet. Enter Original Business Capital in Admin Business Finance & Capital.";
+      return;
+    }
+    const original=Number(capitalRead.data.original_capital);
+    if(!Number.isFinite(original)||original<0){
+      set("coOriginal","Invalid");
+      set("coSold","Unavailable");
+      set("coAccounted","Unavailable");
+      set("coDifference","Unavailable");
+      
+      
+    if(message)message.textContent="The Admin original capital value is invalid. Please check the Admin Business Finance & Capital entry.";
+      return;
+    }
+    // Capital is business-wide, not limited to the current weekly book.
+    // Exclude a source batch's old remaining balance once that stock is represented
+    // by a carry-forward batch, so physical stock is counted exactly once.
+    const activeCapitalRows=(liveStockRows||[]).filter(r=>!r.deleted_at);
+    const carriedSourceIds=new Set(activeCapitalRows.filter(r=>r.stock_type==="carry_forward"&&r.source_batch_id).map(r=>String(r.source_batch_id)));
+    const rows=activeCapitalRows.filter(r=>r.stock_type==="carry_forward"||!carriedSourceIds.has(String(r.id)));
+    const credits=(creditRows||[]);
+    const unpaidCostByBatch=new Map();
+    for(const c of credits){
+      const id=String(c.stock_batch_id||"");
+      const batch=(liveStockRows||[]).find(r=>String(r.id)===id);
+      const unpaidCrates=Math.max(0,Number(c.quantity||0)-Number(c.crates_paid||0));
+      if(unpaidCrates>0&&batch){
+        unpaidCostByBatch.set(id,(unpaidCostByBatch.get(id)||0)+unpaidCrates*Math.max(0,Number(batch.cost_per_unit||0)));
+      }
+    }
+    let remainingValue=0;
+    for(const r of rows){
+      const unit=Math.max(0,Number(r.cost_per_unit||0));
+      const total=Math.max(0,Number(r.total_quantity||0));
+      const sold=Math.max(0,Number(r.sold_quantity||0));
+      const damage=Math.max(0,Number(r.damage_quantity||0));
+      const loss=Math.max(0,Number(r.loss_quantity||0));
+      const physical=Math.max(0,Number(r.remaining_quantity??(total-sold-damage-loss)));
+      remainingValue+=physical*unit;
+    }
+    // Credit receivables and historic damage/loss remain business-wide even
+    // after a batch's remaining stock has moved into a carry-forward record.
+    const creditValue=[...unpaidCostByBatch.values()].reduce((n,v)=>n+v,0);
+    const damageLossValue=activeCapitalRows.filter(r=>r.stock_type!=="carry_forward").reduce((n,r)=>
+      n+(Math.max(0,Number(r.damage_quantity||0))+Math.max(0,Number(r.loss_quantity||0)))*Math.max(0,Number(r.cost_per_unit||0)),0);
+    // Use the same all-time reinvestment ledger as the worker's Finance page.
+    // Credit crates are excluded from cash until they are actually paid.
+    const allRows=(liveStockRows||[]).filter(r=>!r.deleted_at);
+    const grossRecovered=allRows.reduce((n,r)=>{
+      const recordedPaidCost=Math.max(0,Number(r.sold_cost||0));
+      // sold_cost records the cost of every crate recorded as sold, including
+      // crates sold on credit. A normalised batch does NOT mean the unpaid cost
+      // has been removed from sold_cost. Exclude every currently unpaid credit
+      // crate here so it is represented only in On-Credit Stock, never as cash.
+      const unpaidCost=unpaidCostByBatch.get(String(r.id))||0;
+      return n+Math.max(0,recordedPaidCost-unpaidCost);
+    },0);
+    const reinvested=allRows.filter(r=>r.stock_type==="reinvestment"||(r.stock_type!=="carry_forward"&&String(r.notes||"").toLowerCase().includes("additional purchase quantity added while editing an existing stock item"))).reduce((n,r)=>n+Math.max(0,Number(r.purchase_total??(Number(r.total_quantity||0)*Number(r.cost_per_unit||0)))),0);
+    const cashInHand=ezelexCentralSnapshot?Number(ezelexCentralSnapshot.cash_available||0):grossRecovered-reinvested;
+    const accounted=remainingValue+cashInHand+creditValue+damageLossValue;
+    const difference=accounted-original;
     set("coOriginal",money(original));
-    set("coRemaining",money(s.inventoryValue));
-    set("coSold",money(s.reinvestmentCashBalance));
-    set("coCredit",money(s.unpaidCreditCost));
-    set("coDamage",money(s.damageLossValue));
+    set("coRemaining",money(remainingValue));
+    set("coSold",money(cashInHand));
+    set("coCredit",money(creditValue));
+    set("coDamage",money(damageLossValue));
     set("coAccounted",money(accounted));
     set("coDifference",(difference<0?"−":difference>0?"+":"")+money(Math.abs(difference)));
     const reconciliation=document.querySelector(".capital-reconciliation");
@@ -3016,26 +2944,30 @@ async function loadCapitalOverview(){
     const maxValue=Math.max(original,accounted,0.01);
     if(originalBar)originalBar.style.width=(original/maxValue*100).toFixed(2)+"%";
     if(accountedBar)accountedBar.style.width=(accounted/maxValue*100).toFixed(2)+"%";
-    set("coOriginalChartValue",money(original));set("coAccountedChartValue",money(accounted));
+    set("coOriginalChartValue",money(original));
+    set("coAccountedChartValue",money(accounted));
     if(reconciliation){
       reconciliation.classList.remove("capital-status-neutral","capital-status-negative","capital-status-positive");
-      const neutral=Math.abs(difference)<0.005,state=neutral?"neutral":difference<0?"negative":"positive";
+      const neutral=Math.abs(difference)<0.005;
+      const state=neutral?"neutral":difference<0?"negative":"positive";
       reconciliation.classList.add("capital-status-"+state);
       if(label)label.textContent=neutral?"Capital Status — Balanced":difference<0?"Capital Shortage":"Capital Excess";
-      if(status)status.textContent=neutral
-        ?"BALANCED — Physical stock, recovered purchase capital, unpaid-credit cost and losses reconcile to Admin-assigned capital."
-        :difference<0?"SHORTAGE — "+money(Math.abs(difference))+" of assigned capital remains unaccounted for."
-        :"EXCESS — Accounted value exceeds Admin-assigned capital by "+money(difference)+". Check for duplicated stock or capital entries.";
+      if(status){
+        status.textContent=neutral?"NEUTRAL — Capital is fully accounted for.":difference<0?"SHORTAGE — "+money(Math.abs(difference))+" of capital is unaccounted for.":"POSITIVE — Accounted capital exceeds the original investment by "+money(difference)+".";
+      }
       if(accountedBar)accountedBar.style.background=neutral?"#eab308":difference<0?"#dc2626":"#16a34a";
     }
-    if(message)message.textContent="One central ledger from the first purchase ("+s.firstPurchaseDate+"). Carry-forward stock is linked to its source and counted once. Reinvestment purchases recycle recovered purchase cost; they are not new Admin capital. Outstanding credit is valued at purchase cost here; its full receivable amount is "+money(s.unpaidCreditFace)+".";
+    if(message)message.textContent="Capital refreshed across all business weeks. Negative means a shortage; zero means balanced; positive means an excess requiring review. Admin capital changes are read live. Carry-forward is counted once.";
   }catch(error){
     console.error("Capital Overview refresh failed:",error);
-    ["coOriginal","coRemaining","coSold","coCredit","coDamage","coAccounted","coDifference"].forEach(id=>set(id,"Unavailable"));
-    if(message)message.textContent="Capital Overview could not be reconciled: "+String(error?.message||error);
+    set("coOriginal","Unavailable");
+    set("coSold","Unavailable");
+    set("coAccounted","Unavailable");
+    set("coDifference","Unavailable");
+    
+    if(message)message.textContent="Capital Overview could not be refreshed: "+String(error?.message||error);
   }
 }
-window.ezelexLoadCapitalOverview=loadCapitalOverview;
 $("refreshCapitalOverviewBtn")?.addEventListener("click",loadCapitalOverview);
 
 </script>
