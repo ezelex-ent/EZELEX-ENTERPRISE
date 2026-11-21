@@ -329,9 +329,9 @@ img,canvas,svg,video{max-width:100%}
     <div class="stats">
       <div class="stat"><small>Crates Bought This Week</small><strong id="todaySales">0</strong><div class="live" id="dashboardAllTimePurchaseNote">All-time purchases: loading…</div></div>
       <div class="stat"><small>Crates Sold This Week</small><strong id="weekSales">0</strong></div>
-      <div class="stat"><small>Cash In Hand</small><strong id="allSales">GH₵0.00</strong><div class="live">Recovered purchase cost from paid sales, less reinvestment purchases. Expenses are deducted from profit separately.</div></div>
+      <div class="stat"><small>Cash In Hand</small><strong id="allSales">GH₵0.00</strong></div>
       <div class="stat profit" id="dashboardProfitCard" style="background:#dcfce7;border-color:#16a34a;color:#14532d"><small>Actual Profit + On-Credit</small><strong id="dashboardProfitValue">GH₵0.00</strong><div class="live" id="dashboardProfitNote">Realised profit plus unpaid-credit profit only.</div></div>
-      <div class="stat" id="dashboardRemainingCard"><small>Physical Remaining Stock</small><strong id="dashboardRemaining">0</strong><div id="dashboardRemainingBreakdown">Unpaid credit is shown separately</div></div>
+      <div class="stat" id="dashboardRemainingCard"><small>Remaining Stock Position</small><strong id="dashboardRemaining">0</strong></div>
       <button type="button" class="stat statAction" id="dashboardCreditCard" aria-label="Open On-Credit records"><small>On-Credit Crates (unpaid) — Open records</small><strong id="dashboardCreditUnits">0</strong><div id="dashboardCreditBreakdown" class="live">View outstanding customer credit</div></button>
     </div>
   </div>
@@ -1153,11 +1153,12 @@ async function loadSales(){
 
 function creditPaidForBatch(batchId){const paid=(creditRows||[]).filter(c=>String(c.stock_batch_id||"")===String(batchId||""));return {qty:paid.reduce((n,c)=>n+Number(c.crates_paid||0),0),amount:paid.reduce((n,c)=>n+Number(c.amount_paid||0),0)};}
 function calculateStockCashInHand(batch){
+  // Use the central ledger's paid-only quantity. Historical batches may store
+  // unpaid credit inside sold_quantity or separately, so the raw field alone
+  // is not a safe cash-recovery source.
   const unitCost=Math.max(0,Number(batch?.cost_per_unit||0));
-  const recordedSoldCost=Math.max(0,Number(batch?.sold_cost??(Number(batch?.sold_quantity||0)*unitCost)));
-  // Only remove unpaid credit cost when this historical batch stored those
-  // unpaid crates inside sold_cost. Newer batches already keep them separate.
-  return recordedSoldCost-Math.max(0,Number(batch?._ezelexLedger?.unpaidCostIncluded||0));
+  const paidQty=batch?._ezelexLedger?.paidSoldQuantity;
+  return Math.max(0,Number(paidQty??batch?.sold_quantity??0))*unitCost;
 }
 function unpaidCreditForBatch(batchId){return (creditRows||[]).filter(c=>String(c.stock_batch_id||"")===String(batchId||"")).reduce((n,c)=>n+Math.max(0,Number(c.quantity||0)-Number(c.crates_paid||0)),0);}
 function creditPaymentProfitForRows(rows){const ids=new Set((rows||[]).map(r=>String(r.id)));return (creditPaymentRows||[]).filter(p=>!p.reversed_at&&ids.has(String(p.stock_batch_id))).reduce((sum,p)=>sum+Number(p.profit_amount||0),0);}
@@ -1204,9 +1205,10 @@ function buildEzelexCentralLedgerSnapshot(rows=liveStockRows, credits=creditRows
     if(visiting.has(id))return {total:Number(row.total_quantity||0),remaining:Number(row.remaining_quantity||0),unpaidIncluded:false,unpaidQty:0,unpaidCostIncluded:0,unpaidProfitIncluded:0};
     visiting.add(id);
     const c=creditByBatch.get(id)||{unpaidQty:0,unpaidAmount:0,unpaidCost:0,unpaidProfit:0,allQty:0};
-    // Preserve the database values used for the first reconciliation pass.
-    // Repeated dashboard/finance refreshes must not reinterpret our own
-    // in-memory corrected values as new source data.
+    // Freeze the original database quantities exactly once. Later refreshes must
+    // never replace these source values with our own calculated quantities.
+    if(row._ezelexRawTotal===undefined || row._ezelexRawTotal===null) row._ezelexRawTotal=Number(row.total_quantity||0);
+    if(row._ezelexRawRemaining===undefined || row._ezelexRawRemaining===null) row._ezelexRawRemaining=Number(row.remaining_quantity||0);
     const rawTotal=Math.max(0,Number(row._ezelexRawTotal??row.total_quantity??0));
     const sold=Math.max(0,Number(row.sold_quantity||0));
     const damage=Math.max(0,Number(row.damage_quantity||0));
@@ -1234,18 +1236,21 @@ function buildEzelexCentralLedgerSnapshot(rows=liveStockRows, credits=creditRows
       // physical stock. Do not overwrite unrelated/manual opening adjustments.
       if(exactCarryForward||duplicatedUnpaidCredit)effectiveTotal=parentCalc.remaining;
     }
-    // Credit is a payment status attached to crates already sold, not a second
-    // stock movement. If an older normalized row omitted unpaid crates from its
-    // sold counter, add them back to the displayed sold total exactly once.
+    // Reconcile the two historical storage formats using the stored remaining
+    // balance before changing it. residual == unpaidQty means sold_quantity
+    // excludes unpaid credit; residual == 0 means sold_quantity already includes
+    // those credit crates. This distinction prevents both double deduction from
+    // stock and false cash recovery from unpaid sales.
+    const unpaidIncludedInSold=c.unpaidQty>0&&!unpaidExcludedFromSold;
+    const paidSoldQuantity=Math.max(0,sold-(unpaidIncludedInSold?c.unpaidQty:0));
     const soldQuantity=sold+(unpaidExcludedFromSold?c.unpaidQty:0);
-    const remaining=Math.max(0,effectiveTotal-soldQuantity-damage-loss);
-    const unpaidIncludedInSold=c.unpaidQty>0;
+    const remaining=Math.max(0,effectiveTotal-sold-damage-loss-(unpaidExcludedFromSold?c.unpaidQty:0));
     const result={
-      total:effectiveTotal,soldQuantity,remaining,unpaidQty:c.unpaidQty,unpaidAmount:c.unpaidAmount,
+      total:effectiveTotal,soldQuantity,paidSoldQuantity,remaining,unpaidQty:c.unpaidQty,unpaidAmount:c.unpaidAmount,
       unpaidCost:c.unpaidCost,unpaidProfit:c.unpaidProfit,
       unpaidExcludedFromSold,unpaidIncludedInSold,
-      unpaidCostIncluded:unpaidExcludedFromSold?0:c.unpaidCost,
-      unpaidProfitIncluded:unpaidExcludedFromSold?0:c.unpaidProfit,
+      unpaidCostIncluded:0,
+      unpaidProfitIncluded:0,
       remainingValue:remaining*Math.max(0,Number(row.cost_per_unit||0))
     };
     visiting.delete(id);calcCache.set(id,result);
@@ -1255,8 +1260,6 @@ function buildEzelexCentralLedgerSnapshot(rows=liveStockRows, credits=creditRows
     const x=calc(r);
     // Use the corrected opening quantity for linked carry-forward rows in every
     // section of this page. This fixes legacy transfers without inventing purchases.
-    r._ezelexRawTotal=Number(r.total_quantity||0);
-    r._ezelexRawRemaining=Number(r.remaining_quantity||0);
     r.total_quantity=x.total;
     r.remaining_quantity=x.remaining;
     r.remaining_value=x.remainingValue;
@@ -1289,11 +1292,9 @@ function buildEzelexCentralLedgerSnapshot(rows=liveStockRows, credits=creditRows
   // sold_cost snapshots that may include unpaid credit or prior-week transfers.
   const paidCostRecovered=active.reduce((sum,r)=>{
     const unit=Math.max(0,Number(r.cost_per_unit||0));
-    const batchCredit=creditByBatch.get(String(r.id))||{unpaidQty:0};
-    const rawSold=Math.max(0,Number(r.sold_quantity||0));
-    const creditWasIncluded=!(r._ezelexLedger?.unpaidExcludedFromSold);
-    const paidSoldQty=Math.max(0,rawSold-(creditWasIncluded?Number(batchCredit.unpaidQty||0):0));
-    return sum+paidSoldQty*unit;
+    // loadCredits normalises sold_quantity to paid sales (including paid credit
+    // repayments). Never deduct unpaid credit from this amount a second time.
+    return sum+Math.max(0,Number(r._ezelexLedger?.paidSoldQuantity ?? r.sold_quantity ?? 0))*unit;
   },0);
   const reinvestmentRows=active.filter(r=>r.stock_type==="reinvestment"||(r.stock_type!=="carry_forward"&&String(r.notes||"").toLowerCase().includes("additional purchase quantity added while editing an existing stock item")));
   const reinvestmentSpend=reinvestmentRows.reduce((n,r)=>n+Math.max(0,Number(r.purchase_total??(Number(r.total_quantity||0)*Number(r.cost_per_unit||0))),0),0);
@@ -1306,7 +1307,8 @@ function buildEzelexCentralLedgerSnapshot(rows=liveStockRows, credits=creditRows
   const manualCashAdjustments=(ezelexFinancialEventRows||[]).filter(r=>["manual_cash_adjustment","opening_cash_adjustment","cash_adjustment"].includes(String(r.event_type||"").toLowerCase())).reduce((n,r)=>n+Number(r.amount||0),0);
   const assigned=adminCapital!==null&&adminCapital!==undefined&&Number.isFinite(Number(adminCapital))?Number(adminCapital):initialPurchaseCost;
   const openingCash=assigned-initialPurchaseCost;
-  const cashInHand=openingCash+manualCashAdjustments+paidCostRecovered-reinvestmentSpend-otherDirectPurchaseSpend;
+  const cashInHand=paidCostRecovered;
+  const reinvestmentCashBalance=openingCash+manualCashAdjustments+paidCostRecovered-reinvestmentSpend-otherDirectPurchaseSpend;
   const damageLossValue=active.reduce((n,r)=>n+(Math.max(0,Number(r.damage_quantity||0))+Math.max(0,Number(r.loss_quantity||0)))*Math.max(0,Number(r.cost_per_unit||0)),0);
   const realisedProfit=active.reduce((n,r)=>n+Number(r.profit_loss||0),0)-unpaidProfitAlreadyInProfit;
   const currentWeekId=String(currentStockWeek?.id||"");
@@ -1316,11 +1318,13 @@ function buildEzelexCentralLedgerSnapshot(rows=liveStockRows, credits=creditRows
   const currentWeekPurchases=currentWeekRows.filter(r=>r.stock_type!=="carry_forward").reduce((n,r)=>n+Number(r.total_quantity||0),0);
   const currentWeekAvailable=currentWeekRows.reduce((n,r)=>n+Number(r.remaining_quantity||0),0);
   const currentWeekRemainingPosition=currentWeekAvailable+unpaidCreditUnits;
-  const capitalAccounted=inventoryValue+cashInHand+unpaidCreditCost+damageLossValue;
+  // Capital reconciliation uses cash still held after purchases, because
+  // reinvested money is already represented in remaining inventory.
+  const capitalAccounted=inventoryValue+reinvestmentCashBalance+unpaidCreditCost+damageLossValue;
   const snapshot={
     rows:active,inventoryRows,inventoryValue,remainingProfitProjection,currentWeekRemainingPosition,unpaidCreditUnits,unpaidCreditFace,unpaidCreditCost,unpaidCreditProfit,
     paidCostRecovered,reinvestmentSpend,otherDirectPurchaseSpend,initialPurchaseCost,firstPurchaseDate,
-    openingCash,manualCashAdjustments,totalExpenses,cashInHand,damageLossValue,realisedProfit,
+    openingCash,manualCashAdjustments,totalExpenses,cashInHand,reinvestmentCashBalance,damageLossValue,realisedProfit,
     currentWeekRows,currentWeekSold,currentWeekProfit,currentWeekPurchases,currentWeekAvailable,
     capitalAssigned:assigned,capitalAccounted,capitalDifference:capitalAccounted-assigned,
     carryForwardCorrections,ambiguousCarryForwardSources:[...ambiguousSources],
@@ -1444,7 +1448,7 @@ async function loadStock(){
   const expenseResult=await selectWorkerRows("worker_stock_expenses","*");
   const firstCapital=[...purchaseRows].filter(r=>Number(r.capital_amount||0)!==0).sort((a,b)=>String(a.stock_date||a.created_at||"").localeCompare(String(b.stock_date||b.created_at||"")))[0];
   const openingBusinessCapital=Number(firstCapital?.capital_amount||0);
-  const reinvestmentLedger={recovered:centralLedger.paidCostRecovered,spent:centralLedger.reinvestmentSpend+centralLedger.otherDirectPurchaseSpend,expenses:centralLedger.totalExpenses,opening:centralLedger.openingCash+centralLedger.manualCashAdjustments,balance:centralLedger.cashInHand};
+  const reinvestmentLedger={recovered:centralLedger.paidCostRecovered,spent:centralLedger.reinvestmentSpend+centralLedger.otherDirectPurchaseSpend,expenses:centralLedger.totalExpenses,opening:centralLedger.openingCash+centralLedger.manualCashAdjustments,balance:centralLedger.reinvestmentCashBalance};
   // Reinvestment cash is strictly the original cost basis recovered from paid sales,
   // less purchases made from this reinvestment pool. Sales profit is never included.
   window.ezelexReinvestmentCashBalance=reinvestmentLedger.balance;
@@ -1455,7 +1459,7 @@ async function loadStock(){
   const unpaidCreditProfit=centralLedger.unpaidCreditProfit;
   // Dashboard profit is intentionally not displayed here; projected values belong in P&L.
   $("todaySales").textContent=dashBought.toLocaleString(); $("weekSales").textContent=dashSold.toLocaleString();
-  const dashCash=reinvestmentLedger.balance;
+  const dashCash=centralLedger.cashInHand;
   $("allSales").textContent=money(dashCash);
   if($("dashboardRemaining"))$("dashboardRemaining").textContent=dashboardRemaining.toLocaleString();
   if($("dashboardRemainingBreakdown"))$("dashboardRemainingBreakdown").textContent=`${physicalRemaining.toLocaleString()} available + ${unpaidCreditRemaining.toLocaleString()} on credit`;
@@ -2189,6 +2193,7 @@ async function loadCredits(){
       const total=Number(batch.total_quantity||0),sold=Number(batch.sold_quantity||0),damage=Number(batch.damage_quantity||0),loss=Number(batch.loss_quantity||0);
       const residual=total-sold-damage-loss-Number(batch.remaining_quantity||0);
       const unpaidExcludedFromSold=ledger.unpaidQty>0&&Math.abs(residual-ledger.unpaidQty)<0.001;
+      const unpaidAlreadyInSold=ledger.unpaidQty>0&&Math.abs(residual)<0.001;
       const expectedRemaining=Math.max(0,total-sold-damage-loss-(unpaidExcludedFromSold?ledger.unpaidQty:0));
       if(Math.abs(Number(batch.remaining_quantity||0)-expectedRemaining)>0.0001 ||
          Math.abs(Number(batch.credit_quantity||0)-ledger.qty)>0.0001 ||
@@ -2209,12 +2214,12 @@ async function loadCredits(){
     const baseRevenue=unpaidExcludedFromSold?Number(batch.sales_revenue||0):Math.max(0,Number(batch.sales_revenue||0)-ledger.amount);
     const baseSoldCost=unpaidExcludedFromSold?Number(batch.sold_cost||0):Math.max(0,Number(batch.sold_cost||0)-ledger.qty*unit);
     const baseProfit=unpaidExcludedFromSold?Number(batch.profit_loss||0):Number(batch.profit_loss||0)-(ledger.amount-ledger.qty*unit);
-    const nextSold=baseSold+ (unpaidExcludedFromSold?0:ledger.paidQty);
-    const nextRevenue=baseRevenue+(unpaidExcludedFromSold?0:ledger.paidAmount);
-    const nextSoldCost=baseSoldCost+(unpaidExcludedFromSold?0:ledger.paidQty*unit);
+    const nextSold=baseSold+ledger.paidQty;
+    const nextRevenue=baseRevenue+ledger.paidAmount;
+    const nextSoldCost=baseSoldCost+ledger.paidQty*unit;
     const nextRemaining=Math.max(0,total-nextSold-damage-loss-ledger.unpaidQty);
     const purchase=Number(batch.purchase_total||0),capital=Number(batch.capital_amount||0);
-    const patch={sold_quantity:nextSold,sales_revenue:nextRevenue,sold_cost:nextSoldCost,profit_loss:baseProfit+(unpaidExcludedFromSold?0:(ledger.paidAmount-ledger.paidQty*unit)),remaining_quantity:nextRemaining,remaining_value:nextRemaining*unit,credit_quantity:ledger.qty,credit_outstanding:ledger.unpaidAmount,cash_in_hand:nextSoldCost-damage*unit-loss*unit,credit_sales_normalized:true};
+    const patch={sold_quantity:nextSold,sales_revenue:nextRevenue,sold_cost:nextSoldCost,profit_loss:baseProfit+(ledger.paidAmount-ledger.paidQty*unit),remaining_quantity:nextRemaining,remaining_value:nextRemaining*unit,credit_quantity:ledger.qty,credit_outstanding:ledger.unpaidAmount,cash_in_hand:nextSoldCost-damage*unit-loss*unit,credit_sales_normalized:true};
     const fixed=await db.from('worker_stock_batches').update(patch).eq('id',batchId).eq('worker_id',currentUser.id).is('deleted_at',null);
     if(!fixed.error)Object.assign(batch,patch);else console.warn('Credit normalization could not update stock batch',batchId,fixed.error.message);
   }
@@ -2888,7 +2893,9 @@ window.addEventListener("load",()=>start(),{once:true});
  const reinvestmentSpendRows=rows=>(rows||[]).filter(r=>r.stock_type==='reinvestment'||(r.stock_type!=='carry_forward'&&String(r.notes||'').toLowerCase().includes('additional purchase quantity added while editing an existing stock item')));
  function calculateReinvestmentCash(rows){
    const s=buildEzelexCentralLedgerSnapshot(rows||liveStockRows,creditRows,ezelexOperatingExpenseRows,ezelexAdminAssignedCapital);
-   return {recovered:s.paidCostRecovered,spent:s.reinvestmentSpend+s.otherDirectPurchaseSpend,expenses:s.totalExpenses,opening:s.openingCash+s.manualCashAdjustments,balance:s.cashInHand};
+   // Purchase authorization must use the live remaining reinvestment balance,
+   // not lifetime recovered cash (which ignores purchases already made).
+   return {recovered:s.paidCostRecovered,spent:s.reinvestmentSpend+s.otherDirectPurchaseSpend,expenses:s.totalExpenses,opening:s.openingCash+s.manualCashAdjustments,balance:s.reinvestmentCashBalance};
   }
  // The main portal script also needs this calculation. Export it explicitly;
  // a function declared inside this IIFE is otherwise private to this script.
@@ -2915,10 +2922,10 @@ window.addEventListener("load",()=>start(),{once:true});
   let purchases=stock.filter(r=>r.stock_type!=='carry_forward').reduce((n,r)=>n+Number(r.purchase_total??(Number(r.total_quantity||0)*Number(r.cost_per_unit||0))),0);
   let trading=centralLedger.realisedProfit;
   let expenses=financeExpenses.reduce((n,r)=>n+Number(r.amount||0),0),opening=Number(financeCashRow?.opening_cash||0);
-  const reinvestmentLedger={recovered:centralLedger.paidCostRecovered,spent:centralLedger.reinvestmentSpend+centralLedger.otherDirectPurchaseSpend,expenses:centralLedger.totalExpenses,balance:centralLedger.cashInHand};
+  const reinvestmentLedger={recovered:centralLedger.paidCostRecovered,spent:centralLedger.reinvestmentSpend+centralLedger.otherDirectPurchaseSpend,expenses:centralLedger.totalExpenses,balance:centralLedger.reinvestmentCashBalance};
   const cash=reinvestmentLedger.balance;
   window.ezelexReinvestmentCashBalance=cash;window.ezelexCurrentCashBalance=cash;
-  if($f('allSales'))$f('allSales').textContent=fmt(cash);
+  if($f('allSales'))$f('allSales').textContent=fmt(centralLedger.cashInHand);
   paintReinvestmentCash(reinvestmentLedger);$f('financeWeekPurchases').textContent=fmt(purchases);$f('cashOpeningDisplay').textContent=fmt(centralLedger.openingCash+centralLedger.manualCashAdjustments);$f('cashSalesDisplay').textContent=fmt(reinvestmentLedger.recovered);$f('cashPurchasesDisplay').textContent=fmt(reinvestmentLedger.spent);$f('cashExpensesDisplay').textContent=fmt(reinvestmentLedger.expenses);$f('cashClosingDisplay').textContent=fmt(cash);$f('openingCashInput').value=opening.toFixed(2);
   const lifetimeOperatingExpenses=centralLedger.totalExpenses;
   const netProfit=trading-lifetimeOperatingExpenses;
@@ -2998,7 +3005,7 @@ async function loadCapitalOverview(){
     const original=s.capitalAssigned,accounted=s.capitalAccounted,difference=accounted-original;
     set("coOriginal",money(original));
     set("coRemaining",money(s.inventoryValue));
-    set("coSold",money(s.cashInHand));
+    set("coSold",money(s.reinvestmentCashBalance));
     set("coCredit",money(s.unpaidCreditCost));
     set("coDamage",money(s.damageLossValue));
     set("coAccounted",money(accounted));
