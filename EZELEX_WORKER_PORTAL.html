@@ -1204,11 +1204,14 @@ function buildEzelexCentralLedgerSnapshot(rows=liveStockRows, credits=creditRows
     if(visiting.has(id))return {total:Number(row.total_quantity||0),remaining:Number(row.remaining_quantity||0),unpaidIncluded:false,unpaidQty:0,unpaidCostIncluded:0,unpaidProfitIncluded:0};
     visiting.add(id);
     const c=creditByBatch.get(id)||{unpaidQty:0,unpaidAmount:0,unpaidCost:0,unpaidProfit:0,allQty:0};
-    const rawTotal=Math.max(0,Number(row.total_quantity||0));
+    // Preserve the database values used for the first reconciliation pass.
+    // Repeated dashboard/finance refreshes must not reinterpret our own
+    // in-memory corrected values as new source data.
+    const rawTotal=Math.max(0,Number(row._ezelexRawTotal??row.total_quantity??0));
     const sold=Math.max(0,Number(row.sold_quantity||0));
     const damage=Math.max(0,Number(row.damage_quantity||0));
     const loss=Math.max(0,Number(row.loss_quantity||0));
-    const rawRemaining=Math.max(0,Number(row.remaining_quantity||0));
+    const rawRemaining=Math.max(0,Number(row._ezelexRawRemaining??row.remaining_quantity??0));
     const residual=rawTotal-sold-damage-loss-rawRemaining;
     // Historic rows were written by two different credit-normalisation versions.
     // If the residual equals the unpaid crates, unpaid credit was stored separately;
@@ -1273,14 +1276,25 @@ function buildEzelexCentralLedgerSnapshot(rows=liveStockRows, credits=creditRows
   const transferredSources=new Set([...childGroups.keys()].filter(id=>!ambiguousSources.has(id)));
   const inventoryRows=active.filter(r=>!transferredSources.has(String(r.id)));
   const inventoryValue=inventoryRows.reduce((n,r)=>n+Number(r.remaining_value||0),0);
+  const remainingProfitProjection=inventoryRows.reduce((n,r)=>n+
+    Math.max(0,Number(r.remaining_quantity||0))*
+    Math.max(0,Number(r.selling_price_per_unit||0)-Number(r.cost_per_unit||0)),0);
   const unpaidCreditUnits=[...creditByBatch.values()].reduce((n,x)=>n+x.unpaidQty,0);
   const unpaidCreditFace=[...creditByBatch.values()].reduce((n,x)=>n+x.unpaidAmount,0);
   const unpaidCreditCost=[...creditByBatch.values()].reduce((n,x)=>n+x.unpaidCost,0);
   const unpaidCreditProfit=[...creditByBatch.values()].reduce((n,x)=>n+x.unpaidProfit,0);
-  const unpaidCostAlreadyInSold=active.reduce((n,r)=>n+Number(r._ezelexLedger?.unpaidCostIncluded||0),0);
   const unpaidProfitAlreadyInProfit=active.reduce((n,r)=>n+Number(r._ezelexLedger?.unpaidProfitIncluded||0),0);
-  const grossSoldCost=active.reduce((n,r)=>n+Number(r.sold_cost||0),0);
-  const paidCostRecovered=grossSoldCost-unpaidCostAlreadyInSold;
+  // Cash recovery is the purchase cost of PAID crates only. Derive it from the
+  // reconciled sold quantity and the credit ledger, not stale cash_in_hand or
+  // sold_cost snapshots that may include unpaid credit or prior-week transfers.
+  const paidCostRecovered=active.reduce((sum,r)=>{
+    const unit=Math.max(0,Number(r.cost_per_unit||0));
+    const batchCredit=creditByBatch.get(String(r.id))||{unpaidQty:0};
+    const rawSold=Math.max(0,Number(r.sold_quantity||0));
+    const creditWasIncluded=!(r._ezelexLedger?.unpaidExcludedFromSold);
+    const paidSoldQty=Math.max(0,rawSold-(creditWasIncluded?Number(batchCredit.unpaidQty||0):0));
+    return sum+paidSoldQty*unit;
+  },0);
   const reinvestmentRows=active.filter(r=>r.stock_type==="reinvestment"||(r.stock_type!=="carry_forward"&&String(r.notes||"").toLowerCase().includes("additional purchase quantity added while editing an existing stock item")));
   const reinvestmentSpend=reinvestmentRows.reduce((n,r)=>n+Math.max(0,Number(r.purchase_total??(Number(r.total_quantity||0)*Number(r.cost_per_unit||0))),0),0);
   const originalPurchaseRows=active.filter(r=>r.stock_type==="purchase");
@@ -1301,9 +1315,10 @@ function buildEzelexCentralLedgerSnapshot(rows=liveStockRows, credits=creditRows
   const currentWeekProfit=currentWeekRows.reduce((n,r)=>n+Number(r.profit_loss||0)-Number(r._ezelexLedger?.unpaidProfitIncluded||0),0);
   const currentWeekPurchases=currentWeekRows.filter(r=>r.stock_type!=="carry_forward").reduce((n,r)=>n+Number(r.total_quantity||0),0);
   const currentWeekAvailable=currentWeekRows.reduce((n,r)=>n+Number(r.remaining_quantity||0),0);
+  const currentWeekRemainingPosition=currentWeekAvailable+unpaidCreditUnits;
   const capitalAccounted=inventoryValue+cashInHand+unpaidCreditCost+damageLossValue;
   const snapshot={
-    rows:active,inventoryRows,inventoryValue,unpaidCreditUnits,unpaidCreditFace,unpaidCreditCost,unpaidCreditProfit,
+    rows:active,inventoryRows,inventoryValue,remainingProfitProjection,currentWeekRemainingPosition,unpaidCreditUnits,unpaidCreditFace,unpaidCreditCost,unpaidCreditProfit,
     paidCostRecovered,reinvestmentSpend,otherDirectPurchaseSpend,initialPurchaseCost,firstPurchaseDate,
     openingCash,manualCashAdjustments,totalExpenses,cashInHand,damageLossValue,realisedProfit,
     currentWeekRows,currentWeekSold,currentWeekProfit,currentWeekPurchases,currentWeekAvailable,
@@ -1420,7 +1435,10 @@ async function loadStock(){
   // not remain in physical stock and must never be added back to the stock count.
   const physicalRemaining=centralLedger.currentWeekAvailable;
   const unpaidCreditRemaining=unpaidCreditUnits;
-  const dashboardRemaining=physicalRemaining;
+  // Dashboard "Remaining Stock" is the complete stock position: physical
+  // crates still available PLUS crates already sold on credit. Credit crates
+  // remain separately classified and are never counted as physical inventory.
+  const dashboardRemaining=physicalRemaining+unpaidCreditRemaining;
   // Reinvestment cash is recovered purchase cost from paid sales less purchases.
   // Operating expenses are charged only against profit, never against capital.
   const expenseResult=await selectWorkerRows("worker_stock_expenses","*");
@@ -1439,8 +1457,8 @@ async function loadStock(){
   $("todaySales").textContent=dashBought.toLocaleString(); $("weekSales").textContent=dashSold.toLocaleString();
   const dashCash=reinvestmentLedger.balance;
   $("allSales").textContent=money(dashCash);
-  if($("dashboardRemaining"))$("dashboardRemaining").textContent=physicalRemaining.toLocaleString();
-  if($("dashboardRemainingBreakdown"))$("dashboardRemainingBreakdown").textContent=`${unpaidCreditRemaining.toLocaleString()} crates sold on credit (already included in sold)`;
+  if($("dashboardRemaining"))$("dashboardRemaining").textContent=dashboardRemaining.toLocaleString();
+  if($("dashboardRemainingBreakdown"))$("dashboardRemainingBreakdown").textContent=`${physicalRemaining.toLocaleString()} available + ${unpaidCreditRemaining.toLocaleString()} on credit`;
   if($("dashboardCreditUnits"))$("dashboardCreditUnits").textContent=openDashboardWeekCredits.reduce((n,c)=>n+Math.max(0,Number(c.quantity||0)-Number(c.crates_paid||0)),0).toLocaleString();
   if($("dashboardCreditBreakdown"))$("dashboardCreditBreakdown").textContent=`${money(openDashboardWeekCredits.reduce((n,c)=>n+Math.max(0,Number(c.amount_due||0)-Number(c.amount_paid||0)),0))} outstanding · Tap to open On-Credit`;
   // Dashboard projection: realised sold profit PLUS the projected profit
@@ -2037,6 +2055,9 @@ $("saveStockBtn").onclick=async()=>{
   const savedStockDate=record.stock_date;
   msg("stockMsg",wasEditing?"Stock updated and date/time history recorded.":"Stock record saved successfully and sent to Ezelex admin.","success");
   editingStockId=""; editingStockOriginal=null; $("editingStockId").value=""; $("stockForm").reset(); $("capitalAmountEditField")?.classList.remove("hidden"); const soldLabel=$("stockSold")?.previousElementSibling;if(soldLabel)soldLabel.textContent="Sold Quantity"; $("stockDate").value=savedStockDate||today(); $("stockSold").value=0; $("stockDamage").value=0; $("saveStockBtn").textContent="Save Stock Record"; $("cancelEditStockBtn").style.display="none"; $("deleteStockBtn").style.display="none"; updateStockFormCreditSummary(""); calculateStock(); await loadCredits(); await loadStockHistory(); await loadStockWeeks();
+  if(typeof window.ezelexLoadFinance==="function")await window.ezelexLoadFinance();
+  if(typeof window.ezelexLoadCapitalOverview==="function")await window.ezelexLoadCapitalOverview();
+  if(typeof window.updateEzelexBillboard==="function")window.updateEzelexBillboard();
   if(activeWeekCorrection)msg("weeklyStockMsg","Historical record saved. Continue correcting this week, then finish the one-time correction to reconcile and permanently lock it.","success");
   }catch(error){
     console.error("Stock save/update failed:",error);
@@ -2093,6 +2114,9 @@ $('saveCreditBtn')?.addEventListener('click',async()=>{
   $('creditDate').value=today();
   msg('creditMsg',`On-credit sale saved for ${esc(customer)}: ${quantity} crate(s), ${money(amount)} outstanding. Stock and billboard figures are being refreshed.`,'success');
   await loadCredits(); await loadStockHistory();
+  if(typeof window.ezelexLoadFinance==="function")await window.ezelexLoadFinance();
+  if(typeof window.ezelexLoadCapitalOverview==="function")await window.ezelexLoadCapitalOverview();
+  if(typeof window.updateEzelexBillboard==="function")window.updateEzelexBillboard();
  }catch(error){
   console.error('On-credit sale save failed:',error);
   msg('creditMsg','On-credit sale could not be saved: '+esc(error?.message||String(error)),'error');
@@ -2254,6 +2278,8 @@ window.reverseCreditPayment=async paymentId=>{
     msg('creditMsg',`Payment reversed: ${money(result.data?.amount_reversed||payment.amount_paid)} and ${Number(result.data?.crates_reversed||payment.crates_paid||0)} crate(s) returned to outstanding credit. The original payment remains in the audit history.`,'success');
     await loadCredits(); await loadStockWeeks(); await loadStockHistory();
     if(typeof window.ezelexLoadFinance==='function')await window.ezelexLoadFinance();
+    if(typeof window.ezelexLoadCapitalOverview==='function')await window.ezelexLoadCapitalOverview();
+    if(typeof window.updateEzelexBillboard==='function')window.updateEzelexBillboard();
   }catch(error){
     console.error('Credit payment reversal failed:',error);
     msg('creditMsg','Payment reversal failed: '+esc(error?.message||String(error))+'. Check that the supplied Supabase reversal SQL has been run.','error');
@@ -2327,6 +2353,8 @@ $('creditActionSave')?.addEventListener('click',async()=>{
     }
     await loadCredits(); await loadStockWeeks(); await loadStockHistory();
     if(typeof window.ezelexLoadFinance==='function')await window.ezelexLoadFinance();
+    if(typeof window.ezelexLoadCapitalOverview==='function')await window.ezelexLoadCapitalOverview();
+    if(typeof window.updateEzelexBillboard==='function')window.updateEzelexBillboard();
   }finally{button.disabled=false;}
 });
 
@@ -2896,8 +2924,8 @@ window.addEventListener("load",()=>start(),{once:true});
   const netProfit=trading-lifetimeOperatingExpenses;
   const openCredits=(creditRows||[]).filter(c=>Number(c.amount_paid||0)<Number(c.amount_due||0)||Number(c.crates_paid||0)<Number(c.quantity||0));
   const creditUnitsByBatch=new Map();openCredits.forEach(c=>creditUnitsByBatch.set(String(c.stock_batch_id),(creditUnitsByBatch.get(String(c.stock_batch_id))||0)+Math.max(0,Number(c.quantity||0)-Number(c.crates_paid||0))));
-  const remainingProjection=currentPhysicalStockRows((liveStockRows||[]).filter(r=>!r.deleted_at)).reduce((n,r)=>n+Math.max(0,Number(r.remaining_quantity||0))*Math.max(0,Number(r.selling_price_per_unit||0)-Number(r.cost_per_unit||0)),0);
-  const creditProjection=openCredits.reduce((n,c)=>{const b=(liveStockRows||[]).find(r=>String(r.id)===String(c.stock_batch_id));if(!b)return n;const qty=Math.max(0,Number(c.quantity||0)-Number(c.crates_paid||0)),due=Math.max(0,Number(c.amount_due||0)-Number(c.amount_paid||0));return n+Math.max(0,due-qty*Number(b.cost_per_unit||0));},0);
+  const remainingProjection=centralLedger.remainingProfitProjection;
+  const creditProjection=centralLedger.unpaidCreditProfit;
   const potentialProfit=netProfit+remainingProjection+creditProjection;
   $f('pnlTrading').textContent=fmt(trading);$f('pnlExpenses').textContent=fmt(lifetimeOperatingExpenses);$f('pnlNet').textContent=fmt(netProfit);$f('pnlNetCard').classList.toggle('loss',netProfit<0);$f('pnlNetCard').classList.toggle('profit',netProfit>=0);
   $f('pnlRemainingProjection').textContent=fmt(remainingProjection);$f('pnlCreditProjection').textContent=fmt(creditProjection);$f('pnlPotential').textContent=fmt(potentialProfit);
@@ -2922,7 +2950,7 @@ window.addEventListener("load",()=>start(),{once:true});
 
 // Five-second live performance billboard beside the Menu.
 (function(){
- const labels=['Actual Profit + On-Credit','All-Time Realised Profit','Sold Today','Sold This Week','Physical Remaining Stock','On-Credit Crates'];let idx=0;
+ const labels=['Actual Profit + On-Credit','All-Time Realised Profit','Sold Today','Sold This Week','Remaining Stock Position','On-Credit Crates'];let idx=0;
  function update(){
   if(!currentUser)return;
   const s=ezelexCentralLedgerSnapshot||buildEzelexCentralLedgerSnapshot(liveStockRows,creditRows,ezelexOperatingExpenseRows,ezelexAdminAssignedCapital);
@@ -2932,7 +2960,7 @@ window.addEventListener("load",()=>start(),{once:true});
   const soldToday=(stockHistoryRows||[]).filter(h=>dateOnly(h.changed_at)===today()).reduce((n,h)=>n+Math.max(0,Number(h.sold_delta||0)),0);
   const soldWeek=s.currentWeekSold;
   const onCredit=s.unpaidCreditUnits;
-  const remaining=s.currentWeekAvailable;
+  const remaining=s.currentWeekRemainingPosition;
   const allProfit=s.realisedProfit;
   const weekProfit=s.currentWeekProfit+s.unpaidCreditProfit;
   const vals=[money(weekProfit),money(allProfit),soldToday.toLocaleString()+' crates',soldWeek.toLocaleString()+' crates',remaining.toLocaleString()+' crates',onCredit.toLocaleString()+' crates'];
@@ -3000,6 +3028,7 @@ async function loadCapitalOverview(){
     if(message)message.textContent="Capital Overview could not be reconciled: "+String(error?.message||error);
   }
 }
+window.ezelexLoadCapitalOverview=loadCapitalOverview;
 $("refreshCapitalOverviewBtn")?.addEventListener("click",loadCapitalOverview);
 
 </script>
