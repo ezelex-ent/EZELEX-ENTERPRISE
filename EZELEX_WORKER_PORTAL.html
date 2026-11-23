@@ -329,9 +329,9 @@ img,canvas,svg,video{max-width:100%}
     <div class="stats">
       <div class="stat"><small>Crates Bought This Week</small><strong id="todaySales">0</strong><div class="live" id="dashboardAllTimePurchaseNote">All-time purchases: loading…</div></div>
       <div class="stat"><small>Crates Sold This Week</small><strong id="weekSales">0</strong></div>
-      <div class="stat"><small>Cash In Hand</small><strong id="allSales">GH₵0.00</strong></div>
+      <div class="stat"><small>Cash In Hand</small><strong id="allSales">GH₵0.00</strong><div class="live">Actual available cash after purchases and expenses.</div></div>
       <div class="stat profit" id="dashboardProfitCard" style="background:#dcfce7;border-color:#16a34a;color:#14532d"><small>Actual Profit + On-Credit</small><strong id="dashboardProfitValue">GH₵0.00</strong><div class="live" id="dashboardProfitNote">Realised profit plus unpaid-credit profit only.</div></div>
-      <div class="stat" id="dashboardRemainingCard"><small>Total Remaining Position</small><strong id="dashboardRemaining">0</strong><div id="dashboardRemainingBreakdown">0 available + 0 on-credit</div></div>
+      <div class="stat" id="dashboardRemainingCard"><small>Remaining Stock (including unpaid credit)</small><strong id="dashboardRemaining">0</strong><div id="dashboardRemainingBreakdown">0 available + 0 on-credit</div></div>
       <button type="button" class="stat statAction" id="dashboardCreditCard" aria-label="Open On-Credit records"><small>On-Credit Crates (unpaid) — Open records</small><strong id="dashboardCreditUnits">0</strong><div id="dashboardCreditBreakdown" class="live">View outstanding customer credit</div></button>
     </div>
   </div>
@@ -456,7 +456,7 @@ img,canvas,svg,video{max-width:100%}
         <div class="resultCard"><h3>Starting Capital</h3><strong id="calcCapital">GH₵0.00</strong></div>
         <div class="resultCard"><h3>Outstanding Credit</h3><strong id="calcCreditCapital">GH₵0.00</strong><div>Money customers still owe</div></div>
         <div class="resultCard"><h3>Total Business Capital</h3><strong id="calcTotalCapital">GH₵0.00</strong><div>Starting capital + outstanding credit</div></div>
-        <div class="resultCard"><h3>Cash In Hand</h3><strong id="calcCashInHand">GH₵0.00</strong><div>Purchase cost recovered from paid crates only; unpaid credit excluded</div></div>
+        <div class="resultCard"><h3>Cash In Hand</h3><strong id="calcCashInHand">GH₵0.00</strong><div>Purchase cost recovered from sold crates − damage/loss cost; profit excluded</div></div>
         <div class="resultCard"><h3>Sales Revenue</h3><strong id="calcSalesRevenue">GH₵0.00</strong></div>
         <div class="resultCard" id="profitCard"><h3>Current Profit / Loss</h3><strong id="calcProfit">GH₵0.00</strong><div id="profitLabel" class="live">No sales/loss yet</div></div>
         <div class="resultCard"><h3>Total Stock Accounted For</h3><strong id="calcAccounted">0 units</strong><div id="calcAccountedNote" class="live">Sold + damage</div></div>
@@ -465,7 +465,7 @@ img,canvas,svg,video{max-width:100%}
     </div>
 
     <div class="panel stock-subsection" id="myStockRecordsPanel" data-stock-panel="records">
-      <h2> My Stock Records</h2><div class="stockNote">Enter your starting capital and purchase cost per unit. Total purchase cost is calculated automatically as quantity × unit cost. <strong>Cash In Hand = Purchase Cost Recovered from Paid Crates</strong>. Profit and starting capital are shown separately.</div>
+      <h2> My Stock Records</h2><div class="stockNote">Enter your starting capital and purchase cost per unit. Total purchase cost is calculated automatically as quantity × unit cost. <strong>Cash In Hand = Purchase Cost Recovered from Sold Crates − Damage/Loss Cost</strong>. Profit and starting capital are shown separately.</div>
       <div class="tablebox"><table><thead><tr><th>Date</th><th>Product</th><th>Total</th><th>Sold</th><th>Damage</th><th>Remaining</th><th>Capital</th><th>Purchase</th><th>Cash In Hand</th><th>Profit/Loss</th><th>Actions</th></tr></thead>
       <tbody id="stockBody"><tr><td colspan="11">Loading...</td></tr></tbody></table></div>
 
@@ -604,7 +604,7 @@ img,canvas,svg,video{max-width:100%}
  <div class="panel"><h2>Stock Management</h2><p>Manage reinvestment, cash movements, operating expenses and net profit. All entries are saved against your worker account.</p><div id="financeMsg" aria-live="polite"></div></div>
  <div class="panel financePane" data-finance-pane="reinvest">
   <h2>Reinvest Cash in Hand</h2><p class="stockNote">Choose an existing stock item. The new purchase is saved as a separate batch linked to that product, so its purchase cost and history remain traceable while the product's total stock increases.</p>
-  <div class="stats"><div class="stat" id="reinvestCashCard"><small>Reinvestment Cash in Hand</small><strong id="financeCashAvailable">GH₵0.00</strong><div class="live">Purchase cost recovered from paid crates only. Unpaid credit is excluded until payment. Reinvestment purchases reduce the available balance.</div><div id="reinvestCashStatus" class="live" aria-live="polite"></div></div><div class="stat"><small>Current Week Purchases</small><strong id="financeWeekPurchases">GH₵0.00</strong></div></div>
+  <div class="stats"><div class="stat" id="reinvestCashCard"><small>Reinvestment Cash in Hand</small><strong id="financeCashAvailable">GH₵0.00</strong><div class="live">Only the original purchase cost recovered from paid crates sold. Profit is excluded. New reinvestment purchases reduce this balance.</div><div id="reinvestCashStatus" class="live" aria-live="polite"></div></div><div class="stat"><small>Current Week Purchases</small><strong id="financeWeekPurchases">GH₵0.00</strong></div></div>
   <form id="reinvestForm" class="grid">
    <div><label>Existing Stock Item</label><select id="reinvestProduct" required><option value="">Select an existing stock item</option></select></div>
    <div><label>Purchase Date</label><input id="reinvestDate" type="date" required></div>
@@ -667,19 +667,6 @@ const SUPABASE_URL="https://hweczhwoggmsrwhkktrx.supabase.co";
 const SUPABASE_PUBLISHABLE_KEY="sb_publishable_q52vf7tvpI4ho9FkGfZhvw_xdUv_bni";
 const {createClient}=supabase;
 const db=createClient(SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY);
-// Canonical finance read model. The SQL migration must be installed before this
-// portal version is deployed; no browser-side fallback is allowed for money.
-let ezelexCentralSnapshot=null;
-let ezelexCentralSnapshotError=null;
-async function loadEzelexCentralSnapshot(){
-  if(!currentUser)throw new Error("Worker is not signed in");
-  const {data,error}=await db.rpc("ezelex_worker_financial_snapshot");
-  if(error){ezelexCentralSnapshot=null;ezelexCentralSnapshotError=error;throw new Error("Central financial ledger is unavailable. Run EZELEX_WORKER_FINANCIAL_LEDGER_V2.sql in Supabase before using financial figures. "+error.message);}
-  if(!data||String(data.worker_id)!==String(currentUser.id)||data.calculation_version!=="2.0.0"){
-    ezelexCentralSnapshot=null;throw new Error("Central financial ledger returned an invalid worker snapshot. No financial figure was updated.");
-  }
-  ezelexCentralSnapshot=data;ezelexCentralSnapshotError=null;return data;
-}
 let profile=null;
 let currentUser=null;
 let reportSalesRows=[];
@@ -782,64 +769,26 @@ async function selectWorkerRows(table, columns="*", orderColumn=null, limitCount
 
 async function ensureCurrentStockWeek(){
   const start=mondayDateISO(today()),end=addDaysISO(start,6);
-  // Any still-open previous week is archived automatically when a new Monday begins.
-  const oldOpen=await db.from("worker_stock_weeks").select("id,week_start,week_end,status").eq("worker_id",currentUser.id).lt("week_start",start).eq("status","open");
-  if(oldOpen.error) console.warn("Could not list previous weekly books:",oldOpen.error.message);
-  else for(const oldWeek of (oldOpen.data||[])){
-    const closedOld=await db.from("worker_stock_weeks").update({status:"closed",closed_at:new Date().toISOString()}).eq("id",oldWeek.id).eq("worker_id",currentUser.id).eq("status","open");
-    if(closedOld.error) console.warn("Could not auto-close previous weekly book:",closedOld.error.message);
-    else { const notice=await db.functions.invoke("worker-weekly-stock-closed",{body:{week_id:oldWeek.id}}); if(notice.error||notice.data?.email_sent!==true)console.error("Weekly admin email was not confirmed:",notice.error?.message||notice.data?.error||notice.data?.message||"No successful email confirmation returned."); }
+  // Week creation, prior-week closure and physical-stock carry-forward are one
+  // database transaction. The browser no longer inserts duplicate carry rows.
+  const {data,error}=await db.rpc("ezelex_open_stock_week",{
+    p_week_start:start,
+    p_week_end:end
+  });
+  if(error){
+    msg("weeklyStockMsg","This week's stock book could not be opened safely: "+esc(error.message)+". No partial carry-forward was applied.","error");
+    return null;
   }
-  // Read weekly books using both the auth UUID and the legacy worker code. Older portal
-  // records may have been saved under either owner value. Do not create a duplicate
-  // empty current week when a matching historical/current book already exists.
-  const weekRead=await selectWorkerRows("worker_stock_weeks","*",{column:"week_start",ascending:false},1000);
-  if(weekRead.error){msg("weeklyStockMsg","Weekly stock books could not be read: "+esc(weekRead.error.message)+". No replacement week was created, to protect your history.","error");return null;}
-  let currentExisting=(weekRead.data||[]).find(w=>String(w.week_start||"")===start);
-  if(!currentExisting){
-    const created=await db.from("worker_stock_weeks").insert({worker_id:currentUser.id,week_start:start,week_end:end,status:"open"}).select("*").single();
-    if(created.error){msg("weeklyStockMsg","Could not open this week's stock book: "+esc(created.error.message),"error");return null;}
-    currentExisting=created.data;
+  const payload=data||{};
+  currentStockWeek=payload.week||null;
+  if(!currentStockWeek){
+    msg("weeklyStockMsg","The database did not return the current stock book. Please contact admin before recording stock.","error");
+    return null;
   }
-  currentStockWeek=currentExisting;
-  // Carry forward the previous week's single cash balance once; never add it as fresh capital.
-  const priorCashWeek=(weekRead.data||[]).filter(w=>String(w.week_start||"")<start).sort((a,b)=>String(b.week_start||"").localeCompare(String(a.week_start||"")))[0]||null;
-  if(priorCashWeek){
-    const alreadyCash=await db.from("worker_weekly_cash_balances").select("id").eq("worker_id",currentUser.id).eq("week_id",currentStockWeek.id).maybeSingle();
-    if(!alreadyCash.error&&!alreadyCash.data){
-      const [allPriorBatches,allPriorExpenses]=await Promise.all([
-        selectWorkerRows("worker_stock_batches","*",{column:"stock_date",ascending:true}),
-        selectWorkerRows("worker_stock_expenses","*")
-      ]);
-      if(!allPriorBatches.error&&!allPriorExpenses.error){
-        const priorRows=(allPriorBatches.data||[]).filter(r=>String(r.stock_date||r.created_at||"").slice(0,10)<start);
-        const tradingRows=priorRows.filter(r=>r.stock_type!=="carry_forward");
-        const firstCapital=[...tradingRows].filter(r=>Number(r.capital_amount||0)!==0).sort((a,b)=>String(a.stock_date||a.created_at||"").localeCompare(String(b.stock_date||b.created_at||"")))[0];
-        const initialCapital=Number(firstCapital?.capital_amount||0);
-        const receipts=priorRows.reduce((n,r)=>n+Number(r.sales_revenue||0),0); // includes paid sales from carry-forward batches
-        const purchases=tradingRows.reduce((n,r)=>n+Number(r.purchase_total??(Number(r.total_quantity||0)*Number(r.cost_per_unit||0)),0),0);
-        const expenses=(allPriorExpenses.data||[]).filter(r=>String(r.expense_date||r.created_at||"").slice(0,10)<start).reduce((n,r)=>n+Number(r.amount||0),0);
-        const closing=initialCapital+receipts-purchases-expenses;
-        const carry=await db.from("worker_weekly_cash_balances").insert({worker_id:currentUser.id,week_id:currentStockWeek.id,opening_cash:closing,adjustment_note:"Automatic opening cash reconciled from all prior purchases, cash receipts and expenses."});
-        if(carry.error)console.warn("Weekly cash carry-forward could not be saved:",carry.error.message);
-        else await db.from("worker_stock_financial_events").insert({worker_id:currentUser.id,week_id:currentStockWeek.id,event_type:"weekly_cash_carry_forward",amount:closing,description:"Opening cash reconciled from prior business activity; not new capital."});
-      }
-    }
-  }
-  // When a new Monday book is first opened, carry forward each previous batch's unsold physical stock.
-  // Carry-forward rows have zero new purchase quantity/cost and zero profit, so historical purchase/profit totals are not duplicated.
-  const existingWeekRows=await db.from("worker_stock_batches").select("id,stock_type").eq("worker_id",currentUser.id).eq("week_id",currentStockWeek.id).eq("stock_type","carry_forward").is("deleted_at",null).limit(1);
-  if(!existingWeekRows.error&&!(existingWeekRows.data||[]).length){
-    const prevWeek=priorCashWeek;
-    if(prevWeek){
-      const prevBatchRead=await selectWorkerRows("worker_stock_batches","*",{column:"stock_date",ascending:false},5000);
-      const prevBatches={data:(prevBatchRead.data||[]).filter(b=>String(b.week_id||"")===String(prevWeek.id)&&Number(b.remaining_quantity||0)>0),error:prevBatchRead.error};
-      if(!prevBatches.error&&prevBatches.data?.length){
-        const carryRows=prevBatches.data.map(b=>({worker_id:currentUser.id,week_id:currentStockWeek.id,source_batch_id:b.id,stock_type:"carry_forward",stock_date:start,product_service:b.product_service||"Opening stock",total_quantity:Number(b.remaining_quantity||0),capital_amount:0,cost_per_unit:Number(b.cost_per_unit||0),selling_price_per_unit:Number(b.selling_price_per_unit||0),sold_quantity:0,damage_quantity:0,loss_quantity:0,sales_revenue:0,sold_cost:0,damage_value:0,loss_value:0,remaining_quantity:Number(b.remaining_quantity||0),remaining_value:Number(b.remaining_quantity||0)*Number(b.cost_per_unit||0),purchase_total:0,cash_in_hand:0,credit_quantity:0,credit_outstanding:0,profit_loss:0,notes:`Opening balance carried forward from week starting ${prevWeek.week_start}. Original purchase and profit remain in the previous week's record.`}));
-        const inserted=await db.from("worker_stock_batches").insert(carryRows);
-        if(inserted.error)msg("weeklyStockMsg","Weekly book opened, but previous unsold stock could not be carried forward automatically: "+esc(inserted.error.message)+". Please contact admin before recording sales.","error");
-      }
-    }
+  // Preserve the existing weekly-close notification workflow after the transaction commits.
+  for(const closedId of (payload.closed_week_ids||[])){
+    const notice=await db.functions.invoke("worker-weekly-stock-closed",{body:{week_id:closedId}});
+    if(notice.error||notice.data?.email_sent!==true)console.error("Weekly admin email was not confirmed:",notice.error?.message||notice.data?.error||notice.data?.message||"No successful email confirmation returned.");
   }
   renderStockWeekControls();
   return currentStockWeek;
@@ -885,38 +834,13 @@ async function openHistoricalStockWeekForIntake(stockDate){
     msg("stockMsg","Finish the currently open historical week before entering stock for another previous week.","error");
     return null;
   }
-  let week=stockWeekRows.find(w=>String(w.week_start||"")===start&&!w._derived)||null;
-  if(!week){
-    const read=await db.from("worker_stock_weeks").select("*").eq("worker_id",currentUser.id).eq("week_start",start).maybeSingle();
-    if(read.error){msg("stockMsg","Could not check the historical weekly book: "+esc(read.error.message),"error");return null;}
-    week=read.data||null;
-  }
-  if(!week){
-    const created=await db.from("worker_stock_weeks").insert({
-      worker_id:currentUser.id,week_start:start,week_end:addDaysISO(start,6),
-      status:"closed",closed_at:new Date().toISOString()
-    }).select("*").single();
-    if(created.error){msg("stockMsg","Could not create the historical weekly book: "+esc(created.error.message),"error");return null;}
-    week=created.data;
-  }else if(week.status==="open"){
-    const closed=await db.from("worker_stock_weeks").update({status:"closed",closed_at:new Date().toISOString()})
-      .eq("id",week.id).eq("worker_id",currentUser.id).eq("status","open").select("*").single();
-    if(closed.error){msg("stockMsg","Could not safely close the old weekly book before historical entry: "+esc(closed.error.message),"error");return null;}
-    week=closed.data;
-  }
-  const prior=await db.from("worker_stock_week_corrections").select("id,status")
-    .eq("worker_id",currentUser.id).eq("week_id",week.id).maybeSingle();
-  if(prior.error){msg("stockMsg","Could not verify the one-time historical entry permission: "+esc(prior.error.message),"error");return null;}
-  if(prior.data){
-    msg("stockMsg","This previous week has already used its one-time historical entry/closing session. It is locked to protect the records.","error");
-    return null;
-  }
-  const opened=await db.from("worker_stock_week_corrections").insert({
-    worker_id:currentUser.id,week_id:week.id,status:"open",opened_at:new Date().toISOString()
-  }).select("*").single();
+  const opened=await db.rpc("ezelex_open_historical_stock_week",{p_week_start:start});
   if(opened.error){msg("stockMsg","Could not open the one-time historical entry session: "+esc(opened.error.message),"error");return null;}
-  activeWeekCorrection={...opened.data,week_start:start};
-  stockWeekCorrections=(stockWeekCorrections||[]).concat(opened.data);
+  const week=opened.data?.week||null;
+  const correction=opened.data?.correction||null;
+  if(!week||!correction){msg("stockMsg","The database did not return the historical week and correction session.","error");return null;}
+  activeWeekCorrection={...correction,week_start:start};
+  stockWeekCorrections=(stockWeekCorrections||[]).concat(correction);
   stockWeekRows=stockWeekRows.filter(w=>String(w.week_start||"")!==start).concat(week)
     .sort((a,b)=>String(b.week_start||"").localeCompare(String(a.week_start||"")));
   selectedStockWeekId=String(week.id);
@@ -946,11 +870,10 @@ async function beginHistoricalWeekCorrection(weekId){
   const week=stockWeekRows.find(w=>String(w.id)===String(targetId));
   if(!week||week.status!=="closed"||week._derived){msg("weeklyStockMsg","Select a saved, closed weekly book before starting a correction.","error");return;}
   if(activeWeekCorrection){msg("weeklyStockMsg","Finish the currently open historical correction first.","error");return;}
-  const prior=await db.from("worker_stock_week_corrections").select("id,status").eq("worker_id",currentUser.id).eq("week_id",week.id).maybeSingle();
-  if(prior.error){msg("weeklyStockMsg","Could not verify whether this week's one-time correction was already used: "+esc(prior.error.message),"error");return;}
-  if(prior.data){stockWeekCorrections=stockWeekCorrections.filter(c=>String(c.week_id)!==String(week.id)).concat(prior.data);msg("weeklyStockMsg","This week has already used its one correction session and is permanently locked.","error");renderStockWeekControls();return;}
-  const {data,error}=await db.from("worker_stock_week_corrections").insert({worker_id:currentUser.id,week_id:week.id,status:"open",opened_at:new Date().toISOString()}).select("*").single();
-  if(error){msg("weeklyStockMsg","Could not open correction mode. The database may already have recorded this week's one-time correction: "+esc(error.message),"error");return;}
+  const opened=await db.rpc("ezelex_open_historical_stock_week",{p_week_start:week.week_start});
+  if(opened.error){msg("weeklyStockMsg","Could not open correction mode: "+esc(opened.error.message),"error");return;}
+  const data=opened.data?.correction;
+  if(!data){msg("weeklyStockMsg","The database did not return a correction session.","error");return;}
   activeWeekCorrection=data;selectedStockWeekId=String(week.id);$("stockWeekPicker").value=String(week.id);renderStockWeekControls();await loadStock();
   msg("weeklyStockMsg","One-time correction is now open for "+weekLabel(week)+". Edit only this week's existing records. When finished, use Finish Historical Week & Transfer Remaining Stock. This week cannot be reopened afterward.","success");
 }
@@ -960,8 +883,8 @@ async function finishHistoricalWeekCorrection(){
   const week=stockWeekRows.find(w=>String(w.id)===String(activeWeekCorrection.week_id));
   const reconcile=await reconcileHistoricalWeekCarry(week);
   if(!reconcile.ok){msg("weeklyStockMsg",reconcile.message,"error");return;}
-  const {error}=await db.from("worker_stock_week_corrections").update({status:"closed",closed_at:new Date().toISOString()}).eq("id",activeWeekCorrection.id).eq("worker_id",currentUser.id).eq("status","open");
-  if(error){msg("weeklyStockMsg","Stock was reconciled, but the correction lock could not be saved: "+esc(error.message)+". Do not edit more records; contact admin.","error");return;}
+  const closed=await db.rpc("ezelex_close_historical_stock_correction",{p_correction_id:activeWeekCorrection.id});
+  if(closed.error){msg("weeklyStockMsg","Stock was reconciled, but the correction lock could not be saved: "+esc(closed.error.message)+". Do not edit more records; contact admin.","error");return;}
   stockWeekCorrections=stockWeekCorrections.map(c=>String(c.id)===String(activeWeekCorrection.id)?{...c,status:"closed",closed_at:new Date().toISOString()}:c);
   activeWeekCorrection=null;
   renderStockWeekControls();
@@ -970,63 +893,13 @@ async function finishHistoricalWeekCorrection(){
 }
 async function reconcileHistoricalWeekCarry(week){
   if(!week)return {ok:true};
-  // Ensure the chain contains every Monday-to-Sunday book through the current week.
-  // This prevents a missing/empty intermediate week from blocking the final opening-stock transfer.
-  const currentStart=currentStockWeek?.week_start||mondayDateISO(today());
-  let cursor=addDaysISO(week.week_start,7);
-  while(String(cursor)<=String(currentStart)){
-    const existing=await db.from("worker_stock_weeks").select("id,week_start,status")
-      .eq("worker_id",currentUser.id).eq("week_start",cursor).maybeSingle();
-    if(existing.error)return {ok:false,message:"Could not verify the weekly book for "+cursor+": "+existing.error.message};
-    if(!existing.data){
-      const isCurrent=String(cursor)===String(currentStart);
-      const created=await db.from("worker_stock_weeks").insert({
-        worker_id:currentUser.id,week_start:cursor,week_end:addDaysISO(cursor,6),
-        status:isCurrent?"open":"closed",
-        closed_at:isCurrent?null:new Date().toISOString()
-      }).select("*").single();
-      if(created.error)return {ok:false,message:"Could not create the missing weekly book for "+cursor+": "+created.error.message};
-    }
-    cursor=addDaysISO(cursor,7);
-  }
-  const refreshed=await db.from("worker_stock_weeks").select("*").eq("worker_id",currentUser.id).order("week_start",{ascending:true});
-  if(refreshed.error)return {ok:false,message:"Could not reload weekly books before stock transfer: "+refreshed.error.message};
-  stockWeekRows=refreshed.data||stockWeekRows;
-  const chain=stockWeekRows.filter(w=>!w._derived&&String(w.week_start)>String(week.week_start)&&String(w.week_start)<=String(currentStockWeek?.week_start||today())).sort((a,b)=>String(a.week_start).localeCompare(String(b.week_start)));
-  let sourceWeek=week;
-  for(const next of chain){
-    const {data:prior,error}=await db.from("worker_stock_batches").select("*").eq("worker_id",currentUser.id).eq("week_id",sourceWeek.id).is("deleted_at",null);
-    if(error)return {ok:false,message:"Week closed, but reconciliation could not read the corrected stock: "+error.message};
-    for(const source of (prior||[])){
-      let carryQ=await db.from("worker_stock_batches").select("*").eq("worker_id",currentUser.id).eq("week_id",next.id).eq("source_batch_id",source.id).maybeSingle();
-      if(carryQ.error)return {ok:false,message:"Run the carry-forward SQL migration before reconciling this historical week: "+carryQ.error.message};
-      let carry=carryQ.data;
-      if(!carry){
-        const note="Opening balance carried forward from week starting "+sourceWeek.week_start;
-        const candidates=await db.from("worker_stock_batches").select("*").eq("worker_id",currentUser.id).eq("week_id",next.id).eq("stock_type","carry_forward").eq("product_service",source.product_service||"Opening stock").ilike("notes",note+"%");
-        if(candidates.error)return {ok:false,message:"Could not identify the original opening-stock carry-forward row safely: "+candidates.error.message};
-        if((candidates.data||[]).length>1)return {ok:false,message:"More than one matching opening-stock row exists in "+weekLabel(next)+". No ambiguous stock adjustment was made."};
-        carry=candidates.data?.[0]||null;
-        if(carry){const link=await db.from("worker_stock_batches").update({source_batch_id:source.id}).eq("id",carry.id).eq("worker_id",currentUser.id);if(link.error)return {ok:false,message:"Could not link the existing opening-stock row: "+link.error.message};}
-      }
-      if(!carry){
-        const openingQty=Number(source.remaining_quantity||0);
-        const created=await db.from("worker_stock_batches").insert({worker_id:currentUser.id,week_id:next.id,source_batch_id:source.id,stock_type:"carry_forward",stock_date:next.week_start,product_service:source.product_service||"Opening stock",total_quantity:openingQty,capital_amount:0,cost_per_unit:Number(source.cost_per_unit||0),selling_price_per_unit:Number(source.selling_price_per_unit||0),sold_quantity:0,damage_quantity:0,loss_quantity:0,sales_revenue:0,sold_cost:0,damage_value:0,loss_value:0,remaining_quantity:openingQty,remaining_value:openingQty*Number(source.cost_per_unit||0),purchase_total:0,cash_in_hand:0,credit_quantity:0,credit_outstanding:0,profit_loss:0,notes:"Opening balance carried forward from week starting "+sourceWeek.week_start+". Created during one-time historical correction reconciliation; no new purchase or profit recorded."}).select("*").single();
-        if(created.error)return {ok:false,message:"Could not create corrected opening stock in "+weekLabel(next)+": "+created.error.message};
-        carry=created.data;
-      }
-      const opening=Number(source.remaining_quantity||0), sold=Number(carry.sold_quantity||0), damage=Number(carry.damage_quantity||0), loss=Number(carry.loss_quantity||0), used=sold+damage+loss;
-      if(opening<used)return {ok:false,message:"Reconciliation stopped for "+esc(source.product_service)+" in "+weekLabel(next)+": corrected opening stock is lower than quantities already sold, damaged or lost in that week. The existing figures were not overwritten."};
-      const unit=Number(source.cost_per_unit||0), remaining=opening-used;
-      const soldCost=sold*unit,damageValue=damage*unit,lossValue=loss*unit;
-      const revenue=Number(carry.sales_revenue||0),profit=revenue-soldCost-damageValue-lossValue;
-      const update={total_quantity:opening,remaining_quantity:remaining,remaining_value:remaining*unit,cost_per_unit:unit,sold_cost:soldCost,damage_value:damageValue,loss_value:lossValue,profit_loss:profit,source_batch_id:source.id,notes:"Opening balance carried forward from week starting "+sourceWeek.week_start+". Reconciled after historical correction; no new purchase or profit recorded."};
-      const upd=await db.from("worker_stock_batches").update(update).eq("id",carry.id).eq("worker_id",currentUser.id);
-      if(upd.error)return {ok:false,message:"Could not update opening stock in "+weekLabel(next)+": "+upd.error.message};
-    }
-    sourceWeek=next;
-  }
-  return {ok:true};
+  const through=currentStockWeek?.week_start||mondayDateISO(today());
+  const {data,error}=await db.rpc("ezelex_reconcile_historical_stock_carry",{
+    p_source_week_id:week.id,
+    p_through_week_start:through
+  });
+  if(error)return {ok:false,message:"The database could not reconcile the historical carry-forward chain: "+error.message};
+  return {ok:true,created_or_updated:Number(data||0)};
 }
 async function loadActiveWeekCorrection(){
   const q=await db.from("worker_stock_week_corrections").select("*").eq("worker_id",currentUser.id).eq("status","open").maybeSingle();
@@ -1037,10 +910,17 @@ async function closeCurrentStockWeek(){
   if(!currentStockWeek||currentStockWeek.status!=="open")return;
   if(new Date().getDay()!==0){msg("weeklyStockMsg","You can close the weekly book on Sunday. It will automatically be archived when the next Monday begins.","error");return;}
   if(!confirm(`Close the stock book for ${weekLabel(currentStockWeek)}? This archives the week without deleting stock or profit history.`))return;
-  const r=await db.from("worker_stock_weeks").update({status:"closed",closed_at:new Date().toISOString()}).eq("id",currentStockWeek.id).eq("worker_id",currentUser.id).eq("status","open");
-  if(r.error){msg("weeklyStockMsg","Could not close this week: "+esc(r.error.message),"error");return;}
-  currentStockWeek.status="closed";renderStockWeekControls();msg("weeklyStockMsg","Weekly stock book closed and archived. Preparing the admin summary email…","success");
-  const notice=await db.functions.invoke("worker-weekly-stock-closed",{body:{week_id:currentStockWeek.id}});
+  const weekId=currentStockWeek.id;
+  const {data,error}=await db.rpc("ezelex_close_stock_week",{p_week_id:weekId});
+  if(error){msg("weeklyStockMsg","Could not close this week safely: "+esc(error.message),"error");return;}
+  if(!data||String(data.week_id)!==String(weekId)||data.status!=="closed"){
+    msg("weeklyStockMsg","The database did not confirm that the selected weekly book was closed. Refresh the weekly records before trying again.","error");return;
+  }
+  currentStockWeek.status="closed";
+  currentStockWeek.closed_at=data.closed_at||currentStockWeek.closed_at;
+  renderStockWeekControls();
+  msg("weeklyStockMsg","Weekly stock book closed and archived. Preparing the admin summary email…","success");
+  const notice=await db.functions.invoke("worker-weekly-stock-closed",{body:{week_id:weekId}});
   if(notice.error)msg("weeklyStockMsg","Week is closed, but the admin summary email could not be sent: "+esc(notice.error.message)+". Ask admin to check the Resend function logs.","error");
   else if(notice.data?.email_sent!==true)msg("weeklyStockMsg","Week is closed, but email delivery was not confirmed: "+esc(notice.data?.error||notice.data?.message||"The email function did not confirm a successful send."),"error");
   else msg("weeklyStockMsg","Week closed successfully. The weekly management summary was accepted by Resend for delivery to Ezelex admin.","success");
@@ -1165,12 +1045,11 @@ async function loadSales(){
 
 function creditPaidForBatch(batchId){const paid=(creditRows||[]).filter(c=>String(c.stock_batch_id||"")===String(batchId||""));return {qty:paid.reduce((n,c)=>n+Number(c.crates_paid||0),0),amount:paid.reduce((n,c)=>n+Number(c.amount_paid||0),0)};}
 function calculateStockCashInHand(batch){
-  // sold_quantity is the paid/sold quantity in this schema. Unpaid credit is
-  // reserved separately and reduces physical remaining stock; it is not added
-  // to sold_quantity until payment is posted by the credit-payment RPC.
   const unitCost=Math.max(0,Number(batch?.cost_per_unit||0));
-  const paidSoldQty=Math.max(0,Number(batch?.sold_quantity||0));
-  return paidSoldQty*unitCost;
+  const soldCost=Math.max(0,Number(batch?.sold_quantity||0))*unitCost;
+  const damageCost=Math.max(0,Number(batch?.damage_quantity||0))*unitCost;
+  const lossCost=Math.max(0,Number(batch?.loss_quantity||0))*unitCost;
+  return soldCost-damageCost-lossCost;
 }
 function unpaidCreditForBatch(batchId){return (creditRows||[]).filter(c=>String(c.stock_batch_id||"")===String(batchId||"")).reduce((n,c)=>n+Math.max(0,Number(c.quantity||0)-Number(c.crates_paid||0)),0);}
 function creditPaymentProfitForRows(rows){const ids=new Set((rows||[]).map(r=>String(r.id)));return (creditPaymentRows||[]).filter(p=>!p.reversed_at&&ids.has(String(p.stock_batch_id))).reduce((sum,p)=>sum+Number(p.profit_amount||0),0);}
@@ -1180,7 +1059,7 @@ function creditPaymentsForWeek(weekStart){return (creditPaymentRows||[]).filter(
 function calculateStock(){
   const total=num("stockTotal"),unitCost=num("costPerUnit"),purchase=total*unitCost,price=num("sellPrice"),enteredSold=num("stockSold"),sold=editingStockId&&!stockCorrectionMode?Number(editingStockOriginal?.sold_quantity||0)+enteredSold:enteredSold,damage=num("stockDamage"),loss=Number(editingStockOriginal?.loss_quantity||0);
   const unpaidQty=editingStockId?unpaidCreditForBatch(editingStockId):0,paidCredit=editingStockId?creditPaidForBatch(editingStockId):{qty:0,amount:0};
-  const remaining=Math.max(0,total-sold-damage-loss-unpaidQty),revenue=Math.max(0,sold-paidCredit.qty)*price+paidCredit.amount,soldCost=sold*unitCost,damageValue=damage*unitCost,remainingValue=remaining*unitCost,capital=editingStockId?(editingStockOriginal?.stock_type==="reinvestment"?remainingValue:Number(editingStockOriginal?.capital_amount??editingStockOriginal?.purchase_total??0)):num("capitalAmount"),profit=revenue-soldCost-damageValue-loss*unitCost,accounted=sold+damage+loss+unpaidQty,cash=editingStockId?calculateStockCashInHand({...editingStockOriginal,sold_quantity:sold,cost_per_unit:unitCost}):sold*unitCost;
+  const remaining=Math.max(0,total-sold-damage-loss-unpaidQty),revenue=Math.max(0,sold-paidCredit.qty)*price+paidCredit.amount,soldCost=sold*unitCost,damageValue=damage*unitCost,remainingValue=remaining*unitCost,capital=editingStockId?(editingStockOriginal?.stock_type==="reinvestment"?remainingValue:Number(editingStockOriginal?.capital_amount??editingStockOriginal?.purchase_total??0)):num("capitalAmount"),profit=revenue-soldCost-damageValue-loss*unitCost,accounted=sold+damage+loss+unpaidQty,cash=soldCost-damageValue-loss*unitCost;
   const outstandingCredit=(creditRows||[]).reduce((sum,c)=>sum+Math.max(0,Number(c.amount_due||0)-Number(c.amount_paid||0)),0);
   $("calcTotal").textContent=total+" units";$("calcTotalValue").textContent=money(purchase);
   $("calcSold").textContent=sold+" units";$("calcRevenue").textContent=money(revenue)+" revenue";
@@ -1199,7 +1078,6 @@ async function loadStock(){
   const {data,error}=await selectWorkerRows("worker_stock_batches","*",{column:"stock_date",ascending:false});
   if(error){$("stockBody").innerHTML='<tr><td colspan="11">Stock records could not be loaded.</td></tr>';msg("stockLiveMsg","Could not load live stock: "+error.message,"error");return;}
   const allRows=data||[]; liveStockRows=allRows;
-  let centralSnapshot=null;try{centralSnapshot=await loadEzelexCentralSnapshot();}catch(finErr){msg("stockLiveMsg",esc(finErr.message),"error");}
   // Read the complete purchase history separately from active stock. The active
   // stock query intentionally excludes archived rows, but all-time purchases must
   // continue to include them so archiving a record never erases purchase history.
@@ -1237,8 +1115,7 @@ async function loadStock(){
       const expected=Math.min(Math.max(0,Number(row.remaining_quantity??calculatedPhysical)),calculatedPhysical);
       if(Math.abs(expected-Number(row.remaining_quantity||0))>0.0001){
         row.remaining_quantity=expected;row.remaining_value=expected*Number(row.cost_per_unit||0);
-        const repair=await db.from("worker_stock_batches").update({remaining_quantity:expected,remaining_value:row.remaining_value}).eq("id",row.id).eq("worker_id",row.worker_id||currentUser.id).is("deleted_at",null);
-        if(repair.error)console.warn("Derived remaining stock could not be persisted for batch",row.id,repair.error.message);
+        // Keep the displayed projection in memory only. Never mutate stock during a read.
       }
     }
   }
@@ -1288,12 +1165,11 @@ async function loadStock(){
   const expenseResult=await selectWorkerRows("worker_stock_expenses","*");
   const firstCapital=[...purchaseRows].filter(r=>Number(r.capital_amount||0)!==0).sort((a,b)=>String(a.stock_date||a.created_at||"").localeCompare(String(b.stock_date||b.created_at||"")))[0];
   const openingBusinessCapital=Number(firstCapital?.capital_amount||0);
-  const reinvestmentLedger=centralSnapshot?{
-    recovered:Number(centralSnapshot.cash_recovered||0),
-    spent:Number(centralSnapshot.reinvestment_spent||0),
-    balance:Number(centralSnapshot.cash_available||0)
-  }:null;
-  if(reinvestmentLedger){window.ezelexReinvestmentCashBalance=reinvestmentLedger.balance;window.ezelexCurrentCashBalance=reinvestmentLedger.balance;}
+  const reinvestmentLedger=calculateReinvestmentCash(allRows);
+  // Reinvestment cash is strictly the original cost basis recovered from paid sales,
+  // less purchases made from this reinvestment pool. Sales profit is never included.
+  window.ezelexReinvestmentCashBalance=reinvestmentLedger.balance;
+  window.ezelexCurrentCashBalance=reinvestmentLedger.balance;
   if(expenseResult.error)console.warn("Operating expense ledger could not be read:",expenseResult.error.message);
   // Project the profit on every unpaid credit record without recognising it as earned profit.
   // It is shown separately and added to actual sold profit only for the dashboard projection.
@@ -1308,13 +1184,10 @@ async function loadStock(){
   },0);
   // Dashboard profit is intentionally not displayed here; projected values belong in P&L.
   $("todaySales").textContent=dashBought.toLocaleString(); $("weekSales").textContent=dashSold.toLocaleString();
-  const dashCash=reinvestmentLedger?reinvestmentLedger.balance:null;
-  $("allSales").textContent=dashCash===null?"Unavailable":money(dashCash);
-  const centralPhysical=centralSnapshot?Number(centralSnapshot.physical_remaining||0):null;
-  const centralCredit=centralSnapshot?Number(centralSnapshot.unpaid_credit_units||0):null;
-  const centralPosition=centralSnapshot?Number(centralSnapshot.remaining_position||0):null;
-  if($("dashboardRemaining"))$("dashboardRemaining").textContent=centralPosition===null?"Unavailable":centralPosition.toLocaleString();
-  if($("dashboardRemainingBreakdown"))$("dashboardRemainingBreakdown").textContent=centralSnapshot?`${centralPhysical.toLocaleString()} physical + ${centralCredit.toLocaleString()} on-credit`:"Central stock reconciliation unavailable";
+  const dashCash=reinvestmentLedger.balance;
+  $("allSales").textContent=money(dashCash);
+  if($("dashboardRemaining"))$("dashboardRemaining").textContent=(physicalRemaining+unpaidCreditRemaining).toLocaleString();
+  if($("dashboardRemainingBreakdown"))$("dashboardRemainingBreakdown").textContent=`${physicalRemaining.toLocaleString()} available + ${unpaidCreditRemaining.toLocaleString()} on-credit`;
   if($("dashboardCreditUnits"))$("dashboardCreditUnits").textContent=openDashboardWeekCredits.reduce((n,c)=>n+Math.max(0,Number(c.quantity||0)-Number(c.crates_paid||0)),0).toLocaleString();
   if($("dashboardCreditBreakdown"))$("dashboardCreditBreakdown").textContent=`${money(openDashboardWeekCredits.reduce((n,c)=>n+Math.max(0,Number(c.amount_due||0)-Number(c.amount_paid||0)),0))} outstanding · Tap to open On-Credit`;
   // Dashboard projection: realised sold profit PLUS the projected profit
@@ -1398,8 +1271,11 @@ async function loadStock(){
       const editButton=editable
         ? `<button type="button" class="primary" onclick="editStock('${esc(editable.id)}')">Edit</button>`
         : '<span class="muted">No stock record</span>';
+      const saleButton=g.items.some(r=>Number(r.remaining_quantity||0)>0)
+        ? `<button type="button" class="secondary" onclick='recordStockCashSale(${JSON.stringify(g.label).replace("<", "\\u003c")})'>Record Cash Sale</button>`
+        : '';
       const productLabel=esc(g.label)+(g.hasOpening?' <span class="badge">Includes opening stock</span>':'');
-      return `<tr><td>${esc(g.latestDate||"—")}</td><td>${productLabel}</td><td>${esc(g.total)}</td><td>${esc(g.sold)}</td><td>${esc(g.damage)}</td><td><strong>${esc(g.remaining)}</strong></td><td>${money(g.capital)}</td><td>${money(g.purchase)}</td><td>${money(g.cash)}</td><td>${money(g.profit)}</td><td>${editButton}</td></tr>`;
+      return `<tr><td>${esc(g.latestDate||"—")}</td><td>${productLabel}</td><td>${esc(g.total)}</td><td>${esc(g.sold)}</td><td>${esc(g.damage)}</td><td><strong>${esc(g.remaining)}</strong></td><td>${money(g.capital)}</td><td>${money(g.purchase)}</td><td>${money(g.cash)}</td><td>${money(g.profit)}</td><td>${editButton}<br>${saleButton}</td></tr>`;
     }).join("");
   }
   const sel=$("creditStockBatch");if(sel){const prev=sel.value;sel.innerHTML='<option value="">Choose stock batch</option>'+allRows.filter(r=>String(r.week_id||"")===String(currentStockWeek?.id||"")&&Number(r.remaining_quantity||0)>0).map(r=>`<option value="${esc(r.id)}">${esc(dateOnly(r.stock_date))} — ${esc(r.product_service||"Stock")} (remaining ${Number(r.remaining_quantity||0)})</option>`).join("");if(allRows.some(r=>r.id===prev))sel.value=prev;}
@@ -1407,6 +1283,50 @@ async function loadStock(){
   await loadDeletedStock();
   if(typeof window.updateEzelexBillboard==="function")window.updateEzelexBillboard();
 }
+
+// Record an incremental direct cash sale through the central database ledger.
+// The database locks the worker and batch, checks physical stock, updates the batch,
+// and posts the cost-recovery/profit event atomically.
+window.recordStockCashSale=async function(productName){
+  const candidates=(liveStockRows||[]).filter(r=>
+    !r.deleted_at && String(r.product_service||"")===String(productName||"") &&
+    String(r.week_id||"")===String(currentStockWeek?.id||"") &&
+    Number(r.remaining_quantity||0)>0
+  );
+  if(!candidates.length){msg("stockLiveMsg","No available stock batch was found for this product in the current weekly book.","error");return;}
+  let batch=candidates[0];
+  if(candidates.length>1){
+    const choices=candidates.map((r,i)=>`${i+1}. ${dateOnly(r.stock_date)} — ${Number(r.remaining_quantity||0)} crates available (cost ${money(r.cost_per_unit||0)} each)`).join("\n");
+    const answer=prompt(`Choose the stock batch for ${productName}:\n${choices}\nEnter the batch number:` ,"1");
+    if(answer===null)return;
+    const index=Number(answer)-1;
+    if(!Number.isInteger(index)||index<0||index>=candidates.length){msg("stockLiveMsg","Invalid stock batch selection.","error");return;}
+    batch=candidates[index];
+  }
+  const available=Number(batch.remaining_quantity||0);
+  const quantityText=prompt(`How many crates of ${productName} were sold for cash? Available: ${available}`,"1");
+  if(quantityText===null)return;
+  const quantity=Number(quantityText);
+  if(!Number.isInteger(quantity)||quantity<=0||quantity>available){msg("stockLiveMsg","Enter a whole number of crates within the available physical stock.","error");return;}
+  const suggested=Number((quantity*Number(batch.selling_price_per_unit||0)).toFixed(2));
+  const amountText=prompt(`Enter the total cash received for ${quantity} crates (GH₵):`,String(suggested));
+  if(amountText===null)return;
+  const amount=Number(amountText);
+  if(!Number.isFinite(amount)||amount<0){msg("stockLiveMsg","Enter a valid cash sale amount.","error");return;}
+  if(!confirm(`Record ${quantity} crates of ${productName} sold for GH₵${amount.toFixed(2)}?`))return;
+  try{
+    const {data,error}=await db.rpc("ezelex_record_stock_cash_sale",{
+      p_idempotency_key:crypto.randomUUID(),p_stock_batch_id:batch.id,
+      p_sale_date:today(),p_quantity:quantity,p_sale_amount:amount,
+      p_notes:"Direct cash sale recorded from Worker Portal"
+    });
+    if(error)throw error;
+    await Promise.all([loadStock(),loadStockHistory(),loadFinance()]);
+    msg("stockLiveMsg",`Cash sale recorded. Cost recovered: ${money(data?.cost_recovered||0)}; trading profit: ${money(data?.trading_profit||0)}.`,"success");
+  }catch(error){
+    msg("stockLiveMsg","Cash sale was not recorded: "+(error?.message||String(error)),"error");
+  }
+};
 
 // Keep the stock area from being left on an endless "Loading..." state if a
 // later calculation or rendering step fails. The original error is logged and
@@ -1491,15 +1411,11 @@ window.restoreStock=async function(id){
       }
     }
   }
-  for(const item of tree){
-    if(!item.deleted_at)continue;
-    const result=await db.from("worker_stock_batches").update({deleted_at:null,deleted_by:null})
-      .eq("id",item.id).eq("worker_id",currentUser.id).not("deleted_at","is",null).select("id");
-    if(result.error||!result.data?.length){
-      msg("deletedStockMsg","Restore stopped at "+esc(item.product_service||"a linked stock batch")+": "+esc(result.error?.message||"No archived row was restored")+". Ask admin to review the recovery chain.","error");
-      await Promise.all([loadStock(),loadStockHistory(),loadCredits(),loadStockWeeks()]);
-      return;
-    }
+  const restored=await db.rpc("ezelex_restore_stock_batch_tree",{p_stock_batch_id:id});
+  if(restored.error||!Number(restored.data||0)){
+    msg("deletedStockMsg","Restore failed: "+esc(restored.error?.message||"No archived linked stock rows were restored")+". Ask admin to review the recovery chain.","error");
+    await Promise.all([loadStock(),loadStockHistory(),loadCredits(),loadStockWeeks()]);
+    return;
   }
   msg("deletedStockMsg","Original stock and its linked opening-stock transfers have been restored. Original credit and edit history remain linked and active figures have been recalculated.","success");
   await Promise.all([loadStock(),loadStockHistory(),loadCredits(),loadStockWeeks()]);
@@ -1703,18 +1619,11 @@ window.archiveOriginalStock=async function(id){
     return n;
   };
   tree.sort((a,b)=>depth(b)-depth(a));
-  for(const item of tree){
-    if(item.deleted_at)continue;
-    const legacy=treeResult.legacyLinks.find(x=>String(x.id)===String(item.id));
-    const patch={deleted_at:stamp,deleted_by:currentUser.id};
-    if(legacy)patch.source_batch_id=legacy.parentId;
-    const archived=await db.from("worker_stock_batches").update(patch)
-      .eq("id",item.id).eq("worker_id",currentUser.id).is("deleted_at",null).select("id");
-    if(archived.error||!archived.data?.length){
-      msg("stockMsg","The archive operation stopped at "+esc(item.product_service||"a linked stock batch")+": "+esc(archived.error?.message||"The record was not updated")+". No credit or edit-history rows were physically deleted. Ask admin to inspect the archive state before retrying.","error");
-      await Promise.all([loadStock(),loadStockHistory(),loadStockWeeks(),loadCredits()]);
-      return;
-    }
+  const archived=await db.rpc("ezelex_archive_stock_batch_tree",{p_stock_batch_id:id});
+  if(archived.error||!Number(archived.data||0)){
+    msg("stockMsg","The archive operation failed: "+esc(archived.error?.message||"No active linked stock rows were archived")+". No credit or edit-history rows were physically deleted.","error");
+    await Promise.all([loadStock(),loadStockHistory(),loadStockWeeks(),loadCredits()]);
+    return;
   }
   if(String(editingStockId)===String(id))cancelStockEdit();
   await Promise.all([loadStock(),loadStockHistory(),loadStockWeeks(),loadCredits()]);
@@ -1737,13 +1646,12 @@ window.deleteStockHistoryEntry=async function(historyId){
   const unpaid=(creditRows||[]).filter(c=>String(c.stock_batch_id)===String(batchId)&&Number(c.amount_paid||0)<Number(c.amount_due||0)).reduce((n,c)=>n+Number(c.quantity||0),0);
   const paid=(creditRows||[]).filter(c=>String(c.stock_batch_id)===String(batchId)&&Number(c.amount_paid||0)>=Number(c.amount_due||0)).reduce((o,c)=>({qty:o.qty+Number(c.quantity||0),amount:o.amount+Number(c.amount_paid||0)}),{qty:0,amount:0});
   const remaining=Math.max(0,total-sold-damage-loss-unpaid),revenue=Math.max(0,sold-paid.qty)*price+paid.amount,soldCost=sold*unit,damageValue=damage*unit,lossValue=loss*unit,profit=revenue-soldCost-damageValue-lossValue;
-  const upd=await db.from('worker_stock_batches').update({sold_quantity:sold,damage_quantity:damage,remaining_quantity:remaining,remaining_value:remaining*unit,sales_revenue:revenue,sold_cost:soldCost,damage_value:damageValue,loss_value:lossValue,profit_loss:profit}).eq('id',batchId).eq('worker_id',currentUser.id).select('id');
-  if(upd.error||!upd.data?.length){msg('stockHistoryMsg','Could not restore the original stock figures: '+(upd.error?.message||'No matching stock record updated')+'. History was not deleted.','error');return;}
-  const del=await db.from('worker_stock_edit_history').delete().eq('id',historyId).eq('worker_id',currentUser.id);
-  if(del.error){msg('stockHistoryMsg','Stock figures were restored, but the history row could not be deleted: '+del.error.message+'. Refresh before continuing.','error');return;}
+  const upd=await db.rpc('ezelex_correct_stock_batch',{p_idempotency_key:crypto.randomUUID(),p_stock_batch_id:batchId,p_sold_quantity:sold,p_damage_quantity:damage,p_loss_quantity:loss,p_notes:'Reversal of stock edit history entry '+historyId});
+  if(upd.error){msg('stockHistoryMsg','Could not reverse the stock edit through the central ledger: '+upd.error.message+'. History was not deleted.','error');return;}
+  // Keep the original audit row permanently. Reversal is recorded as a new stock correction event.
   await Promise.all([loadStock(),loadStockHistory(),loadStockWeeks(),loadCredits()]);
   if(typeof window.ezelexLoadFinance==='function')await window.ezelexLoadFinance();
-  msg('stockHistoryMsg','Edit reversed and deleted. Stock, remaining quantities, sales revenue, profit and Cash in Hand have been refreshed.','success');
+  msg('stockHistoryMsg','Edit reversed successfully. The original history entry has been retained for audit. Stock, remaining quantities, sales revenue, profit and Cash in Hand have been refreshed.','success');
 };
 let stockCorrectionMode=false;
 window.correctStockFromHistory=async function(id){
@@ -1763,7 +1671,7 @@ window.correctStockFromHistory=async function(id){
 async function writeStockHistory(before,after,action){
   const soldBefore=Number(before?.sold_quantity||0),soldAfter=Number(after?.sold_quantity||0),damageBefore=Number(before?.damage_quantity||0),damageAfter=Number(after?.damage_quantity||0);
   const row={stock_batch_id:String(after.id||before?.id||""),worker_id:currentUser.id,stock_date:after.stock_date||before?.stock_date||today(),product_service:after.product_service||before?.product_service||"Stock",action,sold_before:soldBefore,sold_after:soldAfter,sold_delta:soldAfter-soldBefore,damage_before:damageBefore,damage_after:damageAfter,remaining_after:Number(after.remaining_quantity||0),selling_price_per_unit:Number(after.selling_price_per_unit||before?.selling_price_per_unit||0),notes:after.notes||null,changed_at:new Date().toISOString()};
-  const {error}=await db.from("worker_stock_edit_history").insert(row);return error;
+  const {error}=await db.rpc("ezelex_append_stock_edit_history",{p_history:row});return error;
 }
 
 ["stockTotal","capitalAmount","costPerUnit","sellPrice","stockSold","stockDamage"].forEach(id=>$(id).addEventListener("input",calculateStock));
@@ -1882,19 +1790,10 @@ $("saveStockBtn").onclick=async()=>{
       const baseSoldRevenue=Math.max(0,baseSold-paidCredit.qty)*basePrice+paidCredit.amount;
       const baseProfit=baseSoldRevenue-baseSold*beforeUnit-baseDamage*beforeUnit-baseLoss*beforeUnit;
       const originalPatch={...record,total_quantity:baseTotal,capital_amount:Number(editingStockOriginal?.capital_amount||0),cost_per_unit:beforeUnit,purchase_total:Number(editingStockOriginal?.purchase_total??(baseTotal*beforeUnit)),sold_quantity:baseSold,damage_quantity:baseDamage,loss_quantity:baseLoss,sales_revenue:baseSoldRevenue,sold_cost:baseSold*beforeUnit,damage_value:baseDamage*beforeUnit,loss_value:baseLoss*beforeUnit,remaining_quantity:baseRemaining,remaining_value:baseRemaining*beforeUnit,profit_loss:baseProfit,week_id:editingStockOriginal.week_id,stock_date:editingStockOriginal.stock_date};
-      const updBase=await db.from("worker_stock_batches").update(originalPatch).eq("id",editingStockId).eq("worker_id",currentUser.id).select("id");
-      if(updBase.error||!updBase.data?.length){msg("stockMsg","Could not preserve the original purchase while adding the new quantity: "+(updBase.error?.message||"No row updated"),"error");return;}
       const addBatch={worker_id:currentUser.id,week_id:purchaseWeek.id,stock_type:"reinvestment",stock_date:activeWeekCorrection?$("stockDate").value:today(),product_service:record.product_service,total_quantity:addedPurchaseQty,capital_amount:addedPurchaseQty*unitCost,cash_in_hand:0,purchase_total:addedPurchaseQty*unitCost,cost_per_unit:unitCost,selling_price_per_unit:price,sold_quantity:0,damage_quantity:0,loss_quantity:0,sales_revenue:0,sold_cost:0,damage_value:0,loss_value:0,remaining_quantity:addedPurchaseQty,remaining_value:addedPurchaseQty*unitCost,profit_loss:0,credit_quantity:0,credit_outstanding:0,credit_sales_normalized:true,notes:"Additional purchase quantity added while editing an existing stock item. Original batch preserved."};
-      const purchaseDebit=addedPurchaseQty*unitCost;
-      const posted=await db.rpc('ezelex_create_reinvestment',{p_week_id:purchaseWeek.id,p_stock_date:activeWeekCorrection?$('stockDate').value:today(),p_product_service:record.product_service,p_quantity:addedPurchaseQty,p_unit_cost:unitCost,p_selling_price:price,p_notes:"Additional purchase quantity added while editing an existing stock item. Original batch preserved."});
-      if(posted.error){msg("stockMsg","Original stock was preserved, but the additional purchase was blocked or could not be committed: "+posted.error.message,"error");return;}
-      const insertedRead=await db.from("worker_stock_batches").select("*").eq("id",posted.data?.batch_id).eq("worker_id",currentUser.id).single();
-      if(insertedRead.error||!insertedRead.data){msg("stockMsg","The additional purchase was committed, but its audit record could not be reloaded. Ask an administrator to inspect batch "+String(posted.data?.batch_id||"unknown")+".","error");return;}
-      const inserted={data:insertedRead.data};
-      const h1=await writeStockHistory(editingStockOriginal,originalPatch,"Original purchase preserved while recording additional purchase");
-      const h2=await writeStockHistory(null,inserted.data,"Additional purchase created from stock edit");
-      if(h1||h2)msg("stockMsg","Additional purchase saved. One of the audit entries needs administrator review.","error");
-      else msg("stockMsg",addedPurchaseQty+" additional crates saved as a new purchase this week. Original purchase history preserved.","success");
+      const saved=await db.rpc("ezelex_update_stock_batch_with_purchase",{p_stock_batch_id:editingStockId,p_record:originalPatch,p_additional_purchase:addBatch,p_idempotency_key:crypto.randomUUID()});
+      if(saved.error){msg("stockMsg","Stock edit and additional purchase were not saved: "+saved.error.message,"error");return;}
+      msg("stockMsg",addedPurchaseQty+" additional crates saved as a new purchase this week. Original purchase history and audit trail preserved.","success");
       const savedDate=today();editingStockId="";editingStockOriginal=null;stockCorrectionMode=false;$('editingStockId').value="";$('stockForm').reset();$('capitalAmountEditField')?.classList.remove('hidden');const soldLabel=$('stockSold')?.previousElementSibling;if(soldLabel)soldLabel.textContent="Sold Quantity";$('stockDate').value=savedDate;$('stockSold').value=0;$('stockDamage').value=0;$('saveStockBtn').textContent="Save Stock Record";$('cancelEditStockBtn').style.display="none";$('deleteStockBtn').style.display="none";updateStockFormCreditSummary("");calculateStock();await Promise.all([loadStock(),loadStockHistory(),loadStockWeeks()]);return;
     }
     const purchaseChanged=beforeTotal!==total||Math.abs(beforeUnit-unitCost)>0.0001;
@@ -1904,16 +1803,26 @@ $("saveStockBtn").onclick=async()=>{
       const audit=`Purchase quantity: ${beforeTotal} → ${total}; unit cost: ${money(beforeUnit)} → ${money(unitCost)}; calculated purchase total: ${money(Number(editingStockOriginal?.purchase_total||0))} → ${money(purchase)}.`;
       historyRecord={...record,notes:[audit,String(record.notes||"")].filter(Boolean).join(" ")||null};
     }
-    result=await db.from("worker_stock_batches").update(record).eq("id",editingStockId).eq("worker_id",currentUser.id).select("id");
-    if(result.error){msg("stockMsg","Stock update failed: "+result.error.message,"error");return;}
-    if(!result.data||result.data.length===0){msg("stockMsg","No stock row was updated. The signed-in account may not own this row under the current Supabase policy. No stock data was changed.","error");return;}
-    const historyError=await writeStockHistory(editingStockOriginal,historyRecord,historyAction);
-    if(historyError){msg("stockMsg","Stock was updated successfully, but the edit-history entry failed: "+historyError.message,"error");}
+    const saved=await db.rpc("ezelex_update_stock_batch_with_purchase",{p_stock_batch_id:editingStockId,p_record:record,p_additional_purchase:null,p_idempotency_key:crypto.randomUUID()});
+    if(saved.error){msg("stockMsg","Stock update was not saved: "+saved.error.message,"error");return;}
+    result={data:[{id:editingStockId}],error:null};
   }else{
-    result=await db.from("worker_stock_batches").insert(record).select("*").single();
-    if(result.error){msg("stockMsg","Stock record could not be saved: "+result.error.message,"error");return;}
+    const intakeKey=crypto.randomUUID();
+    const created=await db.rpc("ezelex_create_stock_intake",{
+      p_idempotency_key:intakeKey,p_week_id:record.week_id,p_stock_date:record.stock_date,
+      p_product_service:record.product_service,p_total_quantity:record.total_quantity,
+      p_cost_per_unit:record.cost_per_unit,p_selling_price_per_unit:record.selling_price_per_unit,
+      p_sold_quantity:record.sold_quantity,p_damage_quantity:record.damage_quantity,
+      p_loss_quantity:record.loss_quantity,p_sales_revenue:record.sales_revenue,
+      p_notes:record.notes,p_capital_amount:record.capital_amount
+    });
+    if(created.error){msg("stockMsg","Stock record could not be saved: "+created.error.message,"error");return;}
+    const fresh=await db.from("worker_stock_batches").select("*").eq("id",created.data).eq("worker_id",currentUser.id).single();
+    if(fresh.error||!fresh.data){msg("stockMsg","Stock was recorded, but its confirmation could not be loaded. Refresh My Stock Records before retrying.","error");return;}
+    result={data:fresh.data,error:null};
     const historyError=await writeStockHistory(null,result.data,"Stock intake created");
-    if(historyError){msg("stockMsg","Stock was saved, but its history entry could not be saved. Please check the stock history SQL/policies: "+historyError.message,"error");}
+    if(historyError){msg("stockMsg","Stock was saved, but its edit-history entry could not be saved. Please check the stock history SQL/policies: "+historyError.message,"error");}
+
   }
   const savedStockDate=record.stock_date;
   msg("stockMsg",wasEditing?"Stock updated and date/time history recorded.":"Stock record saved successfully and sent to Ezelex admin.","success");
@@ -1953,20 +1862,12 @@ $('saveCreditBtn')?.addEventListener('click',async()=>{
  const oldText=button.textContent;
  button.textContent='Saving On-Credit Sale…';
  try{
-  const payload={
-   worker_id:currentUser.id,
-   stock_batch_id:batch.id,
-   customer_name:customer,
-   product_service:batch.product_service||'Eggs',
-   credit_date:creditDate,
-   quantity,
-   amount_due:amount,
-   amount_paid:0,
-   crates_paid:0,
-   status:'unpaid',
-   notes:notes||null
-  };
-  const saved=await db.from('worker_stock_credit_sales').insert(payload).select('id').single();
+  // Credit sale, physical stock reduction and ledger event are one database transaction.
+  const saved=await db.rpc('ezelex_create_credit_sale',{
+   p_idempotency_key:crypto.randomUUID(),p_stock_batch_id:batch.id,
+   p_customer_name:customer,p_credit_date:creditDate,p_quantity:quantity,
+   p_amount_due:amount,p_notes:notes||null
+  });
   if(saved.error)throw saved.error;
   form?.reset();
   $('creditDate').value=today();
@@ -2018,8 +1919,8 @@ async function loadCredits(){
   const stockSnapshot=await selectWorkerRows('worker_stock_batches','*',{column:'stock_date',ascending:false});
   if(!stockSnapshot.error){
     liveStockRows=stockSnapshot.data||[];
-    const activeBatchIds=new Set(liveStockRows.map(b=>String(b.id)));
-    creditRows=normalizedCreditRows.filter(c=>activeBatchIds.has(String(c.stock_batch_id)));
+    // Credit receivables remain visible even if their source batch is archived.
+    creditRows=normalizedCreditRows;
   }else creditRows=normalizedCreditRows;
   creditRowsLoaded=true;
   // Rebuild every credit-linked batch from its non-credit baseline and the active
@@ -2075,11 +1976,9 @@ async function loadCredits(){
       credit_sales_normalized:true
     };
     const differs=Object.entries(patch).some(([key,value])=>Math.abs(Number(batch[key]||0)-Number(value||0))>0.009);
-    if(differs){
-      const fixed=await db.from('worker_stock_batches').update(patch).eq('id',batchId).eq('worker_id',currentUser.id).is('deleted_at',null);
-      if(!fixed.error)Object.assign(batch,patch);
-      else console.warn('Credit stock reconciliation could not update batch',batchId,fixed.error.message);
-    }
+    // Read-only projection: refreshing the portal must never rewrite financial records.
+    // The database ledger migration will become the sole persistence authority.
+    if(differs) Object.assign(batch,patch);
   }
 
   renderCredits();if(typeof calculateStock==="function")calculateStock();updateStockFormCreditSummary(editingStockId);
@@ -2197,11 +2096,8 @@ $('creditActionSave')?.addEventListener('click',async()=>{
       if(!customer||!date||!Number.isInteger(qty)||qty<alreadyPaidCrates||qty<=0||!Number.isFinite(amount)||amount<alreadyPaidAmount||amount<=0||invalidSettledState){
         $('creditActionMsg').innerHTML='<div class="msg error">Check the customer, date, crate quantity and amount. Total crates and amount due cannot be less than payments already recorded. Any remaining crates must also have an amount outstanding.</div>';return;
       }
-      const upd=await db.from('worker_stock_credit_sales').update({
-        customer_name:customer,credit_date:date,quantity:qty,amount_due:amount,
-        notes:notes||null,status:Number(c.crates_paid||0)>=qty&&Number(c.amount_paid||0)>=amount?'paid':Number(c.crates_paid||0)>0?'partial':'unpaid'
-      }).eq('id',id).eq('worker_id',currentUser.id).select('id');
-      if(upd.error||!upd.data?.length){$('creditActionMsg').innerHTML='<div class="msg error">Credit record could not be updated: '+esc(upd.error?.message||'No row updated')+'</div>';return;}
+      const upd=await db.rpc('ezelex_update_credit_sale',{p_credit_sale_id:id,p_customer_name:customer,p_credit_date:date,p_quantity:qty,p_amount_due:amount,p_notes:notes||null});
+      if(upd.error){$('creditActionMsg').innerHTML='<div class="msg error">Credit record could not be updated: '+esc(upd.error.message)+'</div>';return;}
       closeCreditAction();msg('creditMsg','On-credit record updated. Outstanding crates, credit balance and stock figures have been recalculated.','success');
     }else if(mode==='payment'){
       const crates=Number($('creditPaymentCrates').value),date=$('creditPaymentDate').value;
@@ -2209,7 +2105,7 @@ $('creditActionSave')?.addEventListener('click',async()=>{
       if(!Number.isInteger(crates)||crates<=0||crates>outstanding||!date){
         $('creditActionMsg').innerHTML='<div class="msg error">Enter a valid number of crates (up to '+outstanding+') and a payment date.</div>';return;
       }
-      const result=await db.rpc('ezelex_record_credit_payment',{p_credit_sale_id:id,p_crates_paid:crates,p_payment_date:date});
+      const result=await db.rpc('ezelex_record_credit_payment',{p_credit_sale_id:id,p_crates_paid:crates,p_payment_date:date,p_idempotency_key:crypto.randomUUID()});
       if(result.error){$('creditActionMsg').innerHTML='<div class="msg error">Payment could not be recorded: '+esc(result.error.message)+'. Check that the credit-payment SQL update has been run.</div>';return;}
       closeCreditAction();
       const amount=Number(result.data?.amount_paid||0),profit=Number(result.data?.profit_amount||0);
@@ -2745,9 +2641,9 @@ window.addEventListener("load",()=>start(),{once:true});
 <script>
 (()=>{
  const $f=id=>document.getElementById(id), fmt=n=>'GH₵'+Number(n||0).toLocaleString('en-GH',{minimumFractionDigits:2,maximumFractionDigits:2});
- let financeWeeks=[],financeExpenses=[],financeCashRow=null,financeWeekId=null;
+ let financeWeeks=[],financeExpenses=[],financeCashRow=null,financeWeekId=null,centralFinancialSummary=null;
  const reinvestmentSpendRows=rows=>(rows||[]).filter(r=>r.stock_type==='reinvestment'||(r.stock_type!=='carry_forward'&&String(r.notes||'').toLowerCase().includes('additional purchase quantity added while editing an existing stock item')));
- function calculateReinvestmentCash(rows){const active=(rows||[]).filter(r=>!r.deleted_at);const recovered=active.reduce((n,r)=>n+Math.max(0,Number(calculateStockCashInHand(r)||0)),0);const spent=active.filter(r=>r.stock_type==='reinvestment').reduce((n,r)=>n+Math.max(0,Number(r.purchase_total??(Number(r.total_quantity||0)*Number(r.cost_per_unit||0)))),0);return {recovered,spent,balance:recovered-spent};}
+ function calculateReinvestmentCash(rows){if(centralFinancialSummary){const recovered=Number(centralFinancialSummary.cash_in_hand||0),balance=Number(centralFinancialSummary.reinvestment_cash||0);return {recovered,spent:recovered-balance,balance};}const active=(rows||[]).filter(r=>!r.deleted_at);const recovered=active.reduce((n,r)=>n+Math.max(0,Number(r.sold_cost||0)),0);const spent=reinvestmentSpendRows(active).reduce((n,r)=>n+Math.max(0,Number(r.purchase_total??(Number(r.total_quantity||0)*Number(r.cost_per_unit||0)))),0);return {recovered,spent,balance:recovered-spent};}
  // The main portal script also needs this calculation. Export it explicitly;
  // a function declared inside this IIFE is otherwise private to this script.
  window.calculateReinvestmentCash=calculateReinvestmentCash;
@@ -2763,9 +2659,9 @@ window.addEventListener("load",()=>start(),{once:true});
  ['reinvestQty','reinvestUnitCost'].forEach(id=>$f(id)?.addEventListener('input',recalcReinvest));
  $f('reinvestProduct')?.addEventListener('change',()=>{let r=liveStockRows.find(x=>String(x.id)===$f('reinvestProduct').value);if(r){$f('reinvestUnitCost').value=Number(r.cost_per_unit||0);$f('reinvestSellPrice').value=Number(r.selling_price_per_unit||0);recalcReinvest();}});
  async function loadFinance(){if(!currentUser||!getWeek())return;financeWeekId=getWeek();
-  const [w,e,allE]=await Promise.all([db.from('worker_weekly_cash_balances').select('*').eq('worker_id',currentUser.id).eq('week_id',financeWeekId).maybeSingle(),selectWorkerRows('worker_stock_expenses','*'),selectWorkerRows('worker_stock_expenses','*')]);
-  if(w.error||e.error||allE.error){finMsg('Financial Management database setup is required. Run EZELEX_WORKER_STOCK_MANAGEMENT.sql in Supabase SQL Editor. '+(w.error?.message||e.error?.message||allE.error?.message),true);return;}
-  financeCashRow=w.data;financeExpenses=(e.data||[]).filter(r=>String(r.week_id||'')===String(financeWeekId)).sort((a,b)=>String(b.expense_date||'').localeCompare(String(a.expense_date||'')));
+  const [w,e,allE,ledgerSummary]=await Promise.all([db.from('worker_weekly_cash_balances').select('*').eq('worker_id',currentUser.id).eq('week_id',financeWeekId).maybeSingle(),selectWorkerRows('worker_stock_expenses','*'),selectWorkerRows('worker_stock_expenses','*'),db.from('ezelex_worker_financial_summary').select('*').eq('worker_id',currentUser.id).maybeSingle()]);
+  if(w.error||e.error||allE.error||ledgerSummary.error){finMsg('Financial Management database setup is required. Run EZELEX_WORKER_STOCK_MANAGEMENT.sql in Supabase SQL Editor. '+(w.error?.message||e.error?.message||allE.error?.message),true);return;}
+  financeCashRow=w.data;centralFinancialSummary=ledgerSummary.data||{cash_in_hand:0,reinvestment_cash:0,trading_profit:0,operating_expenses:0,net_profit:0};financeExpenses=(e.data||[]).filter(r=>String(r.week_id||'')===String(financeWeekId)).sort((a,b)=>String(b.expense_date||'').localeCompare(String(a.expense_date||'')));
   let stock=(liveStockRows||[]).filter(r=>r.week_id?String(r.week_id)===String(financeWeekId):weekStart(r.stock_date||r.created_at)===weekStart(currentStockWeek?.week_start||today()));
   let sales=stock.reduce((n,r)=>n+Number(r.sales_revenue||0),0),purchases=stock.filter(r=>r.stock_type!=='carry_forward').reduce((n,r)=>n+Number(r.purchase_total??(Number(r.total_quantity||0)*Number(r.cost_per_unit||0)),0),0),trading=(liveStockRows||[]).reduce((n,r)=>n+Number(r.profit_loss||0),0);
   let expenses=financeExpenses.reduce((n,r)=>n+Number(r.amount||0),0),opening=Number(financeCashRow?.opening_cash||0);
@@ -2773,14 +2669,14 @@ window.addEventListener("load",()=>start(),{once:true});
   const purchaseBatches=allBatches.filter(r=>r.stock_type!=='carry_forward');
   const firstCapitalBatch=[...purchaseBatches].filter(r=>Number(r.capital_amount||0)!==0).sort((a,b)=>String(a.stock_date||a.created_at||'').localeCompare(String(b.stock_date||b.created_at||'')))[0];
   const openingBusinessCapital=Number(firstCapitalBatch?.capital_amount||0);
-  let central;try{central=await loadEzelexCentralSnapshot();}catch(err){finMsg(err.message,true);return;}
-  const reinvestmentLedger={recovered:Number(central.cash_recovered||0),spent:Number(central.reinvestment_spent||0),balance:Number(central.cash_available||0)};
+  const reinvestmentLedger={recovered:Number(centralFinancialSummary.cash_in_hand||0),spent:Number(centralFinancialSummary.cash_in_hand||0)-Number(centralFinancialSummary.reinvestment_cash||0),balance:Number(centralFinancialSummary.reinvestment_cash||0)};
   const cash=reinvestmentLedger.balance;
   window.ezelexReinvestmentCashBalance=cash;window.ezelexCurrentCashBalance=cash;
   if($f('allSales'))$f('allSales').textContent=fmt(cash);
   paintReinvestmentCash(reinvestmentLedger);$f('financeWeekPurchases').textContent=fmt(purchases);$f('cashOpeningDisplay').textContent=fmt(opening);$f('cashSalesDisplay').textContent=fmt(reinvestmentLedger.recovered);$f('cashPurchasesDisplay').textContent=fmt(reinvestmentLedger.spent);$f('cashExpensesDisplay').textContent=fmt(expenses);$f('cashClosingDisplay').textContent=fmt(cash);$f('openingCashInput').value=opening.toFixed(2);
-  const lifetimeOperatingExpenses=(allE.data||[]).reduce((n,r)=>n+Number(r.amount||0),0);
-  const netProfit=trading-lifetimeOperatingExpenses;
+  const lifetimeOperatingExpenses=Number(centralFinancialSummary.operating_expenses||0);
+  trading=Number(centralFinancialSummary.trading_profit||0);
+  const netProfit=Number(centralFinancialSummary.net_profit||0);
   const openCredits=(creditRows||[]).filter(c=>Number(c.amount_paid||0)<Number(c.amount_due||0)||Number(c.crates_paid||0)<Number(c.quantity||0));
   const creditUnitsByBatch=new Map();openCredits.forEach(c=>creditUnitsByBatch.set(String(c.stock_batch_id),(creditUnitsByBatch.get(String(c.stock_batch_id))||0)+Math.max(0,Number(c.quantity||0)-Number(c.crates_paid||0))));
   const remainingProjection=currentPhysicalStockRows((liveStockRows||[]).filter(r=>!r.deleted_at)).reduce((n,r)=>n+Math.max(0,Number(r.remaining_quantity||0))*Math.max(0,Number(r.selling_price_per_unit||0)-Number(r.cost_per_unit||0)),0);
@@ -2795,16 +2691,12 @@ window.addEventListener("load",()=>start(),{once:true});
   $f('reinvestProduct').innerHTML='<option value="">Select an existing stock item</option>'+[...products.entries()].map(([name,r])=>`<option value="${r.id}">${name}</option>`).join('');
  }
  rf?.addEventListener('submit',async ev=>{ev.preventDefault();let source=liveStockRows.find(r=>String(r.id)===$f('reinvestProduct').value);if(!source){finMsg('Select an existing stock item.',true);return;}let qty=Number($f('reinvestQty').value),unit=Number($f('reinvestUnitCost').value),sell=Number($f('reinvestSellPrice').value),total=qty*unit;
-  if(!Number.isInteger(qty)||qty<1||unit<=0||!Number.isFinite(total)){finMsg('Enter a valid quantity and unit cost.',true);return;}$f('reinvestSubmit').disabled=true;try{
-   const notes='Reinvestment from recovered cash. '+($f('reinvestSupplier').value?'Supplier: '+$f('reinvestSupplier').value+'. ':'')+$f('reinvestNotes').value;
-   const posted=await db.rpc('ezelex_create_reinvestment',{p_week_id:financeWeekId,p_stock_date:$f('reinvestDate').value||today(),p_product_service:source.product_service,p_quantity:qty,p_unit_cost:unit,p_selling_price:sell,p_notes:notes});
-   if(posted.error)throw posted.error;
-   rf.reset();$f('reinvestDate').value=today();await Promise.all([loadStock(),loadStockHistory(),loadCredits()]);await loadFinance();
-   finMsg('Reinvestment saved securely. '+qty+' crates added to '+source.product_service+'. The balance check and purchase were committed together.');
-  }catch(e){finMsg('Could not save reinvestment: '+(e.message||e),true);}finally{$f('reinvestSubmit').disabled=false;}
+  if(!Number.isInteger(qty)||qty<1||unit<=0||!Number.isFinite(total)||sell<0){finMsg('Enter a valid quantity and unit cost.',true);return;}
+  const notes='Reinvestment from recovered purchase cost. '+($f('reinvestSupplier').value?'Supplier: '+$f('reinvestSupplier').value+'. ':'')+$f('reinvestNotes').value;
+  $f('reinvestSubmit').disabled=true;try{const {data:batchId,error}=await db.rpc('ezelex_create_reinvestment_purchase',{p_idempotency_key:crypto.randomUUID(),p_week_id:financeWeekId,p_purchase_date:$f('reinvestDate').value||today(),p_product_service:source.product_service,p_quantity:qty,p_unit_cost:unit,p_selling_price:sell,p_notes:notes});if(error)throw error;const fresh=await db.from('worker_stock_batches').select('*').eq('id',batchId).eq('worker_id',currentUser.id).single();if(fresh.error)throw fresh.error;rf.reset();$f('reinvestDate').value=today();await Promise.all([loadStock(),loadStockHistory(),loadCredits()]);await loadFinance();finMsg('Reinvestment saved securely. '+qty+' crates added. The database checked and deducted the available Reinvestment Cash in the same transaction.');}catch(e){finMsg('Reinvestment was not saved: '+(e.message||e),true);}finally{$f('reinvestSubmit').disabled=false;}
  });
- ef?.addEventListener('submit',async ev=>{ev.preventDefault();let amount=Number($f('expenseAmount').value);if(!(amount>0)){finMsg('Enter an expense greater than zero.',true);return;}let ins=await db.from('worker_stock_expenses').insert({worker_id:currentUser.id,week_id:financeWeekId,expense_date:$f('expenseDate').value||today(),category:$f('expenseCategory').value,amount,description:$f('expenseDescription').value.trim()});if(ins.error){finMsg('Could not save expense: '+ins.error.message,true);return;}ef.reset();$f('expenseDate').value=today();await loadFinance();finMsg('Expense saved and included in the net profit calculation.');});
- of?.addEventListener('submit',async ev=>{ev.preventDefault();let amount=Number($f('openingCashInput').value);if(amount<0||!Number.isFinite(amount)){finMsg('Enter a valid opening cash amount.',true);return;}let old=Number(financeCashRow?.opening_cash||0);let r=await db.from('worker_weekly_cash_balances').upsert({worker_id:currentUser.id,week_id:financeWeekId,opening_cash:amount,adjustment_note:amount!==old?'Worker opening cash adjustment':''},{onConflict:'worker_id,week_id'});if(r.error){finMsg('Could not save opening cash: '+r.error.message,true);return;}await loadFinance();finMsg('Opening cash saved. This is a balance adjustment, not new capital.');});
+ ef?.addEventListener('submit',async ev=>{ev.preventDefault();let amount=Number($f('expenseAmount').value);if(!(amount>0)){finMsg('Enter an expense greater than zero.',true);return;}const {error}=await db.rpc('ezelex_record_operating_expense',{p_idempotency_key:crypto.randomUUID(),p_week_id:financeWeekId,p_expense_date:$f('expenseDate').value||today(),p_category:$f('expenseCategory').value,p_amount:amount,p_description:$f('expenseDescription').value.trim()});if(error){finMsg('Could not save expense: '+error.message,true);return;}ef.reset();$f('expenseDate').value=today();await loadFinance();finMsg('Expense saved atomically and included in net profit. It does not reduce Cash in Hand or Reinvestment Cash.');});
+ of?.addEventListener('submit',async ev=>{ev.preventDefault();let amount=Number($f('openingCashInput').value);if(amount<0||!Number.isFinite(amount)){finMsg('Enter a valid opening cash amount.',true);return;}let old=Number(financeCashRow?.opening_cash||0);let r=await db.rpc('ezelex_set_week_opening_cash',{p_week_id:financeWeekId,p_opening_cash:amount,p_adjustment_note:amount!==old?'Worker opening cash adjustment':''});if(r.error){finMsg('Could not save opening cash: '+r.error.message,true);return;}await loadFinance();finMsg('Opening cash saved. This is a balance adjustment, not new capital.');});
  // Initialise date controls; the actual weekly opening carry-forward is handled by the close-week hook below.
  document.addEventListener('DOMContentLoaded',()=>{['reinvestDate','expenseDate'].forEach(id=>{if($f(id))$f(id).value=today();});});
  const oldClose=window.closeCurrentStockWeek; if(typeof oldClose==='function'){window.closeCurrentStockWeek=async function(){await oldClose();};}
@@ -2928,7 +2820,7 @@ async function loadCapitalOverview(){
       return n+Math.max(0,recordedPaidCost-unpaidCost);
     },0);
     const reinvested=allRows.filter(r=>r.stock_type==="reinvestment"||(r.stock_type!=="carry_forward"&&String(r.notes||"").toLowerCase().includes("additional purchase quantity added while editing an existing stock item"))).reduce((n,r)=>n+Math.max(0,Number(r.purchase_total??(Number(r.total_quantity||0)*Number(r.cost_per_unit||0)))),0);
-    const cashInHand=ezelexCentralSnapshot?Number(ezelexCentralSnapshot.cash_available||0):grossRecovered-reinvested;
+    const cashInHand=grossRecovered-reinvested;
     const accounted=remainingValue+cashInHand+creditValue+damageLossValue;
     const difference=accounted-original;
     set("coOriginal",money(original));
